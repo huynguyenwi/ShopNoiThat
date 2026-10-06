@@ -56,7 +56,7 @@ public sealed class AccountOrdersController(IOrderService orders, IAddressServic
             command = new CustomerAddressCommand
             {
                 Label = current.Label, RecipientName = current.RecipientName, Phone = current.Phone, AddressLine = current.AddressLine,
-                Ward = current.Ward, District = current.District, Province = current.Province, IsDefault = current.IsDefault
+                Ward = current.Ward, Province = current.Province, IsDefault = current.IsDefault
             };
         }
 

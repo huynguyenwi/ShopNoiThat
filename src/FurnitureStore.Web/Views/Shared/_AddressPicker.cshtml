@@ -1,0 +1,48 @@
+@model FurnitureStore.Web.ViewModels.Sales.AddressPickerModel
+@using FurnitureStore.Application.Sales
+@* Two-level address since 07/2025: province, then ward / commune (no district). Options of the selected province are
+   rendered here; address-picker.js reloads them from /api/locations when another province is chosen. *@
+@{
+    var province = VietnamProvinces.Find(Model.Province);
+    var ward = Model.Ward?.Trim();
+    var wardKnown = province is not null && VietnamProvinces.IsValidWard(Model.Province, ward);
+    var outdatedWard = province is not null && !string.IsNullOrEmpty(ward) && !wardKnown;
+    var labelClass = Model.SmallLabels ? "form-label small" : "form-label";
+    string Invalid(string key) => ViewData.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0 ? " input-validation-error" : "";
+}
+<div class="@Model.ColumnClass">
+    <label class="@labelClass" for="Command_Province">Tỉnh / Thành phố *</label>
+    <select id="Command_Province" name="Command.Province" class="form-select@(Invalid("Command.Province"))" required data-province-select data-ward-target="Command_Ward">
+        <option value="">— Chọn tỉnh / thành —</option>
+        @foreach (var p in VietnamProvinces.Provinces)
+        {
+            <option value="@p.Name" data-code="@p.Code" selected="@(p == province)">@p.Name</option>
+        }
+    </select>
+    @Html.ValidationMessage("Command.Province", null, new { @class = "text-danger small" })
+</div>
+<div class="@Model.ColumnClass">
+    <label class="@labelClass" for="Command_Ward">Phường / Xã *</label>
+    <select id="Command_Ward" name="Command.Ward" class="form-select@(Invalid("Command.Ward"))" required data-ward-select disabled="@(province is null)">
+        <option value="">@(province is null ? "— Chọn tỉnh / thành trước —" : "— Chọn phường / xã —")</option>
+        @if (province is not null)
+        {
+            foreach (var group in province.Wards.GroupBy(w => w.Type))
+            {
+                <optgroup label="@group.Key">
+                    @foreach (var w in group)
+                    {
+                        <option value="@w.Name" selected="@(wardKnown && string.Equals(w.Name, ward, StringComparison.OrdinalIgnoreCase))">@w.Label</option>
+                    }
+                </optgroup>
+            }
+        }
+    </select>
+    <div class="form-text text-warning-emphasis" data-ward-hint hidden="@(!outdatedWard)">
+        @if (outdatedWard)
+        {
+            @:“@ward” không có trong danh sách phường / xã của @province!.Name (danh mục mới từ 07/2025), vui lòng chọn lại.
+        }
+    </div>
+    @Html.ValidationMessage("Command.Ward", null, new { @class = "text-danger small" })
+</div>

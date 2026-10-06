@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FurnitureStore.Web.Controllers;
 
-/// <summary>/cart - plain form posts, so the cart works even without JavaScript.</summary>
+/// <summary>/cart - plain form posts, so the cart works even without JavaScript (cart.js refreshes the page content in place).</summary>
 [Route("cart")]
 public sealed class CartController(ICartService cart, CartOwnerResolver owners) : Controller
 {
@@ -21,6 +21,25 @@ public sealed class CartController(ICartService cart, CartOwnerResolver owners) 
         ViewData["CouponOffers"] = await cart.GetOffersAsync(owner, cartDto, cancellationToken);
         return View(cartDto);
     }
+
+    /// <summary>GET /cart/content - the cart body alone; cart.js reloads it after ticking / unticking lines.</summary>
+    [HttpGet("content")]
+    public async Task<IActionResult> Content(CancellationToken cancellationToken)
+    {
+        var owner = owners.Resolve();
+        var cartDto = await cart.GetAsync(owner, cancellationToken);
+        ViewData["CouponOffers"] = await cart.GetOffersAsync(owner, cartDto, cancellationToken);
+        return PartialView("_CartContent", cartDto);
+    }
+
+    /// <summary>Ticks / unticks a line: only ticked lines go into the next order.</summary>
+    [HttpPost("items/{id:int}/select")]
+    public Task<IActionResult> Select(int id, bool selected, CancellationToken cancellationToken) =>
+        Run(() => cart.SetSelectedAsync(owners.Resolve(), id, selected, cancellationToken), null);
+
+    [HttpPost("select-all")]
+    public Task<IActionResult> SelectAll(bool selected, CancellationToken cancellationToken) =>
+        Run(() => cart.SelectAllAsync(owners.Resolve(), selected, cancellationToken), null);
 
     [HttpPost("items/{id:int}/quantity")]
     public Task<IActionResult> UpdateQuantity(int id, int quantity, CancellationToken cancellationToken) =>
@@ -39,13 +58,16 @@ public sealed class CartController(ICartService cart, CartOwnerResolver owners) 
     public Task<IActionResult> RemoveCoupon(string? returnUrl, CancellationToken cancellationToken) =>
         Run(() => cart.RemoveCouponAsync(owners.Resolve(), cancellationToken), "Đã bỏ mã giảm giá.", returnUrl);
 
-    private async Task<IActionResult> Run(Func<Task<CartDto>> action, string successMessage, string? returnUrl = null)
+    private async Task<IActionResult> Run(Func<Task<CartDto>> action, string? successMessage, string? returnUrl = null)
     {
         try
         {
             ModelState.ThrowIfBindingFailed(); // e.g. quantity "abc" would otherwise become 0 and remove the line
             await action();
-            TempData[MessageKey] = successMessage;
+            if (successMessage is not null)
+            {
+                TempData[MessageKey] = successMessage;
+            }
         }
         catch (Exception ex) when (ex is BusinessRuleException or AppValidationException or NotFoundException)
         {

@@ -71,7 +71,7 @@ public sealed class AdminServiceTests : IAsyncLifetime
             Phone = "0912345678",
             Email = "test@example.com",
             AddressLine = "12 Lê Lợi",
-            Ward = "Phường Bến Nghé",
+            Ward = "Phường Sài Gòn",
             Province = "TP. Hồ Chí Minh",
             PaymentMethod = method
         }));

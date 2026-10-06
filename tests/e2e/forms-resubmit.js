@@ -2,6 +2,7 @@
 // and a value the model binder rejects must bring the form back with the field marked, saving nothing.
 const { execSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const BASE = process.env.BASE || 'https://localhost:7160';
 const DB = process.env.DB || 'FurnitureStoreDb';
 const EDGE = (process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe');
@@ -95,9 +96,7 @@ async function resubmit(page, url, buttonSelector) {
       const fill = (sel, v) => customer.$eval(sel, (i, val) => { i.value = val; }, v);
       await fill('#Command_RecipientName', 'Khách Kiểm Form');
       await fill('#Command_Phone', '0912345678');
-      const province = await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]);
-      await customer.select('#Command_Province', province);
-      await fill('#Command_Ward', 'Phường 1');
+      await chooseAddress(customer);
       await fill('#Command_AddressLine', '1 Nguyễn Huệ');
       await Promise.all([customer.waitForNavigation({ waitUntil: 'networkidle2' }), customer.$eval('form[action="/account/addresses"]', f => f.requestSubmit())]);
       const saved = await state(customer);

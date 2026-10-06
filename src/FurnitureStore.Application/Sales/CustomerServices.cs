@@ -112,7 +112,7 @@ public sealed class AddressService(
         address.Phone = c.Phone.Trim();
         address.AddressLine = c.AddressLine.Trim();
         address.Ward = c.Ward.Trim();
-        address.District = string.IsNullOrWhiteSpace(c.District) ? null : c.District.Trim();
+        address.District = null; // no districts since 07/2025; an address saved earlier loses it when edited
         address.Province = c.Province.Trim();
     }
 

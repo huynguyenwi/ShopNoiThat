@@ -39,7 +39,7 @@
                                             <input type="radio" name="savedAddress" class="form-check-input"
                                                    data-address-fill
                                                    data-name="@address.RecipientName" data-phone="@address.Phone" data-line="@address.AddressLine"
-                                                   data-ward="@address.Ward" data-district="@address.District" data-province="@address.Province"
+                                                   data-ward="@address.Ward" data-province="@address.Province"
                                                    checked="@(address.AddressLine == c.AddressLine && address.Phone == c.Phone)" />
                                             <span>
                                                 <strong>@address.RecipientName</strong> · @address.Phone
@@ -70,28 +70,8 @@
                                     <input asp-for="Command.Email" class="form-control" type="email" autocomplete="email" required />
                                     <span asp-validation-for="Command.Email" class="text-danger small"></span>
                                 </div>
-                                <div class="col-md-6">
-                                    <label asp-for="Command.Province" class="form-label">Tỉnh / Thành phố *</label>
-                                    <select asp-for="Command.Province" class="form-select" required>
-                                        <option value="">— Chọn tỉnh / thành —</option>
-                                        @foreach (var province in Model.Provinces)
-                                        {
-                                            <option value="@province">@province</option>
-                                        }
-                                    </select>
-                                    <span asp-validation-for="Command.Province" class="text-danger small"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="Command.Ward" class="form-label">Phường / Xã *</label>
-                                    <input asp-for="Command.Ward" class="form-control" required maxlength="100" placeholder="VD: Phường Tân Phong" />
-                                    <span asp-validation-for="Command.Ward" class="text-danger small"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="Command.District" class="form-label">Quận / Huyện <span class="text-muted-fs small">(không bắt buộc)</span></label>
-                                    <input asp-for="Command.District" class="form-control" maxlength="100" />
-                                    <div class="form-text">Từ 07/2025 địa chỉ hành chính chỉ còn 2 cấp: Tỉnh - Phường/Xã.</div>
-                                </div>
-                                <div class="col-md-6">
+                                <partial name="_AddressPicker" model="new FurnitureStore.Web.ViewModels.Sales.AddressPickerModel(c.Province, c.Ward)" />
+                                <div class="col-12">
                                     <label asp-for="Command.AddressLine" class="form-label">Số nhà, tên đường *</label>
                                     <input asp-for="Command.AddressLine" class="form-control" autocomplete="street-address" required maxlength="300" />
                                     <span asp-validation-for="Command.AddressLine" class="text-danger small"></span>
@@ -138,5 +118,6 @@
 </section>
 
 @section Scripts {
+    <script src="~/js/address-picker.js" asp-append-version="true"></script>
     <script src="~/js/checkout.js" asp-append-version="true"></script>
 }

@@ -52,7 +52,7 @@ public sealed class SalesServiceTests : IAsyncLifetime
         Phone = "0912345678",
         Email = "test@example.com",
         AddressLine = "12 Lê Lợi",
-        Ward = "Phường Bến Nghé",
+        Ward = "Phường Sài Gòn",
         Province = "TP. Hồ Chí Minh",
         PaymentMethod = method,
         SaveAddress = true
@@ -331,12 +331,12 @@ public sealed class SalesServiceTests : IAsyncLifetime
     {
         var userId = await CreateUserAsync();
         var otherUser = await CreateUserAsync();
-        var command = new CustomerAddressCommand { RecipientName = "A", Phone = "0912345678", AddressLine = "1 Đường A", Ward = "Phường 1", Province = "TP. Hà Nội" };
+        var command = new CustomerAddressCommand { RecipientName = "A", Phone = "0912345678", AddressLine = "1 Đường A", Ward = "Phường Ba Đình", Province = "TP. Hà Nội" };
 
         var first = await Run(sp => sp.GetRequiredService<IAddressService>().CreateAsync(userId, command));
         var second = await Run(sp => sp.GetRequiredService<IAddressService>().CreateAsync(userId, new CustomerAddressCommand
         {
-            RecipientName = "B", Phone = "0987654321", AddressLine = "2 Đường B", Ward = "Phường 2", Province = "TP. Đà Nẵng", IsDefault = true
+            RecipientName = "B", Phone = "0987654321", AddressLine = "2 Đường B", Ward = "Phường Hải Châu", Province = "TP. Đà Nẵng", IsDefault = true
         }));
 
         var list = await Run(sp => sp.GetRequiredService<IAddressService>().ListAsync(userId));

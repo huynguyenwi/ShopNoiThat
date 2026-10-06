@@ -26,6 +26,7 @@ public sealed class CartRepository(ApplicationDbContext context) : EfRepository<
                 i.Id,
                 i.ProductVariantId,
                 i.Quantity,
+                i.IsSelected,
                 i.ProductVariant.ProductId,
                 ProductName = i.ProductVariant.Product.Name,
                 ProductSlug = i.ProductVariant.Product.Slug,
@@ -49,7 +50,7 @@ public sealed class CartRepository(ApplicationDbContext context) : EfRepository<
             r.Id, r.ProductVariantId, r.ProductId, r.ProductName, r.ProductSlug, r.VariantName, r.Sku,
             r.VariantImage ?? r.ProductImage, r.Color, r.Material, r.Size,
             r.Price, r.OriginalPrice > r.Price ? r.OriginalPrice : null,
-            r.Quantity, r.StockQuantity, r.IsActive && r.ProductStatus == ProductStatus.Active)).ToList();
+            r.Quantity, r.StockQuantity, r.IsActive && r.ProductStatus == ProductStatus.Active, r.IsSelected)).ToList();
     }
 
     public async Task<int> CountItemsAsync(CartOwner owner, CancellationToken cancellationToken = default)

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const BASE = process.env.BASE || 'https://localhost:7160';
 const DB = process.env.DB || 'FurnitureStoreDb';
 const EMAIL_DIR = process.env.EMAIL_DIR;
@@ -141,8 +142,7 @@ const menuRows = page => page.$$eval('#mainNav > .navbar-nav > .nav-item', items
     await phoneView.close();
 
     await customer.type('#Command_AddressLine', '25 Đường Bàn Ăn');
-    await customer.select('#Command_Province', await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]));
-    await customer.$eval('#Command_Ward', i => { i.value = 'Phường 3'; });
+    await chooseAddress(customer);
     await customer.type('#Command_Note', 'Gọi sau 18h, tầng 3 có thang máy');
     await click(customer, 'button[form="checkoutForm"]');
     const code = await customer.$eval('[data-order-code]', e => e.textContent.trim()).catch(() => null);

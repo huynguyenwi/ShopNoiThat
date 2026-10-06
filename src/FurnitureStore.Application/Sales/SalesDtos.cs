@@ -24,14 +24,22 @@ public sealed record CartLineDto(
     decimal? OriginalPrice,
     int Quantity,
     int Stock,
-    bool IsAvailable)
+    bool IsAvailable,
+    bool IsSelected = true)
 {
     public decimal LineTotal => UnitPrice * Quantity;
+
+    /// <summary>Can be ticked for an order: still sold and in stock.</summary>
+    public bool IsPurchasable => IsAvailable && Stock > 0;
     public int MaxQuantity => Math.Max(0, Math.Min(Stock, Domain.Entities.Cart.MaxQuantityPerItem));
     public bool ExceedsStock => Quantity > Stock;
     public string Url => $"/products/{ProductSlug}?variant={VariantId}";
 }
 
+/// <summary>
+/// The cart. Subtotal, discount, total and warnings cover the <b>ticked</b> lines only: those are what the next order
+/// contains; unticked lines stay in the cart.
+/// </summary>
 public sealed record CartDto(
     IReadOnlyList<CartLineDto> Items,
     decimal Subtotal,
@@ -43,7 +51,15 @@ public sealed record CartDto(
 {
     public int TotalQuantity => Items.Sum(i => i.Quantity);
     public bool IsEmpty => Items.Count == 0;
-    public bool CanCheckout => Items.Count > 0 && Items.All(i => i.IsAvailable && !i.ExceedsStock);
+
+    public IReadOnlyList<CartLineDto> SelectedItems => Items.Where(i => i.IsSelected).ToList();
+    public int SelectedQuantity => Items.Where(i => i.IsSelected).Sum(i => i.Quantity);
+    public bool HasSelection => Items.Any(i => i.IsSelected);
+
+    /// <summary>Every line that can be ordered is ticked (state of the "select all" box).</summary>
+    public bool AllSelected => Items.Any(i => i.IsPurchasable) && Items.Where(i => i.IsPurchasable).All(i => i.IsSelected);
+
+    public bool CanCheckout => HasSelection && SelectedItems.All(i => i.IsAvailable && !i.ExceedsStock);
 
     public static readonly CartDto Empty = new([], 0, 0, 0, null, null, []);
 }
@@ -57,7 +73,6 @@ public sealed class CheckoutCommand
     public string Email { get; set; } = string.Empty;
     public string AddressLine { get; set; } = string.Empty;
     public string Ward { get; set; } = string.Empty;
-    public string? District { get; set; }
     public string Province { get; set; } = string.Empty;
     public string? Note { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.COD;
@@ -160,7 +175,6 @@ public sealed class CustomerAddressCommand
     public string Phone { get; set; } = string.Empty;
     public string AddressLine { get; set; } = string.Empty;
     public string Ward { get; set; } = string.Empty;
-    public string? District { get; set; }
     public string Province { get; set; } = string.Empty;
     public bool IsDefault { get; set; }
 }

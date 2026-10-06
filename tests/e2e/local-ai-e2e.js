@@ -1,5 +1,6 @@
 // Assistant without an AI model (no AI:ApiKey): everyday questions answered from the store's own data, in the real widget.
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const BASE = process.env.BASE || 'https://localhost:7160';
 const EDGE = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 
@@ -107,8 +108,7 @@ const price = text => Number(text.replace(/[^\d]/g, ''));
     await customer.waitForFunction(() => [...document.querySelectorAll('[data-cart-count]')].some(b => b.textContent.trim() === '1'), { timeout: 10000 });
     await go(customer, '/checkout');
     await customer.type('#Command_AddressLine', '5 Đường Hỏi Trợ Lý');
-    await customer.select('#Command_Province', await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]));
-    await customer.$eval('#Command_Ward', i => { i.value = 'Phường 2'; });
+    await chooseAddress(customer);
     await click(customer, 'button[form="checkoutForm"]');
     const code = await customer.$eval('[data-order-code]', e => e.textContent.trim());
     await go(customer, '/');

@@ -1,5 +1,6 @@
 @model FurnitureStore.Web.ViewModels.Sales.AddressPageViewModel
 @{
+    var addressPicker = new FurnitureStore.Web.ViewModels.Sales.AddressPickerModel(Model.Command.Province, Model.Command.Ward, "col-sm-6", SmallLabels: true);
     ViewData["Title"] = "Sổ địa chỉ";
     var isEdit = Model.EditingId.HasValue;
 }
@@ -62,26 +63,7 @@
                                         <input asp-for="Command.Phone" class="form-control" type="tel" />
                                         <span asp-validation-for="Command.Phone" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-sm-7">
-                                        <label asp-for="Command.Province" class="form-label small">Tỉnh / Thành phố *</label>
-                                        <select asp-for="Command.Province" class="form-select">
-                                            <option value="">— Chọn —</option>
-                                            @foreach (var province in Model.Provinces)
-                                            {
-                                                <option value="@province">@province</option>
-                                            }
-                                        </select>
-                                        <span asp-validation-for="Command.Province" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <label asp-for="Command.Ward" class="form-label small">Phường / Xã *</label>
-                                        <input asp-for="Command.Ward" class="form-control" maxlength="100" />
-                                        <span asp-validation-for="Command.Ward" class="text-danger small"></span>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <label asp-for="Command.District" class="form-label small">Quận / Huyện</label>
-                                        <input asp-for="Command.District" class="form-control" maxlength="100" />
-                                    </div>
+                                    <partial name="_AddressPicker" model="addressPicker" />
                                     <div class="col-12">
                                         <label asp-for="Command.AddressLine" class="form-label small">Số nhà, tên đường *</label>
                                         <input asp-for="Command.AddressLine" class="form-control" maxlength="300" />
@@ -109,3 +91,7 @@
         </div>
     </div>
 </section>
+
+@section Scripts {
+    <script src="~/js/address-picker.js" asp-append-version="true"></script>
+}

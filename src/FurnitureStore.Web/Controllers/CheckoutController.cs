@@ -34,6 +34,12 @@ public sealed class CheckoutController(
             return Redirect("/cart");
         }
 
+        if (!cartDto.HasSelection)
+        {
+            TempData[CartController.MessageKey] = "Lỗi: Vui lòng tích chọn sản phẩm muốn đặt.";
+            return Redirect("/cart");
+        }
+
         var saved = await addresses.ListAsync(UserId, cancellationToken);
         var user = await userManager.GetUserAsync(User);
         var preferred = saved.FirstOrDefault(a => a.IsDefault) ?? saved.FirstOrDefault();
@@ -45,7 +51,6 @@ public sealed class CheckoutController(
             Email = user?.Email ?? string.Empty,
             AddressLine = preferred?.AddressLine ?? string.Empty,
             Ward = preferred?.Ward ?? string.Empty,
-            District = preferred?.District,
             Province = preferred?.Province ?? string.Empty,
             SaveAddress = saved.Count == 0
         };
@@ -81,8 +86,9 @@ public sealed class CheckoutController(
         }
 
         var cartDto = await cart.GetAsync(new CartOwner(UserId, null), cancellationToken);
-        if (cartDto.IsEmpty)
+        if (!cartDto.HasSelection)
         {
+            TempData[CartController.MessageKey] = "Lỗi: Vui lòng tích chọn sản phẩm muốn đặt.";
             return Redirect("/cart");
         }
 

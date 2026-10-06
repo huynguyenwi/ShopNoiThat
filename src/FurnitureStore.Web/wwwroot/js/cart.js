@@ -34,7 +34,8 @@
         const original = button.innerHTML;
         button.disabled = true;
         button.textContent = buyNow ? 'Đang chuyển...' : 'Đang thêm...';
-        const result = await FS.api('/api/cart', { method: 'POST', body: purchase });
+        // "Liên hệ đặt hàng" orders this product alone: the rest of the cart stays for later.
+        const result = await FS.api('/api/cart', { method: 'POST', body: Object.assign({ buyNow: buyNow }, purchase) });
         button.disabled = false;
         button.innerHTML = original;
 
@@ -109,6 +110,53 @@
             event.target.form.submit();
         }
     });
+
+    // Cart page: ticking lines (only ticked lines are ordered). Saved through the API, then the cart body is reloaded in
+    // place so the totals follow without the page jumping. Without JavaScript the same forms post normally.
+    const cartContent = document.querySelector('[data-cart-content]');
+    let selecting = false;
+
+    async function select(url, selected, box) {
+        if (selecting) return;
+        selecting = true;
+        cartContent.setAttribute('aria-busy', 'true');
+        const result = await FS.api(url, { method: 'PUT', body: { selected: selected } });
+        if (!result.success) {
+            box.checked = !selected;
+            FS.toast((result.errors && result.errors[0]) || result.message, 'error');
+        } else {
+            try {
+                const response = await fetch('/cart/content', { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (response.ok) {
+                    const focusId = box.id;
+                    cartContent.innerHTML = await response.text();
+                    // A message of the previous request ("Vui lòng tích chọn...") no longer applies.
+                    const status = document.querySelector('[data-cart-status]');
+                    if (status) status.replaceChildren();
+                    const again = document.getElementById(focusId);
+                    if (again) again.focus(); // keyboard users stay where they were
+                } else {
+                    window.location.reload();
+                }
+            } catch (e) {
+                window.location.reload();
+            }
+        }
+        cartContent.removeAttribute('aria-busy');
+        selecting = false;
+    }
+
+    if (cartContent) {
+        cartContent.addEventListener('change', function (event) {
+            const line = event.target.closest('[data-cart-select]');
+            if (line) {
+                select('/api/cart/items/' + encodeURIComponent(line.getAttribute('data-cart-select')) + '/selected', line.checked, line);
+                return;
+            }
+            const all = event.target.closest('[data-cart-select-all]');
+            if (all) select('/api/cart/selected', all.checked, all);
+        });
+    }
 
     // Highlight hearts of products already in the wishlist.
     if (signedIn && document.querySelector('[data-wishlist-product]')) {

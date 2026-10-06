@@ -57,10 +57,17 @@ public sealed class OrderService(
         var order = await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             var cart = await carts.GetAsync(owner, ct);
-            var lines = cart is null ? [] : await carts.GetLinesAsync(cart.Id, ct);
-            if (cart is null || lines.Count == 0)
+            var allLines = cart is null ? [] : await carts.GetLinesAsync(cart.Id, ct);
+            if (cart is null || allLines.Count == 0)
             {
                 throw new BusinessRuleException("Giỏ hàng của bạn đang trống.");
+            }
+
+            // Only the ticked lines are ordered; the others stay in the cart.
+            var lines = allLines.Where(l => l.IsSelected).ToList();
+            if (lines.Count == 0)
+            {
+                throw new BusinessRuleException("Vui lòng tích chọn sản phẩm muốn đặt trong giỏ hàng.");
             }
 
             var unavailable = lines.FirstOrDefault(l => !l.IsAvailable);
@@ -147,7 +154,6 @@ public sealed class OrderService(
                 Email = newOrder.CustomerEmail,
                 AddressLine = command.AddressLine.Trim(),
                 Ward = command.Ward.Trim(),
-                District = string.IsNullOrWhiteSpace(command.District) ? null : command.District.Trim(),
                 Province = command.Province.Trim()
             });
             newOrder.StatusHistory.Add(new OrderStatusHistory
@@ -178,7 +184,7 @@ public sealed class OrderService(
                 await couponUsages.AddAsync(new CouponUsage { Coupon = coupon, Order = newOrder, UserId = userId, DiscountAmount = discount, UsedAt = now }, ct);
             }
 
-            cart.Clear();
+            cart.RemoveOrdered(lines.Select(l => l.ItemId).ToList());
             if (command.SaveAddress)
             {
                 await SaveAddressAsync(userId, command, ct);
@@ -301,7 +307,6 @@ public sealed class OrderService(
             Phone = command.Phone.Trim(),
             AddressLine = command.AddressLine.Trim(),
             Ward = command.Ward.Trim(),
-            District = string.IsNullOrWhiteSpace(command.District) ? null : command.District.Trim(),
             Province = command.Province.Trim(),
             IsDefault = existing.Count == 0
         }, cancellationToken);

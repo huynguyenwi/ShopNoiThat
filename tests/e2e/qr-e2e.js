@@ -6,6 +6,7 @@ const path = require('path');
 const https = require('https');
 const { execSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const jsQR = require('jsqr');
 const { PNG } = require('pngjs');
 const BASE = process.env.BASE || 'https://localhost:7160';
@@ -134,8 +135,7 @@ async function register(page, who) {
     await customer.waitForFunction(() => { const b = document.querySelector('[data-cart-count]'); return b && b.textContent.trim() === '1'; }, { timeout: 10000 });
     await go(customer, '/checkout');
     await customer.type('#Command_AddressLine', '12 Đường Quét Mã');
-    await customer.select('#Command_Province', await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]));
-    await customer.$eval('#Command_Ward', i => { i.value = 'Phường 1'; });
+    await chooseAddress(customer);
     await click(customer, 'button[form="checkoutForm"]');
     const code = await customer.$eval('[data-order-code]', e => e.textContent.trim());
     const orderId = sql(`SELECT Id FROM Orders WHERE OrderCode='${code}'`);

@@ -10,7 +10,12 @@ public interface ICartService
 {
     Task<CartDto> GetAsync(CartOwner owner, CancellationToken cancellationToken = default);
     Task<int> CountAsync(CartOwner owner, CancellationToken cancellationToken = default);
-    Task<CartDto> AddAsync(CartOwner owner, int variantId, int quantity, CancellationToken cancellationToken = default);
+    /// <param name="selectOnly">Order this product alone ("Liên hệ đặt hàng" on a product page): the other lines are unticked.</param>
+    Task<CartDto> AddAsync(CartOwner owner, int variantId, int quantity, bool selectOnly = false, CancellationToken cancellationToken = default);
+    Task<CartDto> SetSelectedAsync(CartOwner owner, int itemId, bool selected, CancellationToken cancellationToken = default);
+
+    /// <summary>Ticks every line that can be ordered, or unticks all.</summary>
+    Task<CartDto> SelectAllAsync(CartOwner owner, bool selected, CancellationToken cancellationToken = default);
     Task<CartDto> UpdateQuantityAsync(CartOwner owner, int itemId, int quantity, CancellationToken cancellationToken = default);
     Task<CartDto> RemoveAsync(CartOwner owner, int itemId, CancellationToken cancellationToken = default);
     Task<CartDto> ApplyCouponAsync(CartOwner owner, string code, CancellationToken cancellationToken = default);
@@ -46,7 +51,7 @@ public sealed class CartService(
     public Task<int> CountAsync(CartOwner owner, CancellationToken cancellationToken = default) =>
         owner.IsEmpty ? Task.FromResult(0) : carts.CountItemsAsync(owner, cancellationToken);
 
-    public async Task<CartDto> AddAsync(CartOwner owner, int variantId, int quantity, CancellationToken cancellationToken = default)
+    public async Task<CartDto> AddAsync(CartOwner owner, int variantId, int quantity, bool selectOnly = false, CancellationToken cancellationToken = default)
     {
         EnsureOwner(owner);
         if (quantity is < 1 or > Cart.MaxQuantityPerItem)
@@ -77,6 +82,48 @@ public sealed class CartService(
         }
 
         cart.AddItem(variantId, quantity, timeProvider.GetUtcNow().UtcDateTime);
+        if (selectOnly)
+        {
+            cart.SelectOnly(variantId);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await BuildAsync(cart, owner, cancellationToken);
+    }
+
+    public async Task<CartDto> SetSelectedAsync(CartOwner owner, int itemId, bool selected, CancellationToken cancellationToken = default)
+    {
+        var cart = await GetRequiredCartAsync(owner, cancellationToken);
+        if (cart.Items.All(i => i.Id != itemId))
+        {
+            throw new NotFoundException("Sản phẩm không có trong giỏ hàng.");
+        }
+
+        if (selected)
+        {
+            var line = (await carts.GetLinesAsync(cart.Id, cancellationToken)).Single(l => l.ItemId == itemId);
+            if (!line.IsPurchasable)
+            {
+                throw new BusinessRuleException($"\"{line.ProductName}\" {(line.IsAvailable ? "đã hết hàng" : "không còn bán")}, chưa thể đặt.");
+            }
+        }
+
+        cart.SetSelected(itemId, selected);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await BuildAsync(cart, owner, cancellationToken);
+    }
+
+    public async Task<CartDto> SelectAllAsync(CartOwner owner, bool selected, CancellationToken cancellationToken = default)
+    {
+        var cart = await GetRequiredCartAsync(owner, cancellationToken);
+        var purchasable = selected
+            ? (await carts.GetLinesAsync(cart.Id, cancellationToken)).Where(l => l.IsPurchasable).Select(l => l.ItemId).ToHashSet()
+            : [];
+        foreach (var item in cart.Items)
+        {
+            item.IsSelected = purchasable.Contains(item.Id);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await BuildAsync(cart, owner, cancellationToken);
     }
@@ -126,7 +173,7 @@ public sealed class CartService(
 
         var coupon = await coupons.GetByCodeAsync(normalized, cancellationToken) ?? throw new BusinessRuleException("Mã giảm giá không tồn tại.");
         var lines = await carts.GetLinesAsync(cart.Id, cancellationToken);
-        var subtotal = lines.Where(l => l.IsAvailable).Sum(l => l.LineTotal);
+        var subtotal = lines.Where(l => l.IsSelected && l.IsAvailable).Sum(l => l.LineTotal);
         var usedByUser = owner.UserId is null ? 0 : await coupons.CountUsageByUserAsync(coupon.Id, owner.UserId, cancellationToken);
         var reason = coupon.GetInvalidReason(subtotal, timeProvider.GetUtcNow().UtcDateTime, usedByUser);
         if (reason is not null)
@@ -236,7 +283,8 @@ public sealed class CartService(
     {
         var lines = await carts.GetLinesAsync(cart.Id, cancellationToken);
         var warnings = new List<string>();
-        foreach (var line in lines)
+        // Only ticked lines are ordered, so only they can block the order.
+        foreach (var line in lines.Where(l => l.IsSelected))
         {
             if (!line.IsAvailable)
             {
@@ -252,7 +300,7 @@ public sealed class CartService(
             }
         }
 
-        var subtotal = lines.Where(l => l.IsAvailable).Sum(l => l.LineTotal);
+        var subtotal = lines.Where(l => l.IsSelected && l.IsAvailable).Sum(l => l.LineTotal);
         decimal discount = 0;
         string? couponMessage = null;
 

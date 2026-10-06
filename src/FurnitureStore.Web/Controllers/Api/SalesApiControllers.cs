@@ -14,6 +14,15 @@ public sealed class AddToCartRequest
 
     [Range(1, 99, ErrorMessage = "Số lượng phải từ 1 đến 99.")]
     public int Quantity { get; set; } = 1;
+
+    /// <summary>"Liên hệ đặt hàng" on the product page: tick this line only, the rest of the cart waits.</summary>
+    public bool BuyNow { get; set; }
+}
+
+public sealed class SelectCartItemsRequest
+{
+    [Required(ErrorMessage = "Vui lòng cho biết chọn hay bỏ chọn.")]
+    public bool? Selected { get; set; }
 }
 
 public sealed class UpdateCartItemRequest
@@ -52,7 +61,17 @@ public sealed class CartApiController(ICartService cart, CartOwnerResolver owner
     /// <summary>POST /api/cart { variantId, quantity }</summary>
     [HttpPost("")]
     public async Task<IActionResult> Add([FromBody] AddToCartRequest request, CancellationToken cancellationToken) =>
-        OkResponse(await cart.AddAsync(owners.Resolve(createIfMissing: true), request.VariantId, request.Quantity, cancellationToken), "Đã thêm vào giỏ hàng.");
+        OkResponse(await cart.AddAsync(owners.Resolve(createIfMissing: true), request.VariantId, request.Quantity, request.BuyNow, cancellationToken), "Đã thêm vào giỏ hàng.");
+
+    /// <summary>PUT /api/cart/items/{id}/selected { selected } - ticked lines are the ones ordered.</summary>
+    [HttpPut("items/{id:int}/selected")]
+    public async Task<IActionResult> Select(int id, [FromBody] SelectCartItemsRequest request, CancellationToken cancellationToken) =>
+        OkResponse(await cart.SetSelectedAsync(owners.Resolve(), id, request.Selected!.Value, cancellationToken), "Đã cập nhật sản phẩm được chọn.");
+
+    /// <summary>PUT /api/cart/selected { selected } - tick every line that can be ordered, or untick all.</summary>
+    [HttpPut("selected")]
+    public async Task<IActionResult> SelectAll([FromBody] SelectCartItemsRequest request, CancellationToken cancellationToken) =>
+        OkResponse(await cart.SelectAllAsync(owners.Resolve(), request.Selected!.Value, cancellationToken), "Đã cập nhật sản phẩm được chọn.");
 
     /// <summary>PUT /api/cart/items/{id} { quantity } - 0 removes the item.</summary>
     [HttpPut("items/{id:int}")]

@@ -5,6 +5,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const BASE = process.env.BASE || 'https://localhost:7160';
 const DB = process.env.DB || 'FurnitureStoreDb';
 const EDGE = (process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe');
@@ -126,9 +127,7 @@ async function login(page, email, password) {
     await page.type('#Command_FullName', 'Khách Kiểm Thử DoD');
     await page.$eval('#Command_Phone', i => { i.value = ''; });
     await page.type('#Command_Phone', '0912345678');
-    const province = await page.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]);
-    await page.select('#Command_Province', province);
-    await page.type('#Command_Ward', 'Phường Bến Nghé');
+    await chooseAddress(page, 'TP. Hồ Chí Minh', 'Phường Sài Gòn');
     await page.type('#Command_AddressLine', '12 Lê Lợi');
     await submit(page, 'button[form="checkoutForm"]'); // the order button sits in the summary column
     const orderCode = await page.$eval('[data-order-code]', e => e.textContent.trim()).catch(() => null);

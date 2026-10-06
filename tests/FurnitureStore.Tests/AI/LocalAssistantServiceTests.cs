@@ -74,7 +74,7 @@ public sealed class LocalAssistantServiceTests : IAsyncLifetime
         var placed = await Run(sp => sp.GetRequiredService<IOrderService>().PlaceOrderAsync(userId, new CheckoutCommand
         {
             FullName = "Khách Test", Phone = "0912345678", Email = "test@example.com", AddressLine = "12 Lê Lợi",
-            Ward = "Phường Bến Nghé", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
+            Ward = "Phường Sài Gòn", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
         }));
 
         var mine = await AskAsync("đơn hàng của tôi đến đâu rồi?", new AiCaller(userId, null));

@@ -2,6 +2,7 @@
 // (AJAX, typed address kept), place an order; admin sees the usage, switches the code off, cancelling releases the use.
 const { execSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
+const { chooseAddress } = require('./lib/address');
 const BASE = process.env.BASE || 'https://localhost:7160';
 const DB = process.env.DB || 'FurnitureStoreDb';
 const EDGE = process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
@@ -130,9 +131,7 @@ async function toast(page) {
     await phone.close();
 
     // Place the order
-    const province = await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]);
-    await customer.select('#Command_Province', province);
-    await customer.$eval('#Command_Ward', i => { i.value = 'Phường Bến Nghé'; });
+    await chooseAddress(customer, 'TP. Hồ Chí Minh', 'Phường Sài Gòn');
     await click(customer, 'button[form="checkoutForm"]');
     const orderCode = await text(customer, '[data-order-code]');
     const order = sql(`SELECT CONCAT(CouponCode,'|',DiscountAmount,'|',Status) FROM Orders WHERE OrderCode='${orderCode}'`);

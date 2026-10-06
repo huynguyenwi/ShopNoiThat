@@ -12,9 +12,11 @@ public sealed class CheckoutCommandValidator : AbstractValidator<CheckoutCommand
             .Matches(ValidationPatterns.VietnamesePhone).WithMessage(ValidationPatterns.VietnamesePhoneMessage);
         RuleFor(x => x.Email).NotEmpty().WithMessage("Vui lòng nhập email.").EmailAddress().WithMessage("Email không hợp lệ.").MaximumLength(256);
         RuleFor(x => x.AddressLine).NotEmpty().WithMessage("Vui lòng nhập số nhà, tên đường.").MaximumLength(300);
-        RuleFor(x => x.Ward).NotEmpty().WithMessage("Vui lòng nhập phường / xã.").MaximumLength(100);
-        RuleFor(x => x.District).MaximumLength(100);
         RuleFor(x => x.Province).Must(VietnamProvinces.IsValid).WithMessage("Vui lòng chọn tỉnh / thành phố.");
+        RuleFor(x => x.Ward).NotEmpty().WithMessage("Vui lòng chọn phường / xã.")
+            .Must((command, ward) => VietnamProvinces.IsValidWard(command.Province, ward))
+            .WithMessage(command => $"Phường / xã này không thuộc {command.Province}. Vui lòng chọn lại.")
+            .When(command => VietnamProvinces.IsValid(command.Province), ApplyConditionTo.CurrentValidator);
         RuleFor(x => x.Note).MaximumLength(1000).WithMessage("Ghi chú tối đa 1.000 ký tự.");
         RuleFor(x => x.PaymentMethod).IsInEnum().WithMessage("Phương thức thanh toán không hợp lệ.");
     }
@@ -29,8 +31,10 @@ public sealed class CustomerAddressCommandValidator : AbstractValidator<Customer
         RuleFor(x => x.Phone).NotEmpty().WithMessage("Vui lòng nhập số điện thoại.")
             .Matches(ValidationPatterns.VietnamesePhone).WithMessage(ValidationPatterns.VietnamesePhoneMessage);
         RuleFor(x => x.AddressLine).NotEmpty().WithMessage("Vui lòng nhập số nhà, tên đường.").MaximumLength(300);
-        RuleFor(x => x.Ward).NotEmpty().WithMessage("Vui lòng nhập phường / xã.").MaximumLength(100);
-        RuleFor(x => x.District).MaximumLength(100);
         RuleFor(x => x.Province).Must(VietnamProvinces.IsValid).WithMessage("Vui lòng chọn tỉnh / thành phố.");
+        RuleFor(x => x.Ward).NotEmpty().WithMessage("Vui lòng chọn phường / xã.")
+            .Must((command, ward) => VietnamProvinces.IsValidWard(command.Province, ward))
+            .WithMessage(command => $"Phường / xã này không thuộc {command.Province}. Vui lòng chọn lại.")
+            .When(command => VietnamProvinces.IsValid(command.Province), ApplyConditionTo.CurrentValidator);
     }
 }

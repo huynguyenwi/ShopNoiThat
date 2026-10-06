@@ -5,7 +5,8 @@
     if (!form) return;
     const summary = document.querySelector('[data-checkout-summary]');
 
-    form.addEventListener('change', function (event) {
+    // "click" too: picking the saved address that is already selected (after editing the fields) fills it again.
+    function fillFromSavedAddress(event) {
         const radio = event.target.closest('[data-address-fill]');
         if (!radio) return;
         const set = function (name, value) {
@@ -15,16 +16,17 @@
         set('FullName', radio.dataset.name);
         set('Phone', radio.dataset.phone);
         set('AddressLine', radio.dataset.line);
-        set('Ward', radio.dataset.ward);
-        set('District', radio.dataset.district);
-        set('Province', radio.dataset.province);
-    });
+        if (window.FSAddress) window.FSAddress.set(radio.dataset.province, radio.dataset.ward);
+    }
+
+    form.addEventListener('change', fillFromSavedAddress);
+    form.addEventListener('click', fillFromSavedAddress);
 
     form.addEventListener('submit', function () {
         // The button sits in the summary column (outside the form, linked with form="checkoutForm").
         const button = document.querySelector('[data-submit-once]');
         if (!button) return;
-        setTimeout(function () { button.disabled = true; button.textContent = 'Đang đặt hàng...'; }, 0);
+        setTimeout(function () { button.disabled = true; button.textContent = 'Đang gửi yêu cầu...'; }, 0);
     });
 
     if (!summary || !window.FS) return;

@@ -8,7 +8,6 @@ public sealed class CheckoutViewModel
     public required CartDto Cart { get; init; }
     public required IReadOnlyList<CustomerAddressDto> SavedAddresses { get; init; }
     public required IReadOnlyList<CouponOfferDto> Offers { get; init; }
-    public IReadOnlyList<string> Provinces => VietnamProvinces.All;
     public CheckoutSummaryModel Summary => new(Cart, Offers);
 }
 
@@ -24,5 +23,4 @@ public sealed class AddressPageViewModel
     public required IReadOnlyList<CustomerAddressDto> Addresses { get; init; }
     public required CustomerAddressCommand Command { get; init; }
     public int? EditingId { get; init; }
-    public IReadOnlyList<string> Provinces => VietnamProvinces.All;
 }

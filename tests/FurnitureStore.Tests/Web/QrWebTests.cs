@@ -48,7 +48,7 @@ public sealed partial class QrWebTests(FurnitureStoreWebApplicationFactory facto
             ["Command.Phone"] = "0912345678",
             ["Command.Email"] = "qr@example.com",
             ["Command.Province"] = "TP. Hồ Chí Minh",
-            ["Command.Ward"] = "Phường Bến Nghé",
+            ["Command.Ward"] = "Phường Sài Gòn",
             ["Command.AddressLine"] = "12 Lê Lợi",
             ["Command.PaymentMethod"] = "COD",
             ["Command.SaveAddress"] = "false"

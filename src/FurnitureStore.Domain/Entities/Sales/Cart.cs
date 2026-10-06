@@ -30,6 +30,7 @@ public class Cart : AuditableEntity
         if (existing is not null)
         {
             existing.Quantity = Math.Min(existing.Quantity + quantity, MaxQuantityPerItem);
+            existing.IsSelected = true; // added again: the customer wants it
             return existing;
         }
 
@@ -37,7 +38,8 @@ public class Cart : AuditableEntity
         {
             ProductVariantId = productVariantId,
             Quantity = Math.Min(quantity, MaxQuantityPerItem),
-            AddedAt = utcNow
+            AddedAt = utcNow,
+            IsSelected = true
         };
         Items.Add(item);
         return item;
@@ -61,6 +63,33 @@ public class Cart : AuditableEntity
     {
         var item = Items.FirstOrDefault(i => i.ProductVariantId == productVariantId);
         return item is not null && Items.Remove(item);
+    }
+
+    /// <summary>Ticks / unticks a line. Only ticked lines are ordered; the others stay in the cart.</summary>
+    public void SetSelected(int itemId, bool selected)
+    {
+        var item = Items.FirstOrDefault(i => i.Id == itemId) ?? throw new DomainException("Sản phẩm không có trong giỏ hàng.");
+        item.IsSelected = selected;
+    }
+
+    /// <summary>"Liên hệ đặt hàng" on a product page: order that product alone, keep the rest for later.</summary>
+    public void SelectOnly(int productVariantId)
+    {
+        foreach (var item in Items)
+        {
+            item.IsSelected = item.ProductVariantId == productVariantId;
+        }
+    }
+
+    /// <summary>After an order: its lines leave the cart, the others stay. The coupon was used by the order.</summary>
+    public void RemoveOrdered(IReadOnlyCollection<int> itemIds)
+    {
+        foreach (var item in Items.Where(i => itemIds.Contains(i.Id)).ToList())
+        {
+            Items.Remove(item);
+        }
+
+        CouponCode = null;
     }
 
     /// <summary>Moves every item of <paramref name="other"/> into this cart (used when a guest signs in).</summary>
@@ -91,4 +120,7 @@ public class CartItem : BaseEntity
 
     public int Quantity { get; set; }
     public DateTime AddedAt { get; set; }
+
+    /// <summary>Ticked for the next order (new lines are).</summary>
+    public bool IsSelected { get; set; } = true;
 }

@@ -1,0 +1,139 @@
+@model FurnitureStore.Application.Sales.CartDto
+@* Body of /cart. Also served alone by GET /cart/content: cart.js reloads it after a line is ticked / unticked, so the
+   page does not jump. Every action is a plain form post as well, for browsers without JavaScript. *@
+@{
+    var offers = ViewData["CouponOffers"] as IReadOnlyList<FurnitureStore.Application.Sales.CouponOfferDto> ?? [];
+    var couponBox = new FurnitureStore.Web.ViewModels.Sales.CouponBoxModel(Model, offers, "/cart");
+    var purchasable = Model.Items.Count(i => i.IsPurchasable);
+}
+@if (Model.IsEmpty)
+{
+    <div class="empty-state">
+        <i class="bi bi-bag" aria-hidden="true"></i>
+        <h2 class="h5 mt-3">Giỏ hàng của bạn đang trống</h2>
+        <p class="text-muted-fs">Khám phá các mẫu nội thất gỗ và thêm sản phẩm yêu thích vào giỏ.</p>
+        <a class="btn btn-primary" href="/products">Tiếp tục mua sắm</a>
+    </div>
+}
+else
+{
+    @foreach (var warning in Model.Warnings)
+    {
+        <div class="alert alert-warning py-2 d-flex gap-2" role="alert"><i class="bi bi-exclamation-triangle mt-1" aria-hidden="true"></i>@warning</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <form class="cart-select-all" method="post" action="/cart/select-all" asp-antiforgery="true">
+                <input type="hidden" name="selected" value="@(Model.AllSelected ? "false" : "true")" />
+                <input class="form-check-input" type="checkbox" id="cartSelectAll" checked="@Model.AllSelected" disabled="@(purchasable == 0)" data-cart-select-all />
+                <label class="form-check-label fw-semibold" for="cartSelectAll">Chọn tất cả (@purchasable)</label>
+                <noscript><button type="submit" class="btn btn-link btn-sm p-0">@(Model.AllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả")</button></noscript>
+                <span class="ms-auto small text-muted-fs" data-cart-selected-count>Đã chọn @Model.SelectedQuantity / @Model.TotalQuantity sản phẩm</span>
+            </form>
+
+            <div class="cart-list">
+                @foreach (var line in Model.Items)
+                {
+                    var state = !line.IsAvailable ? "Ngừng bán" : line.Stock == 0 ? "Hết hàng" : null;
+                    <article class="cart-line @(line.IsAvailable ? "" : "is-unavailable") @(line.IsSelected ? "is-selected" : "")" id="line-@line.ItemId" data-cart-line="@line.ItemId">
+                        <form class="cart-line-select" method="post" action="/cart/items/@line.ItemId/select" asp-antiforgery="true">
+                            <input type="hidden" name="selected" value="@(line.IsSelected ? "false" : "true")" />
+                            <input class="form-check-input" type="checkbox" id="select-@line.ItemId" checked="@line.IsSelected"
+                                   disabled="@(!line.IsPurchasable && !line.IsSelected)" data-cart-select="@line.ItemId" />
+                            <label class="visually-hidden" for="select-@line.ItemId">Chọn @line.ProductName (@line.VariantName) để đặt hàng</label>
+                            <noscript><button type="submit" class="btn btn-link btn-sm p-0">@(line.IsSelected ? "Bỏ chọn" : "Chọn")</button></noscript>
+                        </form>
+                        <a class="cart-line-image" href="@line.Url">
+                            @if (line.ImageUrl is not null)
+                            {
+                                <img src="@line.ImageUrl" alt="@line.ProductName" width="120" height="90" loading="lazy" />
+                            }
+                        </a>
+                        <div class="cart-line-info">
+                            <h2 class="cart-line-title"><a href="@line.Url">@line.ProductName</a></h2>
+                            <div class="small text-muted-fs">
+                                @line.VariantName · SKU @line.Sku
+                                @if (line.MaterialName is not null)
+                                {
+                                    <span> · @line.MaterialName</span>
+                                }
+                            </div>
+                            <div class="cart-line-price">
+                                <span class="fw-semibold">@Format.Money(line.UnitPrice)</span>
+                                @if (line.OriginalPrice.HasValue)
+                                {
+                                    <span class="price-old">@Format.Money(line.OriginalPrice.Value)</span>
+                                }
+                            </div>
+                            @if (state is not null)
+                            {
+                                <span class="badge text-bg-secondary mt-1">@state</span>
+                            }
+                            else if (line.Stock <= 3)
+                            {
+                                <div class="small text-warning-emphasis">Chỉ còn @line.Stock sản phẩm</div>
+                            }
+                        </div>
+                        <div class="cart-line-actions">
+                            <div class="quantity-stepper quantity-stepper-sm">
+                                <form method="post" action="/cart/items/@line.ItemId/quantity" asp-antiforgery="true">
+                                    <input type="hidden" name="quantity" value="@(line.Quantity - 1)" />
+                                    <button type="submit" class="btn" aria-label="Giảm số lượng @line.ProductName"><i class="bi bi-dash" aria-hidden="true"></i></button>
+                                </form>
+                                <form method="post" action="/cart/items/@line.ItemId/quantity" asp-antiforgery="true">
+                                    <label class="visually-hidden" for="qty-@line.ItemId">Số lượng @line.ProductName</label>
+                                    <input id="qty-@line.ItemId" type="number" name="quantity" value="@line.Quantity" min="0" max="@Math.Max(1, line.MaxQuantity)" inputmode="numeric" data-autosubmit-quantity />
+                                </form>
+                                <form method="post" action="/cart/items/@line.ItemId/quantity" asp-antiforgery="true">
+                                    <input type="hidden" name="quantity" value="@(line.Quantity + 1)" />
+                                    <button type="submit" class="btn" aria-label="Tăng số lượng @line.ProductName" disabled="@(line.Quantity >= line.MaxQuantity)"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                                </form>
+                            </div>
+                            <div class="cart-line-total">@Format.Money(line.LineTotal)</div>
+                            <form method="post" action="/cart/items/@line.ItemId/remove" asp-antiforgery="true">
+                                <button type="submit" class="btn btn-link btn-sm text-danger p-0"><i class="bi bi-trash me-1" aria-hidden="true"></i>Xóa</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+            <a class="btn btn-link mt-3 px-0" href="/products"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Tiếp tục mua sắm</a>
+        </div>
+
+        <div class="col-lg-4">
+            <aside class="order-summary sticky-lg-top">
+                <h2 class="h5 mb-3">Tóm tắt đơn hàng</h2>
+
+                <partial name="_CouponBox" model="couponBox" />
+
+                <dl class="summary-lines">
+                    <div><dt>Tạm tính (@Model.SelectedQuantity sản phẩm đã chọn)</dt><dd data-summary="subtotal">@Format.Money(Model.Subtotal)</dd></div>
+                    @if (Model.DiscountAmount > 0)
+                    {
+                        <div><dt>Giảm giá (@Model.CouponCode)</dt><dd class="text-success">-@Format.Money(Model.DiscountAmount)</dd></div>
+                    }
+                    <div><dt>Giao hàng &amp; lắp đặt</dt><dd class="text-muted-fs" data-summary="shipping">@Format.ShippingQuotedOnContact</dd></div>
+                    <div class="summary-total"><dt>Tổng tiền hàng</dt><dd data-summary="total">@Format.Money(Model.Total)</dd></div>
+                </dl>
+                <p class="small text-muted-fs"><i class="bi bi-truck me-1" aria-hidden="true"></i>Chưa gồm phí giao hàng &amp; lắp đặt: nhân viên báo phí theo địa chỉ khi gọi xác nhận đơn.</p>
+
+                @if (Model.CanCheckout)
+                {
+                    <a class="btn btn-primary btn-lg w-100" href="/checkout" data-cart-checkout><i class="bi bi-telephone me-1" aria-hidden="true"></i>Liên hệ đặt hàng (@Model.SelectedQuantity)</a>
+                }
+                else
+                {
+                    <button class="btn btn-primary btn-lg w-100" type="button" disabled data-cart-checkout>@(Model.HasSelection ? "Vui lòng cập nhật giỏ hàng" : "Chọn sản phẩm để đặt hàng")</button>
+                }
+                <p class="small text-muted-fs text-center mt-2 mb-0">
+                    @if (Model.SelectedQuantity < Model.TotalQuantity)
+                    {
+                        <span class="d-block mb-1">Sản phẩm không chọn vẫn được giữ trong giỏ hàng.</span>
+                    }
+                    <i class="bi bi-shield-check me-1" aria-hidden="true"></i>Không thanh toán trực tuyến · cửa hàng gọi xác nhận trước khi giao
+                </p>
+            </aside>
+        </div>
+    </div>
+}

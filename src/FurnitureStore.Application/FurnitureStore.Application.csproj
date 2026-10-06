@@ -22,4 +22,9 @@
     <InternalsVisibleTo Include="FurnitureStore.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- 34 provinces and 3,321 wards / communes in effect since 01/07/2025, used by VietnamProvinces. -->
+    <EmbeddedResource Include="Sales\Data\vietnam-administrative-units.json" LogicalName="FurnitureStore.Application.Sales.Data.vietnam-administrative-units.json" />
+  </ItemGroup>
+
 </Project>

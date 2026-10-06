@@ -5,9 +5,13 @@
 }
 @* Outside the checkout <form>: the coupon forms cannot be nested in it. checkout.js applies coupons through the API and
    reloads this partial (GET /checkout/summary), so what the customer typed in the form is kept. *@
-<h2 class="h5 mb-3">Đơn hàng (@cart.TotalQuantity sản phẩm)</h2>
+<h2 class="h5 mb-3">Đơn hàng (@cart.SelectedQuantity sản phẩm)</h2>
+@if (cart.SelectedQuantity < cart.TotalQuantity)
+{
+    <p class="small text-muted-fs mb-2">Chỉ đặt các sản phẩm đã chọn; @(cart.TotalQuantity - cart.SelectedQuantity) sản phẩm khác vẫn ở trong <a href="/cart">giỏ hàng</a>.</p>
+}
 <ul class="summary-items">
-    @foreach (var line in cart.Items)
+    @foreach (var line in cart.SelectedItems)
     {
         <li>
             <span class="summary-item-image">

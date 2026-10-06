@@ -69,7 +69,7 @@ public sealed class CouponServiceTests : IAsyncLifetime
         return await Orders(o => o.PlaceOrderAsync(owner.UserId!, new CheckoutCommand
         {
             FullName = "Nguyễn Văn Test", Phone = "0912345678", Email = "test@example.com", AddressLine = "12 Lê Lợi",
-            Ward = "Phường Bến Nghé", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
+            Ward = "Phường Sài Gòn", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
         }));
     }
 
@@ -308,7 +308,7 @@ public sealed class CouponServiceTests : IAsyncLifetime
         await Orders(o => o.PlaceOrderAsync(userId, new CheckoutCommand
         {
             FullName = "Nguyễn Văn Test", Phone = "0912345678", Email = "test@example.com", AddressLine = "12 Lê Lợi",
-            Ward = "Phường Bến Nghé", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
+            Ward = "Phường Sài Gòn", Province = "TP. Hồ Chí Minh", PaymentMethod = PaymentMethod.COD
         }));
 
         var cart = await FillCartAsync(owner);
