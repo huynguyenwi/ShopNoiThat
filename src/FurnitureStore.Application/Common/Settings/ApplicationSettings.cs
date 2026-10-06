@@ -12,7 +12,7 @@ public sealed class ApplicationSettings
     [Required]
     public string SiteName { get; set; } = "Nhà Mộc Furniture";
 
-    public string Tagline { get; set; } = "Không gian đẹp - Nội thất chất lượng";
+    public string Tagline { get; set; } = "Bàn ghế ăn gỗ sồi Nga - Đóng tại xưởng";
 
     /// <summary>Public base URL, used for absolute links (sitemap, Open Graph).</summary>
     [Required, Url]
@@ -20,6 +20,12 @@ public sealed class ApplicationSettings
 
     [Range(4, 100)]
     public int DefaultPageSize { get; set; } = 12;
+
+    /// <summary>
+    /// Category of the store's main product line ("bo-ban-an": dining sets): first section of the home page and a link in
+    /// the main menu. Empty, or a category that does not exist, hides both.
+    /// </summary>
+    public string? FocusCategorySlug { get; set; } = "bo-ban-an";
 
     [Required]
     public StoreSettings Store { get; set; } = new();

@@ -76,13 +76,17 @@
             {
                 <tr><td colspan="4" class="text-end">Giảm giá@(o.CouponCode is null ? "" : $" ({o.CouponCode})")</td><td class="text-end text-nowrap">-@Format.Money(o.DiscountAmount)</td></tr>
             }
-            <tr><td colspan="4" class="text-end">Giao hàng &amp; lắp đặt</td><td class="text-end text-nowrap">@(o.ShippingFee == 0 ? "Miễn phí" : Format.Money(o.ShippingFee))</td></tr>
+            <tr><td colspan="4" class="text-end">Giao hàng &amp; lắp đặt</td><td class="text-end text-nowrap">@Format.ShippingFee(o.ShippingFee, o.Status)</td></tr>
             <tr><td colspan="4" class="text-end fw-bold">Tổng cộng</td><td class="text-end text-nowrap fw-bold">@Format.Money(o.TotalAmount)</td></tr>
         </tfoot>
     </table>
 
     <div class="slip-cod mb-3" data-collect="@((long)toCollect)">
         @(toCollect > 0 ? $"Thu hộ (COD): {Format.Money(toCollect)}" : "Đã thanh toán — không thu tiền khi giao")
+        @if (toCollect > 0 && o.ShippingFee == 0 && o.Status == OrderStatus.Pending)
+        {
+            <span class="d-block small fw-normal">Chưa gồm phí giao hàng &amp; lắp đặt (chưa báo cho khách).</span>
+        }
     </div>
 
     <div class="row g-3">

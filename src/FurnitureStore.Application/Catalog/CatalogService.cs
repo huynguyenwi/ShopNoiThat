@@ -1,6 +1,8 @@
 using FurnitureStore.Application.Common.Interfaces;
 using FurnitureStore.Application.Common.Models;
+using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Domain.Entities;
+using Microsoft.Extensions.Options;
 
 namespace FurnitureStore.Application.Catalog;
 
@@ -27,6 +29,7 @@ public sealed class CatalogService(
     IRepository<ProductSize> sizes,
     IRepository<ProductStyle> styles,
     CatalogCache cache,
+    IOptions<ApplicationSettings> siteOptions,
     TimeProvider timeProvider) : ICatalogService
 {
     /// <summary>Products published within this period get the "Mới" badge.</summary>
@@ -152,7 +155,19 @@ public sealed class CatalogService(
                 }
             }
 
-            return new HomePageDto(featured, newest, bestSellers, onSale, rooms);
+            FocusSectionDto? focus = null;
+            var focusSlug = siteOptions.Value.FocusCategorySlug;
+            if (!string.IsNullOrWhiteSpace(focusSlug) && await FindCategoryAsync(focusSlug, cancellationToken) is { } focusCategory)
+            {
+                var ids = Flatten(focusCategory).Select(c => c.Id).ToList();
+                var items = await Take(new ProductQuery { Sort = ProductSort.BestSelling, PageSize = 8 }, ids);
+                if (items.Count > 0)
+                {
+                    focus = new FocusSectionDto(focusCategory, items, await products.GetSizesInUseAsync(ids, cancellationToken));
+                }
+            }
+
+            return new HomePageDto(featured, newest, bestSellers, onSale, rooms, focus);
         });
 
     public Task RecordViewAsync(int productId, CancellationToken cancellationToken = default) =>

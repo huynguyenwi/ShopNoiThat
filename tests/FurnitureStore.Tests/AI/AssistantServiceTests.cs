@@ -70,7 +70,7 @@ public sealed class AssistantServiceTests : IAsyncLifetime
         Assert.False(response.AiEnabled);
         Assert.NotEmpty(response.Products);
         Assert.Contains("bộ bàn ăn", response.Reply);
-        Assert.Contains("loại sản phẩm", response.Reply); // tells the customer the suggestions are alternatives
+        Assert.DoesNotContain("loại sản phẩm", response.Reply); // real dining sets fit the budget: no alternatives needed
         var ids = response.Products.Select(p => p.ProductId).ToList();
         var dbProducts = await Db(db => db.Products.Include(p => p.Category).Where(p => ids.Contains(p.Id)).ToListAsync());
         foreach (var card in response.Products)
@@ -78,8 +78,8 @@ public sealed class AssistantServiceTests : IAsyncLifetime
             var product = dbProducts.Single(p => p.Id == card.ProductId);
             Assert.Equal(product.DiscountPrice ?? product.BasePrice, card.Price); // price straight from the database
             Assert.Equal($"/products/{product.Slug}", card.Url);
-            // Only one dining set exists and it costs 20M: the assistant offers a table / chairs bought separately instead.
-            Assert.Contains(product.Category.Slug, new[] { "bo-ban-an", "ban-an", "ghe-an" });
+            Assert.Equal("bo-ban-an", product.Category.Slug);
+            Assert.True(card.Price <= 10_000_000m * 1.15m, $"{card.Name} {card.Price}");
             Assert.False(string.IsNullOrWhiteSpace(card.Reason));
         }
 

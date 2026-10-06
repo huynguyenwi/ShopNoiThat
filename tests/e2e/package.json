@@ -6,6 +6,7 @@
     "dod": "node dod-e2e.js",
     "coupon": "node coupon-e2e.js",
     "qr": "node qr-e2e.js",
+    "dining": "node dining-e2e.js",
     "forms": "node forms-resubmit.js",
     "chat": "node chat-e2e.js",
     "ai": "node ai-e2e.js",

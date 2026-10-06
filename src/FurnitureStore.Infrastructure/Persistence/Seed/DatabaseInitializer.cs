@@ -67,10 +67,21 @@ public sealed class DatabaseInitializer(
         await catalogSeeder.BackfillSearchTextAsync(cancellationToken);
     }
 
+    /// <summary>Tagline seeded by earlier versions; a store still using it never edited it, so it follows the configured one.</summary>
+    private const string FormerDefaultTagline = "Không gian đẹp - Nội thất chất lượng";
+
     private async Task SeedStoreInfoAsync(CancellationToken cancellationToken)
     {
-        if (await context.StoreInformation.AnyAsync(cancellationToken))
+        if (await context.StoreInformation.FirstOrDefaultAsync(cancellationToken) is { } existing)
         {
+            var tagline = applicationOptions.Value.Tagline;
+            if (existing.Tagline == FormerDefaultTagline && tagline != FormerDefaultTagline)
+            {
+                existing.Tagline = tagline;
+                await context.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Updated the unedited store tagline to the configured one");
+            }
+
             return;
         }
 

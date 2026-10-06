@@ -109,7 +109,6 @@ const price = text => Number(text.replace(/[^\d]/g, ''));
     await customer.type('#Command_AddressLine', '5 Đường Hỏi Trợ Lý');
     await customer.select('#Command_Province', await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]));
     await customer.$eval('#Command_Ward', i => { i.value = 'Phường 2'; });
-    await customer.click('input[name="Command.PaymentMethod"][value="COD"]');
     await click(customer, 'button[form="checkoutForm"]');
     const code = await customer.$eval('[data-order-code]', e => e.textContent.trim());
     await go(customer, '/');

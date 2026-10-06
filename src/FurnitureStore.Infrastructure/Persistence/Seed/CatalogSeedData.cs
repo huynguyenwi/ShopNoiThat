@@ -50,6 +50,20 @@ internal sealed record ProductSeed
 /// </summary>
 internal static class CatalogSeedData
 {
+    /// <summary>
+    /// Earlier default descriptions (SKU, old text, new text). A product still holding the old text was never edited by
+    /// an admin, so the seeder upgrades it - e.g. sentences promising free delivery, which the store no longer offers.
+    /// </summary>
+    public static readonly (string Sku, string Old, string New)[] DescriptionUpgrades =
+    [
+        ("KTV-SLIM",
+            "Thiết kế treo tường giúp sàn nhà thoáng, dễ lau dọn.\nTải trọng tối đa 40kg với bộ pát treo đi kèm; lắp đặt miễn phí nội thành.",
+            "Thiết kế treo tường giúp sàn nhà thoáng, dễ lau dọn.\nTải trọng tối đa 40kg với bộ pát treo đi kèm; thợ của xưởng khoan và lắp đặt tận nơi."),
+        ("BBA-FAMILY",
+            "Bộ Family gồm 1 bàn ăn chữ nhật và 6 ghế tựa nan, đồng bộ màu sơn.\nTiết kiệm khoảng 15% so với mua lẻ, giao và lắp đặt miễn phí.",
+            "Bộ Family gồm 1 bàn ăn chữ nhật và 6 ghế tựa nan, đồng bộ màu sơn.\nTiết kiệm khoảng 15% so với mua lẻ, thợ của xưởng giao và lắp đặt tận nơi.")
+    ];
+
     public static readonly CategorySeed[] Categories =
     [
         new("phong-khach", "Phòng khách", null, 1, "Sofa, bàn trà, kệ tivi và ghế thư giãn cho không gian sinh hoạt chung.", "bi-lamp", true),
@@ -99,6 +113,8 @@ internal static class CatalogSeedData
 
     public static readonly MaterialSeed[] Materials =
     [
+        new("go-soi-nga", "Gỗ sồi Nga", MaterialGroup.NaturalWood,
+            "Gỗ sồi Nga nhập khẩu nguyên khối, vân rõ và đều, cứng chắc, chịu lực tốt, ít cong vênh khi đã sấy đạt chuẩn - chất liệu chính cho bàn ghế ăn gia đình."),
         new("go-oc-cho", "Gỗ óc chó", MaterialGroup.NaturalWood, "Gỗ óc chó (Walnut) nhập khẩu, vân đẹp, màu nâu sô-cô-la sang trọng, rất bền."),
         new("go-soi", "Gỗ sồi", MaterialGroup.NaturalWood, "Gỗ sồi trắng (Oak) nhập khẩu, vân thẳng, cứng chắc, ít cong vênh."),
         new("go-tan-bi", "Gỗ tần bì", MaterialGroup.NaturalWood, "Gỗ tần bì (Ash) màu sáng, dẻo dai, phù hợp đồ uốn cong."),
@@ -156,6 +172,8 @@ internal static class CatalogSeedData
         new("ban-an-180", "1m8 (6 - 8 người)", 1800, 900, 750, FurnitureType.Table),
         new("ban-an-200", "2m (8 người)", 2000, 950, 750, FurnitureType.Table),
         new("ban-an-tron-120", "Tròn Ø1m2 (6 người)", 1200, 1200, 750, FurnitureType.Table),
+        new("set-4-ghe-120", "Bàn 1m2 + 4 ghế", 1200, 750, 750, FurnitureType.Table),
+        new("set-6-ghe-160", "Bàn 1m6 + 6 ghế", 1600, 850, 750, FurnitureType.Table),
         new("ban-lv-120", "1m2 x 60cm", 1200, 600, 750, FurnitureType.Table),
         new("ban-lv-140", "1m4 x 70cm", 1400, 700, 750, FurnitureType.Table),
         new("ban-lv-160", "1m6 x 80cm", 1600, 800, 750, FurnitureType.Table)
@@ -275,7 +293,7 @@ internal static class CatalogSeedData
             LengthMm = 1600, WidthMm = 350, HeightMm = 300, WeightKg = 22,
             ShortDescription = "Kệ tivi treo tường mỏng nhẹ, tiết kiệm diện tích, MDF lõi xanh chống ẩm.",
             Description = "Thiết kế treo tường giúp sàn nhà thoáng, dễ lau dọn.\n" +
-                          "Tải trọng tối đa 40kg với bộ pát treo đi kèm; lắp đặt miễn phí nội thành.",
+                          "Tải trọng tối đa 40kg với bộ pát treo đi kèm; thợ của xưởng khoan và lắp đặt tận nơi.",
             Materials = [new("mdf-chong-am")],
             Colors = [new("trang"), new("xam"), new("van-soi")],
             Sizes = [new("ke-tivi-160"), new("ke-tivi-200", 900_000)]
@@ -389,6 +407,90 @@ internal static class CatalogSeedData
             SecondaryMaterials = [new("kinh-cuong-luc", "Gương")]
         },
 
+        // ---------------- Phòng ăn: bộ bàn ăn gỗ sồi Nga (mặt hàng chính) ----------------
+        new()
+        {
+            Sku = "BBA-ANGIA", Name = "Bộ bàn ăn gỗ sồi Nga An Gia", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Modern", Shape = "dining-set", BasePrice = 7_900_000, Featured = true, Sold = 86, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 55,
+            ShortDescription = "Bàn chữ nhật bo góc, ghế tựa cong ôm lưng; gỗ sồi Nga màu óc chó, có bản 4 ghế và 6 ghế.",
+            Description = "Mặt bàn gỗ sồi Nga dày 2,5cm, cạnh vát mỏng nhẹ nhàng; chân bàn vát côn vững chắc.\n" +
+                          "Ghế tựa lưng cong ôm người, mặt ngồi gỗ liền dễ lau chùi. Sơn PU màu óc chó chống thấm, chống trầy nhẹ.\n" +
+                          "Bản bàn 1m2 + 4 ghế hợp căn hộ nhỏ; bản bàn 1m6 + 6 ghế cho gia đình 5 - 6 người.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 4_000_000)]
+        },
+        new()
+        {
+            Sku = "BBA-PHUCLOC", Name = "Bộ bàn ăn gỗ sồi Nga Phúc Lộc", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Classic", Shape = "dining-set", BasePrice = 8_500_000, Featured = true, Sold = 58, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 60,
+            ShortDescription = "Kiểu cổ điển, chân bàn tiện tròn, ghế tựa nan đứng; gỗ sồi Nga màu óc chó trầm ấm.",
+            Description = "Chân bàn tiện tròn và diềm bàn soi chỉ tạo nét cổ điển; ghế tựa nan đứng vững chãi.\n" +
+                          "Gỗ sồi Nga sấy đạt độ ẩm 10 - 12%, liên kết mộng kết hợp ke góc nên bàn ghế không lung lay khi dùng lâu.\n" +
+                          "Màu óc chó trầm ấm, hợp nhà phố và căn hộ phong cách truyền thống.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 4_400_000)]
+        },
+        new()
+        {
+            Sku = "BBA-MOCNHIEN", Name = "Bộ bàn ăn gỗ sồi Nga Mộc Nhiên", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Japandi", Shape = "dining-set", BasePrice = 9_200_000, Sold = 41, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 56,
+            ShortDescription = "Phong cách Japandi mộc và tĩnh, ghế tựa lưng thang thoáng nhẹ; màu óc chó hoặc màu gỗ tự nhiên.",
+            Description = "Đường nét tối giản: chân bàn dạng khung chữ nhật, ghế tựa lưng thang thoáng nhẹ.\n" +
+                          "Có hai màu: óc chó trầm và màu gỗ tự nhiên sáng, đều hoàn thiện sơn PU gốc nước an toàn.\n" +
+                          "Hợp không gian nhiều cây xanh và ánh sáng tự nhiên.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho"), new("go-tu-nhien")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 4_600_000)]
+        },
+        new()
+        {
+            Sku = "BBA-TAMAN", Name = "Bộ bàn ăn gỗ sồi Nga Tâm An", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Minimalist", Shape = "dining-set", BasePrice = 6_900_000, SalePercent = 5, Sold = 112, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 50,
+            ShortDescription = "Mẫu tối giản giá tốt: bàn chân thẳng, ghế tựa trơn, gỗ sồi Nga nguyên khối màu óc chó.",
+            Description = "Thiết kế tối giản với bàn chân thẳng và ghế tựa trơn giúp tiết kiệm chi phí mà vẫn dùng gỗ sồi Nga nguyên khối.\n" +
+                          "Mặt bàn sơn PU màu óc chó chống thấm, dễ lau sau bữa ăn.\n" +
+                          "Phù hợp căn hộ, nhà mới cần một bộ bàn ăn bền và gọn.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 3_600_000)]
+        },
+        new()
+        {
+            Sku = "BBA-THINHGIA", Name = "Bộ bàn ăn mặt đá gỗ sồi Nga Thịnh Gia", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Luxury", Shape = "dining-set", BasePrice = 11_500_000, Featured = true, Sold = 33, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 68,
+            ShortDescription = "Mặt đá ceramic vân trắng chịu nhiệt, khung bàn và ghế gỗ sồi Nga màu óc chó.",
+            Description = "Mặt đá ceramic vân trắng chịu nhiệt, chống trầy, không thấm dầu mỡ - đặt nồi nóng trực tiếp được.\n" +
+                          "Khung bàn và ghế bằng gỗ sồi Nga sơn màu óc chó, tương phản sang trọng với mặt đá.\n" +
+                          "Mặt đá dán trên khung gỗ đỡ toàn mặt, hạn chế nứt vỡ khi va chạm.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 5_400_000)],
+            SecondaryMaterials = [new("da-ceramic", "Mặt bàn")],
+            SecondaryColors = [new("trang-van-da", "Mặt bàn")]
+        },
+        new()
+        {
+            Sku = "BBA-BINHMINH", Name = "Bộ bàn ăn gỗ sồi Nga ghế nệm Bình Minh", CategorySlug = "bo-ban-an", Type = FurnitureType.Table,
+            StyleCode = "Scandinavian", Shape = "dining-set", BasePrice = 9_800_000, Sold = 47, WarrantyMonths = 24,
+            LengthMm = 1200, WidthMm = 750, HeightMm = 750, WeightKg = 58,
+            ShortDescription = "Ghế nệm vải bố màu kem êm ái, bàn gỗ sồi Nga màu óc chó chân chữ A kiểu Bắc Âu.",
+            Description = "Ghế có nệm ngồi và tựa lưng bọc vải bố màu kem, mút D40 êm, ngồi lâu không xẹp; vỏ nệm tháo ra vệ sinh được.\n" +
+                          "Bàn gỗ sồi Nga chân chữ A kiểu Bắc Âu, màu óc chó ấm.\n" +
+                          "Hợp gia đình có người lớn tuổi, thích ngồi ăn và trò chuyện lâu.",
+            Materials = [new("go-soi-nga")],
+            Colors = [new("nau-oc-cho")],
+            Sizes = [new("set-4-ghe-120"), new("set-6-ghe-160", 4_700_000)],
+            SecondaryMaterials = [new("vai-bo", "Nệm ghế")],
+            SecondaryColors = [new("kem", "Nệm ghế")]
+        },
+
         // ---------------- Phòng ăn ----------------
         new()
         {
@@ -479,7 +581,7 @@ internal static class CatalogSeedData
             LengthMm = 1600, WidthMm = 850, HeightMm = 750, WeightKg = 90,
             ShortDescription = "Trọn bộ 1 bàn + 6 ghế gỗ sồi đồng bộ màu, tiết kiệm hơn mua lẻ.",
             Description = "Bộ Family gồm 1 bàn ăn chữ nhật và 6 ghế tựa nan, đồng bộ màu sơn.\n" +
-                          "Tiết kiệm khoảng 15% so với mua lẻ, giao và lắp đặt miễn phí.",
+                          "Tiết kiệm khoảng 15% so với mua lẻ, thợ của xưởng giao và lắp đặt tận nơi.",
             Materials = [new("go-soi")],
             Colors = [new("soi-tu-nhien"), new("nau-oc-cho", 1_000_000)],
             Sizes = [new("ban-an-160"), new("ban-an-180", 2_000_000)]

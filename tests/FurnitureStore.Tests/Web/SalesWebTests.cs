@@ -44,6 +44,9 @@ public sealed partial class SalesWebTests(FurnitureStoreWebApplicationFactory fa
         Assert.Contains(add.Headers.GetValues("Set-Cookie"), c => c.StartsWith(".NhaMoc.Cart=") && c.Contains("httponly"));
         var cartPage = await client.GetStringAsync("/cart");
         Assert.Contains("Ghế ăn gỗ sồi lưng cong", cartPage);
+        Assert.Contains("Liên hệ đặt hàng", cartPage);
+        Assert.Contains("Cửa hàng báo khi liên hệ", cartPage);          // no shipping fee computed online
+        Assert.DoesNotContain("miễn phí giao hàng", cartPage);
 
         // 2. Checkout requires sign-in.
         var checkoutAnonymous = await client.GetAsync("/checkout");
@@ -55,9 +58,13 @@ public sealed partial class SalesWebTests(FurnitureStoreWebApplicationFactory fa
         var count = await client.GetFromJsonAsync<JsonElement>("/api/cart/count");
         Assert.Equal(2, count.GetProperty("data").GetProperty("count").GetInt32());
 
-        // 4. Checkout form.
+        // 4. "Liên hệ đặt hàng" form: contact and delivery details only, no payment step.
         var checkoutPage = await client.GetStringAsync("/checkout");
         Assert.Contains("TP. Hồ Chí Minh", checkoutPage);
+        Assert.Contains("<h1 class=\"page-title\">Liên hệ đặt hàng</h1>", checkoutPage);
+        Assert.Contains("Gửi yêu cầu đặt hàng", checkoutPage);
+        Assert.Contains("Cửa hàng báo khi liên hệ", checkoutPage);
+        Assert.DoesNotContain("name=\"Command.PaymentMethod\"", checkoutPage);
         var placed = await PostFormAsync(client, "/checkout", "/checkout", new Dictionary<string, string>
         {
             ["Command.FullName"] = "Khách Thử Nghiệm",
@@ -66,7 +73,7 @@ public sealed partial class SalesWebTests(FurnitureStoreWebApplicationFactory fa
             ["Command.Province"] = "TP. Hà Nội",
             ["Command.Ward"] = "Phường Hoàn Kiếm",
             ["Command.AddressLine"] = "1 Tràng Tiền",
-            ["Command.PaymentMethod"] = "BankTransfer",
+            ["Command.PaymentMethod"] = "BankTransfer",              // not offered by the form any more: ignored
             ["Command.SaveAddress"] = "true"
         });
         Assert.Equal(HttpStatusCode.Redirect, placed.StatusCode);
@@ -76,8 +83,15 @@ public sealed partial class SalesWebTests(FurnitureStoreWebApplicationFactory fa
         var success = await client.GetStringAsync(successUrl);
         var code = successUrl.Split('/').Last();
         Assert.Contains(code, success);
-        Assert.Contains("Thông tin chuyển khoản", success);
-        Assert.Contains($"NHAMOC {code}", success);
+        Assert.Contains("Đã gửi yêu cầu đặt hàng", success);
+        Assert.Contains("0912345678", success);                              // the store calls this number back
+        Assert.Contains("chưa gồm phí giao hàng", success);
+        Assert.DoesNotContain("Thông tin chuyển khoản", success);
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Equal(FurnitureStore.Domain.Enums.PaymentMethod.COD, await db.Orders.Where(o => o.OrderCode == code).Select(o => o.PaymentMethod).SingleAsync());
+        }
         Assert.Equal(0, (await client.GetFromJsonAsync<JsonElement>("/api/cart/count")).GetProperty("data").GetProperty("count").GetInt32());
 
         // 5. The order appears in "Đơn hàng của tôi" and can be cancelled.

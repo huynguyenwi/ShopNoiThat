@@ -127,9 +127,9 @@ public sealed class CatalogServiceTests : IAsyncLifetime
         var page4 = await Catalog(c => c.GetProductsAsync(new ProductQuery { PageSize = 10, Page = 4 }));
 
         Assert.Equal(10, page1.Items.Count);
-        Assert.Equal(37, page1.TotalCount);
-        Assert.Equal(4, page1.TotalPages);
-        Assert.Equal(7, page4.Items.Count);
+        Assert.Equal(43, page1.TotalCount);
+        Assert.Equal(5, page1.TotalPages);
+        Assert.Equal(10, page4.Items.Count);
         Assert.Empty(page1.Items.Select(p => p.Id).Intersect(page4.Items.Select(p => p.Id)));
     }
 

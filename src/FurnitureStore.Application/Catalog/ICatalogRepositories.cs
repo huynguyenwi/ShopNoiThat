@@ -34,6 +34,9 @@ public interface IProductRepository : IRepository<Product>
 
     Task<(decimal Min, decimal Max)> GetPriceRangeAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Sizes offered by the active products of these categories, with the number of products offering each (most offered first).</summary>
+    Task<IReadOnlyList<SizeInUseDto>> GetSizesInUseAsync(IReadOnlyCollection<int> categoryIds, CancellationToken cancellationToken = default);
+
     Task IncrementViewCountAsync(int productId, CancellationToken cancellationToken = default);
 
     Task<PagedResult<AdminProductListItemDto>> SearchAdminAsync(AdminProductQuery query, CancellationToken cancellationToken = default);

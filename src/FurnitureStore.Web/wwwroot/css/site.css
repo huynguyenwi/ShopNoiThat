@@ -1597,6 +1597,37 @@ img {
     font-size: .9rem;
 }
 
+/* ---------- Home: main product line, by size ---------- */
+.focus-sizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+
+.focus-size {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem 1.1rem;
+    border: 1px solid var(--fs-line);
+    border-radius: var(--fs-radius-sm);
+    background: var(--fs-white);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.focus-size > .bi {
+    font-size: 1.25rem;
+    color: var(--fs-brown);
+}
+
+.focus-size:hover,
+.focus-size:focus-visible {
+    border-color: var(--fs-brown);
+    box-shadow: 0 0 0 1px var(--fs-brown);
+}
+
 /* ---------- Checkout ---------- */
 .saved-addresses {
     display: grid;
@@ -1625,6 +1656,40 @@ img {
     border-color: var(--fs-brown);
     box-shadow: 0 0 0 1px var(--fs-brown);
     background: var(--fs-cream);
+}
+
+/* "Liên hệ đặt hàng": what happens after the request is sent */
+.contact-steps {
+    list-style: none;
+    counter-reset: contact-step;
+    display: grid;
+    gap: .75rem;
+    padding: 0;
+    margin: 0;
+}
+
+.contact-steps li {
+    counter-increment: contact-step;
+    position: relative;
+    padding-left: 2.5rem;
+    min-height: 1.75rem;
+}
+
+.contact-steps li::before {
+    content: counter(contact-step);
+    position: absolute;
+    left: 0;
+    top: -.05rem;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 1px solid var(--fs-sand);
+    background: var(--fs-cream);
+    color: var(--fs-brown);
+    font-size: .85rem;
+    font-weight: 700;
 }
 
 .bank-box {
@@ -2704,6 +2769,17 @@ body[data-open-panel="chat"] .ai-widget {
 
 .header-search {
     min-width: 0;
+}
+
+.site-header .brand {
+    flex-shrink: 0;
+}
+
+/* Below 1400px "Sản phẩm" is reached from "Danh mục" (Xem tất cả sản phẩm), leaving room for the search box. */
+@media (min-width: 992px) and (max-width: 1399.98px) {
+    .nav-item-xxl {
+        display: none;
+    }
 }
 
 @media (min-width: 992px) and (max-width: 1399.98px) {

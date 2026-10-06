@@ -51,8 +51,8 @@
                     <tfoot>
                         <tr><td colspan="4" class="text-end">Tạm tính</td><td class="text-end">@Format.Money(Model.Subtotal)</td></tr>
                         <tr><td colspan="4" class="text-end">Giảm giá @if (Model.CouponCode is not null) { <a href="/admin/coupons?search=@Uri.EscapeDataString(Model.CouponCode)" class="coupon-code-text">(@Model.CouponCode)</a> }</td><td class="text-end text-success">-@Format.Money(Model.DiscountAmount)</td></tr>
-                        <tr><td colspan="4" class="text-end">Phí giao hàng</td><td class="text-end">@Format.Money(Model.ShippingFee)</td></tr>
-                        <tr><td colspan="4" class="text-end fw-bold">Tổng cộng</td><td class="text-end fw-bold fs-6">@Format.Money(Model.TotalAmount)</td></tr>
+                        <tr><td colspan="4" class="text-end">Giao hàng &amp; lắp đặt</td><td class="text-end" data-shipping-fee>@Format.ShippingFee(Model.ShippingFee, Model.Status)</td></tr>
+                        <tr><td colspan="4" class="text-end fw-bold">Tổng cộng</td><td class="text-end fw-bold fs-6" data-order-total>@Format.Money(Model.TotalAmount)</td></tr>
                     </tfoot>
                 </table>
             </div>
@@ -105,6 +105,26 @@
                 }
             </div>
         </div>
+
+        @if (Model.CanChangeShippingFee)
+        {
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Phí giao hàng &amp; lắp đặt</h2></div>
+                <div class="admin-card-body">
+                    <form method="post" asp-action="ShippingFee" asp-route-id="@Model.Id" data-shipping-fee-form>
+                        <input type="hidden" name="version" value="@Model.Version" />
+                        <label class="form-label small" for="shippingFee">Phí đã báo cho khách (₫)</label>
+                        <div class="input-group mb-2">
+                            <input id="shippingFee" name="shippingFee" type="number" class="form-control" min="0" max="100000000" step="1000" required
+                                   value="@(Model.ShippingFee.ToString("0", System.Globalization.CultureInfo.InvariantCulture))" />
+                            <button type="submit" class="btn btn-primary">Lưu phí</button>
+                        </div>
+                    </form>
+                    <p class="small text-muted-fs mb-0">Website không tính sẵn phí giao: gọi khách xác nhận đơn, báo phí theo địa chỉ rồi nhập ở đây (0 = miễn phí).
+                        Tổng đơn, số tiền thu hộ và trang đơn của khách được cập nhật theo.</p>
+                </div>
+            </div>
+        }
 
         <div class="admin-card mb-3">
             <div class="admin-card-header"><h2>Thanh toán</h2></div>

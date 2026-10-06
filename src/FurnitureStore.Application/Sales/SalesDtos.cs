@@ -36,19 +36,16 @@ public sealed record CartDto(
     IReadOnlyList<CartLineDto> Items,
     decimal Subtotal,
     decimal DiscountAmount,
-    decimal ShippingFee,
     decimal Total,
     string? CouponCode,
     string? CouponMessage,
-    decimal FreeShippingThreshold,
     IReadOnlyList<string> Warnings)
 {
     public int TotalQuantity => Items.Sum(i => i.Quantity);
     public bool IsEmpty => Items.Count == 0;
     public bool CanCheckout => Items.Count > 0 && Items.All(i => i.IsAvailable && !i.ExceedsStock);
-    public decimal AmountToFreeShipping => Math.Max(0, FreeShippingThreshold - Subtotal);
 
-    public static CartDto Empty(decimal freeShippingThreshold) => new([], 0, 0, 0, 0, null, null, freeShippingThreshold, []);
+    public static readonly CartDto Empty = new([], 0, 0, 0, null, null, []);
 }
 
 public sealed record PaymentMethodOption(PaymentMethod Method, string Name, string Description);
@@ -135,7 +132,8 @@ public sealed record OrderDetailDto(
     IReadOnlyList<OrderItemDto> Items,
     IReadOnlyList<OrderStatusHistoryDto> History,
     IReadOnlyList<PaymentDto> Payments,
-    PaymentInstructionsDto? PaymentInstructions)
+    PaymentInstructionsDto? PaymentInstructions,
+    bool CanChangeShippingFee)
 {
     public bool CanBeCancelledByCustomer => Status is OrderStatus.Pending or OrderStatus.Confirmed;
     public int TotalQuantity => Items.Sum(i => i.Quantity);

@@ -38,7 +38,7 @@ public sealed class LocalAssistantServiceTests : IAsyncLifetime
         Assert.Empty(hours.Products);
 
         var shipping = await AskAsync("phi ship bao nhieu");                 // typed without accents
-        Assert.Contains("10.000.000₫", shipping.Reply);                     // free-shipping threshold from the Shipping settings
+        Assert.Contains("báo phí", shipping.Reply);                          // quoted when the store calls back
         Assert.Contains("Bảo hành bao lâu?", shipping.Suggestions);
 
         var thanks = await AskAsync("cảm ơn bạn");

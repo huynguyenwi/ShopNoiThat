@@ -130,7 +130,6 @@ async function login(page, email, password) {
     await page.select('#Command_Province', province);
     await page.type('#Command_Ward', 'Phường Bến Nghé');
     await page.type('#Command_AddressLine', '12 Lê Lợi');
-    await page.click('input[name="Command.PaymentMethod"][value="COD"]');
     await submit(page, 'button[form="checkoutForm"]'); // the order button sits in the summary column
     const orderCode = await page.$eval('[data-order-code]', e => e.textContent.trim()).catch(() => null);
     check('Checkout creates an order', !!orderCode && page.url().includes('/checkout/success/'), orderCode);

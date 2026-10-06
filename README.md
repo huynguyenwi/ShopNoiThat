@@ -1,11 +1,13 @@
 # Nhà Mộc Furniture — Website bán đồ nội thất
 
-Website thương mại điện tử bán nội thất (bàn, ghế, tủ, giường, sofa, kệ...) xây dựng bằng **ASP.NET Core 8 MVC**,
+Website thương mại điện tử bán nội thất, **chủ lực là bộ bàn ghế ăn gỗ sồi Nga màu óc chó** (bàn 1m2 + 4 ghế, bàn 1m6 + 6 ghế),
+vẫn bán các nhóm khác (sofa, giường, tủ, kệ...). Khách gửi **yêu cầu đặt hàng**, cửa hàng gọi lại xác nhận và báo phí giao hàng
+(xem [mục 21](#21-bàn-ghế-ăn--liên-hệ-đặt-hàng)). Xây dựng bằng **ASP.NET Core 8 MVC**,
 **SQL Server**, **Entity Framework Core 8**, **ASP.NET Core Identity**, **Bootstrap 5.3**, có kiến trúc sẵn sàng tích hợp AI
 (OpenAI hoặc API tương thích).
 
 > Đã hoàn thành cả 11 phase (xem [Tiến độ](#12-tiến-độ)). Bản Release đã được kiểm tra trên database tạo từ file SQL,
-> chạy ở môi trường Production: 626 test tự động + 11 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
+> chạy ở môi trường Production: 649 test tự động + 12 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
 
 ---
 
@@ -244,9 +246,9 @@ Trợ lý AI có **hai chế độ**:
 | Nhóm | Ví dụ | Dữ liệu dùng để trả lời |
 |---|---|---|
 | Cửa hàng | "mấy giờ mở cửa", "showroom ở đâu", "số hotline", "có zalo không" | Thông tin cửa hàng (`/admin/store`) |
-| Chính sách | "phí ship bao nhiêu", "bảo hành bao lâu", "đổi trả thế nào", "có trả góp không", "nhận đóng theo yêu cầu không" | Nội dung chatbot (`/admin/ai-knowledge`), cấu hình `Shipping` |
+| Chính sách | "phí ship bao nhiêu", "bảo hành bao lâu", "đổi trả thế nào", "có trả góp không", "nhận đóng theo yêu cầu không" | Nội dung chatbot (`/admin/ai-knowledge`); phí giao hàng: cửa hàng báo khi liên hệ |
 | Mua hàng | "cách đặt hàng", "đơn hàng của tôi đến đâu rồi", "hủy đơn thế nào", "có mã giảm giá không", "quên mật khẩu" | **Đơn hàng của chính khách** (khi đã đăng nhập), mã giảm giá công khai đang chạy |
-| Kiến thức | "gỗ sồi và óc chó khác gì", "MDF có tốt không", "phong cách Japandi là gì", "bàn ăn 6 người cần kích thước bao nhiêu", "bảo quản sofa da" | Kiến thức nội thất có sẵn (15 chất liệu đang bán, 8 phong cách, cỡ chuẩn các món) |
+| Kiến thức | "gỗ sồi Nga có bền không", "gỗ sồi và óc chó khác gì", "MDF có tốt không", "phong cách Japandi là gì", "bàn ăn 6 người cần kích thước bao nhiêu", "bảo quản sofa da" | Kiến thức nội thất có sẵn (16 chất liệu đang bán, 8 phong cách, cỡ chuẩn các món) |
 | Trang sản phẩm | "giá bao nhiêu", "còn màu nào khác", "kích thước thế nào", "còn hàng không", "mẫu nào rẻ hơn", "bảo hành bao lâu" | Dữ liệu của sản phẩm đang xem; "rẻ hơn" liệt kê mẫu cùng loại giá thấp hơn |
 | Trò chuyện | "chào shop", "cảm ơn", "bạn là ai", "bạn giúp được gì" | - |
 
@@ -318,13 +320,14 @@ ASP.NET Core đọc biến môi trường với `__` thay cho `:`.
 | `RateLimiting__FormPermitsPerMinute` | Số lần gửi form liên hệ / đánh giá mỗi phút mỗi IP (mặc định 5) |
 | `RateLimiting__ApiPermitsPerMinute` | Giới hạn chung cho mọi `/api/*` mỗi phút mỗi IP (mặc định 300) |
 | `ApplicationSettings__BaseUrl` | Địa chỉ public của website (dùng cho canonical, sitemap, Open Graph, link trong email) |
+| `ApplicationSettings__FocusCategorySlug` | Danh mục mặt hàng chính hiện đầu trang chủ và trên menu (mặc định `bo-ban-an`; để trống = ẩn) |
 | `Seo__AllowIndexing` | `false` trên máy staging/test: robots.txt chặn toàn bộ và mọi trang `noindex` |
 | `DataProtection__KeysPath` | Thư mục lưu khóa mã hóa cookie (mặc định `App_Data/keys`); dùng chung khi chạy nhiều server |
 | `ReverseProxy__KnownProxies__0` | IP của reverse proxy tin cậy (nginx, load balancer) để lấy IP thật từ `X-Forwarded-For` |
 | `SKIP_SQLSERVER_TESTS` | `1` để bỏ qua test cần SQL Server LocalDB |
 
-Các section cấu hình khác: `ApplicationSettings` (tên site, BaseUrl, thông tin cửa hàng), `Payment` (phương thức thanh toán,
-thông tin chuyển khoản), `Storage` (thư mục upload, dung lượng và định dạng ảnh cho phép). Cấu hình sai (ví dụ `BaseUrl`
+Các section cấu hình khác: `ApplicationSettings` (tên site, khẩu hiệu, BaseUrl, thông tin cửa hàng), `Payment` (phương thức thanh toán
+— trang liên hệ đặt hàng tạo đơn **COD** nên `EnabledMethods` phải có `COD`; thông tin chuyển khoản), `Storage` (thư mục upload, dung lượng và định dạng ảnh cho phép). Cấu hình sai (ví dụ `BaseUrl`
 không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với thông báo rõ ràng.
 
 ## 11. Xử lý sự cố
@@ -356,6 +359,7 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | 9 | Báo giá nội thất theo yêu cầu (PriceCalculatorService, QuoteRequest) | ✅ Hoàn thành |
 | 10 | SEO, responsive, bảo mật, logging, hiệu năng | ✅ Hoàn thành |
 | 11 | Kiểm thử tổng thể, sửa lỗi, build Release | ✅ Hoàn thành |
+| + | Mã giảm giá, mã QR, trợ lý không cần AI, **bàn ghế ăn làm chủ lực + liên hệ đặt hàng** (mục 19 – 21) | ✅ Hoàn thành |
 
 ## 13. Chức năng & đường dẫn chính
 
@@ -364,7 +368,8 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | Trang chủ | `/` |
 | Sản phẩm (tìm kiếm, lọc, sắp xếp) | `/products?q=ban+go&category=phong-an&color=...&minPrice=...&sort=price-asc` |
 | Chi tiết sản phẩm, chọn màu / chất liệu / kích thước, đánh giá | `/products/{slug}` |
-| Giỏ hàng / thanh toán | `/cart`, `/checkout` |
+| Bộ bàn ăn (mặt hàng chính) | `/products?category=bo-ban-an` · theo cỡ: `&size=set-4-ghe-120`, `&size=set-6-ghe-160` |
+| Giỏ hàng / liên hệ đặt hàng | `/cart`, `/checkout` (trang "Liên hệ đặt hàng") |
 | Tài khoản | `/account/login`, `/account/register`, `/account/forgot-password`, `/account/profile` |
 | Đơn hàng, địa chỉ, yêu thích của tôi | `/account/orders`, `/account/addresses`, `/wishlist` |
 | Liên hệ & thông tin cửa hàng | `/contact` |
@@ -472,7 +477,7 @@ Hệ thống:
 ### Test tự động (xUnit)
 
 ```powershell
-dotnet test                      # 626 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
+dotnet test                      # 649 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
 dotnet test -c Release           # cùng bộ test trên bản build Release
 ```
 
@@ -487,7 +492,8 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | Bộ | Kiểm tra |
 |---|---|
 | `dod-e2e.js` | Definition of Done: chặn truy cập admin, đăng ký / đăng xuất / đăng nhập, chọn variant, giỏ hàng, coupon, checkout COD, trừ tồn kho, email xác nhận, admin xử lý đơn đến "Đã giao", đánh giá sau khi mua, wishlist, admin tạo danh mục + sản phẩm 2 variant + ảnh, sửa giá, xóa, CSRF (43 bước) |
-| `coupon-e2e.js` | Mã giảm giá: admin tạo mã (mã ngẫu nhiên, xem trước), khách thấy ưu đãi và áp bằng một cú nhấp ở giỏ hàng, bỏ / nhập sai / nhập đúng mã ở trang thanh toán không tải lại trang (giữ địa chỉ đang nhập), đặt hàng, thống kê lượt dùng, không xóa được mã đã dùng, tắt mã, hủy đơn trả lại lượt (23 bước) |
+| `coupon-e2e.js` | Mã giảm giá: admin tạo mã (mã ngẫu nhiên, xem trước), khách thấy ưu đãi và áp bằng một cú nhấp ở giỏ hàng, bỏ / nhập sai / nhập đúng mã ở trang liên hệ đặt hàng không tải lại trang (giữ địa chỉ đang nhập), đặt hàng, thống kê lượt dùng, không xóa được mã đã dùng, tắt mã, hủy đơn trả lại lượt (23 bước) |
+| `dining-e2e.js` | Bàn ghế ăn: trang chủ / menu ưu tiên bộ bàn ăn, lọc theo "Bàn 1m2 + 4 ghế" / "Bàn 1m6 + 6 ghế", giá theo cỡ, giỏ hàng và trang **liên hệ đặt hàng** không tính phí giao, đơn COD, email, admin nhập phí giao đã báo → tổng tiền, phiếu giao, trang đơn của khách cập nhật; phí âm bị từ chối; menu một hàng ở 1366 / 1100 px, điện thoại không tràn ngang; trợ lý trả lời phí giao / gỗ sồi Nga (40 bước) |
 | `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
 | `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
 | `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
@@ -495,7 +501,7 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | `local-ai-e2e.js` | Trợ lý không có AI: chip "Giao hàng & bảo hành", giờ mở cửa, hotline (gõ không dấu), mã giảm giá, so sánh gỗ, kích thước bàn ăn, "cảm ơn", câu không hiểu, tìm sản phẩm; trang sản phẩm (giao hàng, mẫu rẻ hơn, màu); khách đã đăng nhập hỏi đơn hàng của mình; giao diện điện thoại (16 bước) |
 | `quote-e2e.js` | Báo giá đặt đóng: tính giá, phương án rẻ hơn, gửi yêu cầu, admin báo giá, khách đồng ý |
 | `account-forms.js` | Đăng ký (điều khoản), cập nhật hồ sơ, đổi mật khẩu, quên mật khẩu |
-| `audit.js` | 33 trang × (1366 / 390 / 360 px): lỗi console / vi phạm CSP, tràn ngang, lỗi axe-core nghiêm trọng |
+| `audit.js` | 42 trang × (1366 / 390 / 360 px): lỗi console / vi phạm CSP, tràn ngang, lỗi axe-core nghiêm trọng |
 | `load.js` | Tải thử 300 request × 7 URL, 10 kết nối song song (chạy riêng: `node load.js`) |
 
 ```powershell
@@ -564,7 +570,7 @@ $env:Seed__AdminPassword = "<mật khẩu mạnh>"
 
 **Khách hàng**:
 
-- Nhập mã ở giỏ hàng hoặc ở **trang thanh toán** (áp / bỏ mã không tải lại trang nên thông tin giao hàng đang nhập được giữ nguyên).
+- Nhập mã ở giỏ hàng hoặc ở **trang liên hệ đặt hàng** (áp / bỏ mã không tải lại trang nên thông tin giao hàng đang nhập được giữ nguyên).
 - Mục **"Ưu đãi dành cho bạn"** liệt kê tối đa 5 mã công khai đang chạy: mã dùng được có nút *Áp dụng* và số tiền tiết kiệm;
   mã chưa đủ điều kiện ghi rõ lý do (ví dụ *"Mua thêm 1.200.000₫ để dùng mã này"*, *"Bạn đã sử dụng hết lượt…"*).
 - Điều kiện được kiểm tra lại ở server khi đặt hàng; lượt dùng được trừ nguyên tử (hai người đặt cùng lúc không vượt tổng lượt)
@@ -586,8 +592,45 @@ Thư viện: `Net.Codecrete.QrCodeGenerator` (MIT, không phụ thuộc thư vi�
 
 - **In tem QR** (admin): nút *"In tem QR"* ở danh sách sản phẩm in toàn bộ sản phẩm đang lọc (tối đa 100 tem, khổ A4, 3 tem mỗi hàng:
   QR, tên, SKU, giá, cửa hàng); nút *"In tem QR"* trong trang sửa sản phẩm in một tem. Dán tại showroom để khách quét xem chi tiết.
-- **Phiếu giao hàng** (admin, trang đơn → *"In phiếu giao hàng"*): QR đơn hàng, người nhận, sản phẩm, tổng tiền, số tiền thu hộ COD, ô ký nhận.
+- **Phiếu giao hàng** (admin, trang đơn → *"In phiếu giao hàng"*): QR đơn hàng, người nhận, sản phẩm, tổng tiền, số tiền thu hộ COD
+  (gồm phí giao hàng đã nhập; nếu chưa nhập, phiếu ghi rõ *"Chưa gồm phí giao hàng & lắp đặt"*), ô ký nhận.
 - **Bảo mật**: mã đơn chỉ chứa địa chỉ, không chứa thông tin khách. Khi chưa đăng nhập, hệ thống không tra cứu đơn nên không thể dò
   mã nào tồn tại; ảnh QR đơn hàng được vẽ cho mọi mã đúng định dạng vì cùng lý do (và để email hiển thị được).
 - Địa chỉ trong mã lấy từ `ApplicationSettings:BaseUrl` — **phải là tên miền thật khi triển khai**. Muốn thử bằng điện thoại trong mạng LAN
   khi phát triển: đặt `ApplicationSettings__BaseUrl=http://<IP máy>:5243` và chạy `dotnet run --urls http://0.0.0.0:5243`.
+
+## 21. Bàn ghế ăn & liên hệ đặt hàng
+
+**Mặt hàng chính: bộ bàn ghế ăn gỗ sồi Nga, màu óc chó**
+
+- Trang chủ mở đầu bằng *"Bộ bàn ăn gỗ sồi Nga - màu óc chó"*, ngay sau đó là mục **Bộ bàn ăn** (các bộ bán chạy) với lối tắt chọn theo cỡ
+  *"Bàn 1m2 + 4 ghế"*, *"Bàn 1m6 + 6 ghế"*. Menu chính có mục **Bộ bàn ăn**. Các nhóm khác (sofa, giường, tủ...) vẫn bán bình thường.
+  Danh mục được ưu tiên đặt bằng `ApplicationSettings:FocusCategorySlug` (mặc định `bo-ban-an`).
+- Dữ liệu mẫu thêm chất liệu **Gỗ sồi Nga**, 2 kích thước bộ **Bàn 1m2 + 4 ghế** (`set-4-ghe-120`) và **Bàn 1m6 + 6 ghế** (`set-6-ghe-160`),
+  cùng 6 bộ bàn ăn màu **Nâu óc chó**: An Gia, Phúc Lộc, Mộc Nhiên (thêm màu gỗ tự nhiên), Tâm An, Thịnh Gia (mặt đá ceramic),
+  Bình Minh (ghế nệm). **Giá chỉ để minh họa** (khoảng 6,9 – 11,5 triệu bản 4 ghế; 10,5 – 16,9 triệu bản 6 ghế) — sửa trong
+  `/admin/products` (giá, tồn kho từng phiên bản). Bảng giá báo giá đặt đóng có thêm đơn giá *Vật liệu: Gỗ sồi Nga* (`/admin/price-rules`).
+
+**Trang "Liên hệ đặt hàng" thay cho trang thanh toán** (`/checkout`, vẫn **bắt buộc đăng nhập**)
+
+- Khách chọn mẫu → giỏ hàng → *"Liên hệ đặt hàng"* (hoặc nút *"Liên hệ đặt hàng"* ngay trên trang sản phẩm) → điền họ tên, số điện thoại,
+  email, địa chỉ, ghi chú → *"Gửi yêu cầu đặt hàng"*. **Không có bước thanh toán** và không nhập thông tin thẻ; đơn được tạo ở trạng thái
+  *Chờ xác nhận*, hình thức *thanh toán khi nhận hàng* (hoặc chuyển khoản khi nhân viên hướng dẫn).
+- Trang thành công, email xác nhận (*"Đã nhận yêu cầu đặt hàng …"*) và thông báo cho admin (*"… Gọi lại xác nhận và báo phí giao hàng"*)
+  đều nói rõ cửa hàng sẽ gọi lại.
+
+**Không tự tính phí vận chuyển**
+
+- Giỏ hàng, trang liên hệ đặt hàng, email hiển thị *"Giao hàng & lắp đặt: Cửa hàng báo khi liên hệ"*; tổng là **tổng tiền hàng**
+  (sau giảm giá). Cấu hình `Shipping` cũ (miễn phí từ 10 triệu, phí 300.000₫) đã bỏ.
+- Sau khi gọi khách, admin nhập **phí giao hàng & lắp đặt đã báo** ở trang chi tiết đơn (`/admin/orders/details/{id}`, ô *"Phí giao hàng & lắp đặt"*;
+  0 = miễn phí). Tổng đơn, số tiền thu hộ trên phiếu giao, trang đơn của khách được cập nhật; khách nhận thông báo và email; thao tác được ghi
+  nhật ký. Chỉ sửa được khi đơn chưa giao, chưa hủy, chưa thanh toán; phí 0 – 100 triệu; kiểm tra ở backend (quyền ADMIN) và chống sửa đè
+  khi hai người cùng cập nhật.
+- Trợ lý tự động trả lời "phí ship bao nhiêu", "cách đặt hàng", "thanh toán thế nào", "gỗ sồi Nga có bền không" theo cách bán mới.
+
+**Database đã có từ trước** (đã chạy file SQL cũ): chạy ứng dụng ở môi trường **Development** (mặc định khi bấm Run trong Visual Studio,
+`Database:SeedDemoData = true`) một lần — ứng dụng tự **bổ sung** chất liệu, 2 cỡ bộ bàn ăn, 6 bộ bàn ăn mới và đơn giá gỗ sồi Nga,
+đồng thời cập nhật các nội dung mặc định nhắc tới "miễn phí giao hàng" (chỉ những nội dung admin **chưa sửa**). Sản phẩm admin đã xóa không bị
+thêm lại. Ở Production (`SeedDemoData = false`) không có dữ liệu mẫu nào được thêm. Database mới thì chỉ cần chạy file SQL mới trong `database/`.
+

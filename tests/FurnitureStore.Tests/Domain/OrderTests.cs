@@ -102,4 +102,35 @@ public sealed class OrderTests
         Assert.Equal(1_000_000, order.DiscountAmount);
         Assert.Equal(0, order.TotalAmount);
     }
+
+    [Theory]
+    [InlineData(OrderStatus.Pending, PaymentStatus.Unpaid, true)]
+    [InlineData(OrderStatus.Shipping, PaymentStatus.Unpaid, true)]
+    [InlineData(OrderStatus.Confirmed, PaymentStatus.Paid, false)]
+    [InlineData(OrderStatus.Delivered, PaymentStatus.Paid, false)]
+    [InlineData(OrderStatus.Cancelled, PaymentStatus.Unpaid, false)]
+    [InlineData(OrderStatus.Refunded, PaymentStatus.Refunded, false)]
+    public void ShippingFee_CanBeRecorded_UntilTheOrderIsDeliveredCancelledOrPaid(OrderStatus status, PaymentStatus payment, bool expected)
+    {
+        Assert.Equal(expected, new Order { Status = status, PaymentStatus = payment }.CanChangeShippingFee);
+    }
+
+    [Fact]
+    public void ChangeShippingFee_AddsItToTheTotal_AndRejectsOutOfRangeAmounts()
+    {
+        var order = new Order { DiscountAmount = 500_000 };
+        order.Items.Add(new OrderItem { UnitPrice = 7_900_000, Quantity = 1 });
+        order.RecalculateTotals();
+
+        order.ChangeShippingFee(350_000);
+
+        Assert.Equal(350_000, order.ShippingFee);
+        Assert.Equal(7_750_000, order.TotalAmount);
+        Assert.Throws<DomainException>(() => order.ChangeShippingFee(-1));
+        Assert.Throws<DomainException>(() => order.ChangeShippingFee(Order.MaxShippingFee + 1));
+
+        order.Status = OrderStatus.Cancelled;
+        Assert.Throws<DomainException>(() => order.ChangeShippingFee(0));
+        Assert.Equal(350_000, order.ShippingFee);
+    }
 }

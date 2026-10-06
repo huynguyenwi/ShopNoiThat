@@ -1,6 +1,7 @@
 using FurnitureStore.Domain.Constants;
 using FurnitureStore.Infrastructure.Identity;
 using FurnitureStore.Infrastructure.Persistence;
+using FurnitureStore.Infrastructure.Persistence.Seed;
 using FurnitureStore.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -66,5 +67,25 @@ public sealed class DatabaseStartupTests(FurnitureStoreWebApplicationFactory fac
         Assert.True(await context.Products.CountAsync() >= 30);
         Assert.True(await context.Categories.CountAsync() >= 10);
         Assert.Equal(1, await context.StoreInformation.CountAsync());
+    }
+
+    [Fact]
+    public async Task Startup_UpdatesTheFormerDefaultTagline_ButKeepsOneTheAdminWrote()
+    {
+        await using var scope = CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var store = await context.StoreInformation.SingleAsync();
+
+        store.Tagline = "Không gian đẹp - Nội thất chất lượng";       // seeded by an earlier version
+        await context.SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync();
+        await context.Entry(store).ReloadAsync();
+        Assert.Equal("Bàn ghế ăn gỗ sồi Nga - Đóng tại xưởng", store.Tagline);
+
+        store.Tagline = "Khẩu hiệu do admin viết";
+        await context.SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync();
+        await context.Entry(store).ReloadAsync();
+        Assert.Equal("Khẩu hiệu do admin viết", store.Tagline);
     }
 }

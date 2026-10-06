@@ -28,7 +28,6 @@ public sealed class AssistantService(
     Quotes.IQuoteService quoteService,
     Sales.ICouponRepository couponRepository,
     Sales.IOrderService orderService,
-    IOptions<ShippingSettings> shippingOptions,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<AssistantService> logger) : IAssistantService
@@ -280,7 +279,7 @@ public sealed class AssistantService(
             cheaper = ids.Count == 0 ? [] : (await facts.GetFactsAsync(ids, cancellationToken)).OrderByDescending(p => p.Price).ToList();
         }
 
-        var reply = LocalAssistant.Answer(local, new LocalFacts(store, shippingOptions.Value, allKnowledge, coupons, myOrders, focus, warrantyMonths, cheaper));
+        var reply = LocalAssistant.Answer(local, new LocalFacts(store, allKnowledge, coupons, myOrders, focus, warrantyMonths, cheaper));
 
         // Cards: cheaper alternatives, the product being asked about, or products for needs named in the same question.
         List<ProductFact> shown = local.Topic == LocalTopic.FocusCheaper ? cheaper.ToList()

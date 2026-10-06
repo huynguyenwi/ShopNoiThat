@@ -1,7 +1,8 @@
 @model FurnitureStore.Web.ViewModels.Sales.CheckoutViewModel
-@using FurnitureStore.Domain.Enums
+@inject IStoreInfoService StoreInfo
 @{
-    ViewData["Title"] = "Đặt hàng";
+    ViewData["Title"] = "Liên hệ đặt hàng";
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     var c = Model.Command;
     var message = TempData[CartController.MessageKey] as string;
 }
@@ -11,10 +12,11 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb small mb-2">
                 <li class="breadcrumb-item"><a href="/cart">Giỏ hàng</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Đặt hàng</li>
+                <li class="breadcrumb-item active" aria-current="page">Liên hệ đặt hàng</li>
             </ol>
         </nav>
-        <h1 class="page-title">Thông tin đặt hàng</h1>
+        <h1 class="page-title">Liên hệ đặt hàng</h1>
+        <p class="text-muted-fs mb-0">Để lại thông tin, cửa hàng sẽ gọi lại xác nhận mẫu, giá và báo phí giao hàng &amp; lắp đặt. Website không thu tiền trực tuyến.</p>
     </div>
 </section>
 
@@ -26,7 +28,7 @@
                 <form method="post" asp-action="Place" novalidate id="checkoutForm">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                         <div class="panel mb-4">
-                            <h2 class="h5 mb-3"><i class="bi bi-person me-2" aria-hidden="true"></i>Người nhận hàng</h2>
+                            <h2 class="h5 mb-3"><i class="bi bi-person me-2" aria-hidden="true"></i>Thông tin liên hệ &amp; nhận hàng</h2>
 
                             @if (Model.SavedAddresses.Count > 0)
                             {
@@ -95,8 +97,8 @@
                                     <span asp-validation-for="Command.AddressLine" class="text-danger small"></span>
                                 </div>
                                 <div class="col-12">
-                                    <label asp-for="Command.Note" class="form-label">Ghi chú giao hàng</label>
-                                    <textarea asp-for="Command.Note" class="form-control" rows="2" maxlength="1000" placeholder="VD: Giao giờ hành chính, nhà có thang máy..."></textarea>
+                                    <label asp-for="Command.Note" class="form-label">Ghi chú cho cửa hàng</label>
+                                    <textarea asp-for="Command.Note" class="form-control" rows="2" maxlength="1000" placeholder="VD: Gọi sau 18h, nhà tầng 3 có thang máy, muốn xem mẫu gỗ trước..."></textarea>
                                 </div>
                                 <div class="col-12">
                                     <div class="form-check">
@@ -108,23 +110,20 @@
                         </div>
 
                         <div class="panel">
-                            <h2 class="h5 mb-3"><i class="bi bi-credit-card me-2" aria-hidden="true"></i>Phương thức thanh toán</h2>
-                            @foreach (var method in Model.PaymentMethods)
-                            {
-                                var id = "pay-" + method.Method;
-                                <label class="payment-option" for="@id">
-                                    <input type="radio" class="form-check-input" id="@id" name="Command.PaymentMethod" value="@method.Method"
-                                           checked="@(c.PaymentMethod == method.Method)" data-payment-method />
-                                    <span>
-                                        <strong>@method.Name</strong>
-                                        <span class="d-block small text-muted-fs">@method.Description</span>
-                                    </span>
-                                    <i class="bi @(method.Method == PaymentMethod.COD ? "bi-cash-coin" : "bi-bank") ms-auto fs-4 text-wood" aria-hidden="true"></i>
-                                </label>
-                            }
-                            <span asp-validation-for="Command.PaymentMethod" class="text-danger small"></span>
+                            <h2 class="h5 mb-3"><i class="bi bi-telephone-inbound me-2" aria-hidden="true"></i>Sau khi gửi yêu cầu</h2>
+                            <ol class="contact-steps">
+                                <li><strong>Cửa hàng gọi lại</strong> trong giờ làm việc@(string.IsNullOrWhiteSpace(store.OpeningHours) ? "" : $" ({store.OpeningHours})") để xác nhận mẫu, màu và kích thước.</li>
+                                <li><strong>Báo phí giao hàng &amp; lắp đặt</strong> theo địa chỉ, số món và tầng lầu, rồi hẹn lịch giao.</li>
+                                <li><strong>Thanh toán khi nhận hàng</strong> hoặc chuyển khoản theo hướng dẫn của nhân viên.</li>
+                            </ol>
+                            <span asp-validation-for="Command.PaymentMethod" class="text-danger small d-block mt-2"></span>
                             <p class="small text-muted-fs mt-3 mb-0"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
-                                Chúng tôi không thu thập hay lưu thông tin thẻ ngân hàng. Thanh toán VNPay / MoMo sẽ được bổ sung sau.</p>
+                                Website không thu thập hay lưu thông tin thẻ ngân hàng.
+                                @if (!string.IsNullOrWhiteSpace(store.Hotline))
+                                {
+                                    <text>Cần gấp? Gọi <a href="tel:@store.HotlineDigits">@store.Hotline</a>.</text>
+                                }
+                            </p>
                         </div>
                 </form>
             </div>

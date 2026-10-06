@@ -244,7 +244,7 @@ public sealed partial class QrWebTests(FurnitureStoreWebApplicationFactory facto
         Assert.Contains($"src=\"/qr/orders/{code}.svg\"", slip);
         Assert.Contains("Thu hộ (COD)", slip);
 
-        var mail = Directory.GetFiles(factory.EmailPickupDirectory).Select(File.ReadAllText).Single(m => m.Contains(code) && m.Contains("Cảm ơn bạn đã đặt hàng"));
+        var mail = Directory.GetFiles(factory.EmailPickupDirectory).Select(File.ReadAllText).Single(m => m.Contains(code) && m.Contains("Cảm ơn bạn đã gửi yêu cầu đặt hàng"));
         Assert.Contains($"{BaseUrl}/qr/orders/{code}.png?scale=5", mail);
     }
 

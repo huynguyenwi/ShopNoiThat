@@ -44,6 +44,8 @@
         ["phong-an"] = "room-dining",
         ["phong-lam-viec"] = "room-office"
     };
+    var focus = page.Focus;
+    var focusUrl = focus is null ? "/products" : $"/products?category={focus.Category.Slug}";
 }
 
 @section Head {
@@ -55,14 +57,14 @@
     <div class="container py-5">
         <div class="row align-items-center g-5 py-lg-4">
             <div class="col-lg-6">
-                <span class="hero-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i>Nội thất gỗ từ xưởng</span>
-                <h1 class="hero-title mt-3 mb-3">Không gian đẹp - <em>Nội thất chất lượng</em></h1>
+                <span class="hero-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i>Bàn ghế ăn đóng tại xưởng</span>
+                <h1 class="hero-title mt-3 mb-3">Bộ bàn ăn gỗ sồi Nga - <em>màu óc chó</em></h1>
                 <p class="hero-lead mb-4">
-                    Sofa, bàn ăn, giường, tủ và kệ được hoàn thiện thủ công từ gỗ tự nhiên.
-                    Chọn mẫu, màu sắc, kích thước phù hợp căn nhà của bạn - hoặc đặt đóng theo yêu cầu.
+                    Bàn 1m2 + 4 ghế hoặc bàn 1m6 + 6 ghế, làm từ gỗ sồi Nga nguyên khối, sơn màu óc chó ấm áp.
+                    Chọn mẫu và gửi yêu cầu - cửa hàng gọi lại tư vấn, báo phí giao hàng &amp; lắp đặt.
                 </p>
                 <div class="d-flex flex-wrap gap-3">
-                    <a class="btn btn-primary btn-lg" href="/products">Khám phá sản phẩm <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    <a class="btn btn-primary btn-lg" href="@focusUrl">Xem bộ bàn ăn <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
                     <a class="btn btn-outline-primary btn-lg" href="/contact"><i class="bi bi-telephone me-1" aria-hidden="true"></i>Nhận tư vấn</a>
                 </div>
                 <div class="hero-stats d-flex flex-wrap gap-4 gap-md-5 mt-5">
@@ -81,12 +83,45 @@
                 </div>
             </div>
             <div class="col-lg-6 text-center">
-                <img class="hero-illustration" src="~/images/hero-living-room.svg" width="580" height="471"
-                     alt="Minh họa phòng khách với sofa gỗ, đèn đứng và cây xanh" fetchpriority="high" />
+                <img class="hero-illustration" src="~/images/hero-dining-room.svg" width="580" height="471"
+                     alt="Minh họa phòng ăn với bộ bàn ghế gỗ sồi màu óc chó và đèn thả" fetchpriority="high" />
             </div>
         </div>
     </div>
 </section>
+
+@if (focus is not null)
+{
+    <section class="section" aria-labelledby="focus-title" data-focus-section>
+        <div class="container">
+            <div class="section-header">
+                <div>
+                    <p class="section-eyebrow">Mặt hàng chính · gỗ sồi Nga màu óc chó</p>
+                    <h2 id="focus-title" class="section-title">@focus.Category.Name</h2>
+                </div>
+                <a class="btn btn-outline-primary" href="@focusUrl">Xem tất cả (@focus.Category.ProductCount) <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+            </div>
+            @if (focus.Sizes.Count > 0)
+            {
+                <nav class="focus-sizes mb-4" aria-label="Chọn @focus.Category.Name.ToLowerInvariant() theo kích thước">
+                    @foreach (var size in focus.Sizes)
+                    {
+                        <a class="focus-size" href="@focusUrl&amp;size=@size.Slug">
+                            <i class="bi bi-rulers" aria-hidden="true"></i>
+                            <span><strong>@size.Name</strong><span class="d-block small text-muted-fs">@size.ProductCount mẫu</span></span>
+                        </a>
+                    }
+                </nav>
+            }
+            <div class="product-row">
+                @foreach (var product in focus.Products)
+                {
+                    <div class="product-row-item"><partial name="_ProductCard" model="product" /></div>
+                }
+            </div>
+        </div>
+    </section>
+}
 
 <section class="section" aria-labelledby="rooms-title">
     <div class="container">
@@ -172,8 +207,8 @@
             <div class="col-sm-6 col-lg-3">
                 <div class="feature-card">
                     <span class="feature-icon"><i class="bi bi-tree" aria-hidden="true"></i></span>
-                    <h3>Gỗ tự nhiên chọn lọc</h3>
-                    <p>Óc chó, sồi, tần bì, cao su... được sấy và xử lý chống mối mọt trước khi gia công.</p>
+                    <h3>Gỗ sồi Nga chọn lọc</h3>
+                    <p>Gỗ sồi Nga nguyên khối được sấy đạt độ ẩm 10 - 12% và xử lý chống mối mọt trước khi gia công.</p>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3">
@@ -187,7 +222,7 @@
                 <div class="feature-card">
                     <span class="feature-icon"><i class="bi bi-truck" aria-hidden="true"></i></span>
                     <h3>Giao &amp; lắp đặt</h3>
-                    <p>Đội ngũ kỹ thuật giao hàng, lắp đặt tận nơi và hướng dẫn bảo quản.</p>
+                    <p>Thợ của xưởng giao và lắp đặt tận nơi, hướng dẫn bảo quản; phí báo khi liên hệ theo địa chỉ.</p>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3">

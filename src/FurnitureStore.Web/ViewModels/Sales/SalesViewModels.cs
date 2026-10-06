@@ -7,7 +7,6 @@ public sealed class CheckoutViewModel
     public required CheckoutCommand Command { get; init; }
     public required CartDto Cart { get; init; }
     public required IReadOnlyList<CustomerAddressDto> SavedAddresses { get; init; }
-    public required IReadOnlyList<PaymentMethodOption> PaymentMethods { get; init; }
     public required IReadOnlyList<CouponOfferDto> Offers { get; init; }
     public IReadOnlyList<string> Provinces => VietnamProvinces.All;
     public CheckoutSummaryModel Summary => new(Cart, Offers);

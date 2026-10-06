@@ -70,7 +70,7 @@ public sealed class SalesServiceTests : IAsyncLifetime
         var afterAdd = await Cart(c => c.AddAsync(owner, chair.Id, 2));
         Assert.Equal(2, afterAdd.TotalQuantity);
         Assert.Equal(chair.Price * 2, afterAdd.Subtotal);
-        Assert.Equal(300_000, afterAdd.ShippingFee); // below the free-shipping threshold
+        Assert.Equal(afterAdd.Subtotal, afterAdd.Total);  // delivery & installation are quoted when the store calls
 
         var line = Assert.Single(afterAdd.Items);
         var afterUpdate = await Cart(c => c.UpdateQuantityAsync(owner, line.ItemId, 3));
@@ -82,15 +82,17 @@ public sealed class SalesServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Cart_FreeShippingAboveThreshold()
+    public async Task Cart_TotalNeverIncludesShipping_WhateverTheAmount()
     {
         var owner = new CartOwner(await CreateUserAsync(), null);
+        var chair = await VariantAsync("GA-CURVE");
         var table = await VariantAsync("BA-WALNUT");
 
-        var cart = await Cart(c => c.AddAsync(owner, table.Id, 1));
+        var small = await Cart(c => c.AddAsync(owner, chair.Id, 1));
+        Assert.Equal(chair.Price, small.Total);
 
-        Assert.True(cart.Subtotal >= 10_000_000);
-        Assert.Equal(0, cart.ShippingFee);
+        var large = await Cart(c => c.AddAsync(owner, table.Id, 1));
+        Assert.Equal(chair.Price + table.Price, large.Total);
     }
 
     [Fact]
@@ -147,7 +149,7 @@ public sealed class SalesServiceTests : IAsyncLifetime
 
         Assert.Equal("CHAOBAN10", cart.CouponCode);
         Assert.Equal(Math.Min(Math.Round(cart.Subtotal * 0.1m), 2_000_000), cart.DiscountAmount);
-        Assert.Equal(cart.Subtotal - cart.DiscountAmount + cart.ShippingFee, cart.Total);
+        Assert.Equal(cart.Subtotal - cart.DiscountAmount, cart.Total);
     }
 
     // ------------------------------------------------------------------ Orders
@@ -170,7 +172,7 @@ public sealed class SalesServiceTests : IAsyncLifetime
         Assert.Equal(PaymentStatus.Unpaid, order.PaymentStatus);
         Assert.Equal(table.Price * 2, order.Subtotal);
         Assert.Equal(2_000_000, order.DiscountAmount);           // 10% capped at 2M
-        Assert.Equal(0, order.ShippingFee);                      // free above 10M
+        Assert.Equal(0, order.ShippingFee);                      // quoted later by phone, recorded by staff
         Assert.Equal(order.Subtotal - order.DiscountAmount, order.TotalAmount);
         Assert.Equal(table.Sku, Assert.Single(order.Items).Sku);
         Assert.Equal("TP. Hồ Chí Minh", order.ShippingAddress!.Province);

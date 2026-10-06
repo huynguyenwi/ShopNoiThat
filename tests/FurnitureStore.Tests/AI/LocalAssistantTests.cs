@@ -1,5 +1,4 @@
 using FurnitureStore.Application.AI;
-using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Engagement;
 using FurnitureStore.Application.Sales;
 using FurnitureStore.Domain.Entities;
@@ -13,11 +12,9 @@ public sealed class LocalAssistantTests
     private static readonly StoreInfoDto Store = new("Nhà Mộc Furniture", null, null, "123 Nguyễn Văn Linh, Q.7, TP.HCM", "KCN Tân Uyên, Bình Dương",
         "1900 0000", "contact@furniture.local", "08:00 - 21:00 (Thứ 2 - Chủ nhật)", "https://facebook.com/nhamoc", null, "https://zalo.me/19000000", null);
 
-    private static readonly ShippingSettings Shipping = new() { FreeShippingThreshold = 10_000_000, StandardFee = 300_000 };
-
     private static LocalFacts Facts(IReadOnlyList<AIKnowledgeEntry>? knowledge = null, IReadOnlyList<Coupon>? coupons = null,
         IReadOnlyList<OrderListItemDto>? orders = null, ProductFact? focus = null, int? warranty = null) =>
-        new(Store, Shipping, knowledge ?? [], coupons ?? [], orders, focus, warranty, []);
+        new(Store, knowledge ?? [], coupons ?? [], orders, focus, warranty, []);
 
     private static LocalReply Ask(string message, LocalFacts? facts = null, bool focus = false) =>
         LocalAssistant.Answer(LocalAssistant.Classify(message, focus) ?? throw new Xunit.Sdk.XunitException($"Not understood: {message}"), facts ?? Facts());
@@ -117,11 +114,12 @@ public sealed class LocalAssistantTests
     }
 
     [Fact]
-    public void Shipping_UsesTheShippingSettings_OrTheAdminText()
+    public void Shipping_IsQuotedWhenTheStoreCalls_OrUsesTheAdminText()
     {
         var builtIn = Ask("phí ship bao nhiêu").Text;
-        Assert.Contains("10.000.000₫", builtIn);
-        Assert.Contains("300.000₫", builtIn);
+        Assert.Contains("không tính sẵn trên website", builtIn);
+        Assert.Contains("gọi lại", builtIn);
+        Assert.DoesNotContain("₫", builtIn);                         // no amount promised
 
         AIKnowledgeEntry admin = new() { Title = "Giao hàng & lắp đặt", Keywords = "giao hàng, ship", Content = "Giao nội thành trong 48 giờ.", IsActive = true };
         Assert.Equal("Giao nội thành trong 48 giờ.", Ask("phí ship bao nhiêu", Facts(knowledge: [admin])).Text);
@@ -168,6 +166,37 @@ public sealed class LocalAssistantTests
     }
 
     [Fact]
+    public void HowToOrder_And_Payment_DescribeTheContactOrdering()
+    {
+        var steps = Ask("cách đặt hàng trên web").Text;
+        Assert.Contains("\"Liên hệ đặt hàng\"", steps);
+        Assert.Contains("\"Gửi yêu cầu\"", steps);
+        Assert.DoesNotContain("Tiến hành đặt hàng", steps);
+
+        Assert.Contains("không thanh toán trực tuyến", Ask("thanh toán thế nào").Text);
+    }
+
+    [Theory]
+    [InlineData("gỗ sồi Nga có bền không")]
+    [InlineData("go soi nga co tot khong")]
+    public void RussianOak_IsExplained_WithoutAlsoDescribingPlainOak(string question)
+    {
+        var match = LocalAssistant.Classify(question, hasFocusProduct: false)!;
+
+        Assert.Equal(LocalTopic.Material, match.Topic);
+        Assert.Equal("go-soi-nga", Assert.Single(match.Materials).Slug);
+        Assert.Contains("Gỗ sồi Nga", LocalAssistant.Answer(match, Facts()).Text);
+    }
+
+    [Fact]
+    public void RussianOak_ComparedWithOak_DescribesBoth()
+    {
+        var match = LocalAssistant.Classify("gỗ sồi Nga và gỗ sồi Mỹ khác gì", hasFocusProduct: false)!;
+
+        Assert.Equal(["go-soi-nga", "go-soi"], match.Materials.Select(m => m.Slug));
+    }
+
+    [Fact]
     public void MaterialComparison_DescribesBothMaterials()
     {
         var reply = Ask("gỗ sồi và gỗ óc chó khác gì");
@@ -191,7 +220,7 @@ public sealed class LocalAssistantTests
         Assert.Contains("Kem be, Xanh rêu", Ask("có màu nào khác", facts, focus: true).Text);
         Assert.Contains("còn hàng các phiên bản: Kem be / 2m1", Ask("còn hàng không", facts, focus: true).Text);
         Assert.StartsWith("Sofa Oslo được bảo hành 24 tháng.", Ask("bảo hành bao lâu", facts, focus: true).Text);
-        Assert.Contains("miễn phí giao", Ask("phí ship bao nhiêu", facts, focus: true).Text); // 16.9 million is above the free-shipping threshold
+        Assert.Contains("Với Sofa Oslo, nhân viên báo phí giao và lắp đặt", Ask("phí ship bao nhiêu", facts, focus: true).Text);
     }
 
     [Fact]

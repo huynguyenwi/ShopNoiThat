@@ -1,5 +1,13 @@
 @model IReadOnlyList<FurnitureStore.Application.Catalog.CategoryNodeDto>
 @using FurnitureStore.Application.Catalog
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    // The store's main product line gets its own link next to "Danh mục".
+    var focusSlug = SiteOptions.Value.FocusCategorySlug;
+    var focus = string.IsNullOrWhiteSpace(focusSlug)
+        ? null
+        : Model.Concat(Model.SelectMany(room => room.Children)).FirstOrDefault(c => string.Equals(c.Slug, focusSlug, StringComparison.OrdinalIgnoreCase));
+}
 <li class="nav-item dropdown mega-dropdown">
     <a class="nav-link dropdown-toggle" href="/products" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Danh mục</a>
     <div class="dropdown-menu mega-menu">
@@ -38,3 +46,7 @@
         </div>
     </div>
 </li>
+@if (focus is not null)
+{
+    <li class="nav-item"><a class="nav-link" href="/products?category=@focus.Slug">@focus.Name</a></li>
+}

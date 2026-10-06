@@ -96,7 +96,7 @@
                             <dl class="summary-lines mb-0">
                                 <div><dt>Tạm tính</dt><dd>@Format.Money(Model.Subtotal)</dd></div>
                                 <div><dt>Giảm giá @(Model.CouponCode is null ? "" : $"({Model.CouponCode})")</dt><dd class="text-success">-@Format.Money(Model.DiscountAmount)</dd></div>
-                                <div><dt>Giao hàng &amp; lắp đặt</dt><dd>@(Model.ShippingFee == 0 ? "Miễn phí" : Format.Money(Model.ShippingFee))</dd></div>
+                                <div><dt>Giao hàng &amp; lắp đặt</dt><dd>@Format.ShippingFee(Model.ShippingFee, Model.Status)</dd></div>
                                 <div class="summary-total"><dt>Tổng cộng</dt><dd>@Format.Money(Model.TotalAmount)</dd></div>
                             </dl>
                         </div>

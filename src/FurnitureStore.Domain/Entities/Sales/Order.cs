@@ -51,6 +51,32 @@ public class Order : AuditableEntity, IConcurrencyAware
 
     public int TotalQuantity => Items.Sum(i => i.Quantity);
 
+    public const decimal MaxShippingFee = 100_000_000;
+
+    /// <summary>
+    /// Delivery &amp; installation are not priced on the website: the store quotes them when it calls the customer
+    /// and staff record the amount, until the order is delivered, cancelled or paid.
+    /// </summary>
+    public bool CanChangeShippingFee =>
+        Status is OrderStatus.Pending or OrderStatus.Confirmed or OrderStatus.Processing or OrderStatus.Shipping
+        && PaymentStatus != PaymentStatus.Paid;
+
+    public void ChangeShippingFee(decimal fee)
+    {
+        if (!CanChangeShippingFee)
+        {
+            throw new DomainException("Không thể đổi phí giao hàng của đơn đã giao, đã hủy hoặc đã thanh toán.");
+        }
+
+        if (fee < 0 || fee > MaxShippingFee)
+        {
+            throw new DomainException("Phí giao hàng & lắp đặt phải từ 0 đến 100.000.000₫.");
+        }
+
+        ShippingFee = decimal.Round(fee, 0);
+        RecalculateTotals();
+    }
+
     /// <summary>Recalculates Subtotal and TotalAmount from items, discount and shipping fee.</summary>
     public void RecalculateTotals()
     {

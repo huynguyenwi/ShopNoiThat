@@ -10,6 +10,8 @@ namespace FurnitureStore.Infrastructure.Persistence.Seed;
 /// <summary>
 /// Inserts the demo catalog (<see cref="CatalogSeedData"/>) when no product exists yet.
 /// Variants are generated as materials × colors × sizes with deterministic SKUs, prices and stock.
+/// A catalog seeded by an earlier version is topped up with the demo products added since, and descriptions nobody
+/// edited are upgraded (<see cref="CatalogSeedData.DescriptionUpgrades"/>).
 /// </summary>
 public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider timeProvider, ILogger<CatalogSeeder> logger)
 {
@@ -17,11 +19,57 @@ public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider tim
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        if (await context.Products.IgnoreQueryFilters().AnyAsync(cancellationToken))
+        // Deleted products count too: a demo product an admin removed never comes back.
+        var existingSkus = await context.Products.IgnoreQueryFilters().Select(p => p.Sku).ToListAsync(cancellationToken);
+        if (existingSkus.Count == 0)
         {
-            logger.LogDebug("Catalog already contains products; demo catalog seeding skipped");
+            await SeedProductsAsync(CatalogSeedData.Products.Select((seed, index) => (seed, index)).ToList(), onlyNeededLookups: false, cancellationToken);
             return;
         }
+
+        await UpgradeDescriptionsAsync(cancellationToken);
+        await TopUpAsync(existingSkus, cancellationToken);
+    }
+
+    /// <summary>Adds the demo products missing from a catalog that an earlier version of this seeder created.</summary>
+    private async Task TopUpAsync(IReadOnlyCollection<string> existingSkus, CancellationToken cancellationToken)
+    {
+        var skus = new HashSet<string>(existingSkus, StringComparer.OrdinalIgnoreCase);
+        if (!CatalogSeedData.Products.Any(p => skus.Contains(p.Sku)))
+        {
+            logger.LogDebug("Catalog was not created from the demo data; demo catalog seeding skipped");
+            return;
+        }
+
+        var slugs = new HashSet<string>(await context.Products.IgnoreQueryFilters().Select(p => p.Slug).ToListAsync(cancellationToken),
+            StringComparer.OrdinalIgnoreCase);
+        var missing = new List<(ProductSeed Seed, int Index)>();
+        for (var index = 0; index < CatalogSeedData.Products.Length; index++)
+        {
+            var seed = CatalogSeedData.Products[index];
+            var prefix = seed.Sku + "-";
+            if (skus.Contains(seed.Sku) || slugs.Contains(SlugGenerator.Generate(seed.Name))
+                || await context.ProductVariants.IgnoreQueryFilters().AnyAsync(v => v.Sku.StartsWith(prefix), cancellationToken))
+            {
+                continue;
+            }
+
+            missing.Add((seed, index));
+        }
+
+        if (missing.Count > 0)
+        {
+            await SeedProductsAsync(missing, onlyNeededLookups: true, cancellationToken);
+        }
+    }
+
+    /// <param name="onlyNeededLookups">
+    /// Topping up: add only the categories, colors, materials, styles and sizes these products use, so lookups an admin
+    /// deleted are not brought back.
+    /// </param>
+    private async Task SeedProductsAsync(IReadOnlyList<(ProductSeed Seed, int Index)> seeds, bool onlyNeededLookups, CancellationToken cancellationToken)
+    {
+        var needed = onlyNeededLookups ? NeededLookups.For(seeds.Select(s => s.Seed)) : null;
 
         var strategy = context.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async ct =>
@@ -29,36 +77,102 @@ public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider tim
             await using var transaction = await context.Database.BeginTransactionAsync(ct);
 
             var now = timeProvider.GetUtcNow().UtcDateTime;
-            var categories = await SeedCategoriesAsync(ct);
+            var materialsBefore = await context.ProductMaterials.Select(m => m.Slug).ToListAsync(ct);
+            var categories = await SeedCategoriesAsync(needed?.Categories, ct);
             var colors = await SeedLookupAsync(context.ProductColors, CatalogSeedData.Colors, c => c.Slug,
-                (seed, i) => new ProductColor { Slug = seed.Slug, Name = seed.Name, HexCode = seed.Hex, DisplayOrder = i }, x => x.Slug, ct);
+                (seed, i) => new ProductColor { Slug = seed.Slug, Name = seed.Name, HexCode = seed.Hex, DisplayOrder = i }, x => x.Slug, needed?.Colors, ct);
             var materials = await SeedLookupAsync(context.ProductMaterials, CatalogSeedData.Materials, m => m.Slug,
-                (seed, i) => new ProductMaterial { Slug = seed.Slug, Name = seed.Name, Group = seed.Group, Description = seed.Description, DisplayOrder = i }, x => x.Slug, ct);
+                (seed, i) => new ProductMaterial { Slug = seed.Slug, Name = seed.Name, Group = seed.Group, Description = seed.Description, DisplayOrder = i }, x => x.Slug, needed?.Materials, ct);
             var styles = await SeedLookupAsync(context.ProductStyles, CatalogSeedData.Styles, s => s.Code,
-                (seed, i) => new ProductStyle { Code = seed.Code, Slug = seed.Slug, Name = seed.Name, Description = seed.Description, DisplayOrder = i }, x => x.Code, ct);
+                (seed, i) => new ProductStyle { Code = seed.Code, Slug = seed.Slug, Name = seed.Name, Description = seed.Description, DisplayOrder = i }, x => x.Code, needed?.Styles, ct);
             var sizes = await SeedLookupAsync(context.ProductSizes, CatalogSeedData.Sizes, s => s.Slug,
                 (seed, i) => new ProductSize
                 {
                     Slug = seed.Slug, Name = seed.Name, LengthMm = seed.LengthMm, WidthMm = seed.WidthMm,
                     HeightMm = seed.HeightMm, FurnitureType = seed.Type, DisplayOrder = i
-                }, x => x.Slug, ct);
+                }, x => x.Slug, needed?.Sizes, ct);
+
+            // A material this top-up creates also gets its default price in an existing custom-quote price list (only now,
+            // so a price an admin deletes later stays deleted).
+            if (onlyNeededLookups && await context.PriceRules.AnyAsync(ct))
+            {
+                foreach (var material in materials.Values.Where(m => !materialsBefore.Contains(m.Slug, StringComparer.OrdinalIgnoreCase)))
+                {
+                    if (PriceRuleSeeder.MaterialRuleFor(material) is { } rule)
+                    {
+                        context.PriceRules.Add(rule);
+                    }
+                }
+            }
 
             var usedSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var lookups = new Lookups(categories, colors, materials, styles, sizes);
 
-            for (var index = 0; index < CatalogSeedData.Products.Length; index++)
+            foreach (var (seed, index) in seeds)
             {
-                var product = BuildProduct(CatalogSeedData.Products[index], index, now, lookups, usedSkus, usedSlugs);
-                context.Products.Add(product);
+                context.Products.Add(BuildProduct(seed, index, now, lookups, usedSkus, usedSlugs));
             }
 
             await context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
-            logger.LogInformation("Seeded demo catalog: {Categories} categories, {Products} products, {Variants} variants",
-                categories.Count, CatalogSeedData.Products.Length, usedSkus.Count - CatalogSeedData.Products.Length);
+            logger.LogInformation("Seeded demo catalog: {Products} products, {Variants} variants ({Skus})",
+                seeds.Count, usedSkus.Count - seeds.Count, onlyNeededLookups ? string.Join(", ", seeds.Select(s => s.Seed.Sku)) : "full catalog");
         }, cancellationToken);
+    }
+
+    private async Task UpgradeDescriptionsAsync(CancellationToken cancellationToken)
+    {
+        var upgrades = CatalogSeedData.DescriptionUpgrades.ToDictionary(u => u.Sku, StringComparer.OrdinalIgnoreCase);
+        var skus = upgrades.Keys.ToList();
+        var products = await context.Products.IgnoreQueryFilters().Where(p => skus.Contains(p.Sku)).ToListAsync(cancellationToken);
+
+        var upgraded = 0;
+        foreach (var product in products)
+        {
+            // The SQL setup script may carry Windows line breaks.
+            var upgrade = upgrades[product.Sku];
+            if (product.Description?.Replace("\r\n", "\n") == upgrade.Old)
+            {
+                product.Description = upgrade.New;
+                upgraded++;
+            }
+        }
+
+        if (upgraded > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Upgraded the default description of {Count} demo products", upgraded);
+        }
+    }
+
+    /// <summary>The lookup keys a set of demo products refers to (categories include their parents).</summary>
+    private sealed record NeededLookups(
+        HashSet<string> Categories, HashSet<string> Colors, HashSet<string> Materials, HashSet<string> Styles, HashSet<string> Sizes)
+    {
+        public static NeededLookups For(IEnumerable<ProductSeed> products)
+        {
+            var result = new NeededLookups(NewSet(), NewSet(), NewSet(), NewSet(), NewSet());
+            foreach (var product in products)
+            {
+                for (var category = CatalogSeedData.Categories.FirstOrDefault(c => c.Slug == product.CategorySlug);
+                     category is not null;
+                     category = CatalogSeedData.Categories.FirstOrDefault(c => c.Slug == category.ParentSlug))
+                {
+                    result.Categories.Add(category.Slug);
+                }
+
+                result.Colors.UnionWith(product.Colors.Select(o => o.Slug).Concat(product.SecondaryColors.Select(o => o.Slug)));
+                result.Materials.UnionWith(product.Materials.Select(o => o.Slug).Concat(product.SecondaryMaterials.Select(o => o.Slug)));
+                result.Sizes.UnionWith(product.Sizes.Select(o => o.Slug));
+                result.Styles.Add(product.StyleCode);
+            }
+
+            return result;
+        }
+
+        private static HashSet<string> NewSet() => new(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Fills SearchText for products saved before the column existed (or edited outside the app).</summary>
@@ -98,13 +212,13 @@ public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider tim
         Dictionary<string, ProductStyle> Styles,
         Dictionary<string, ProductSize> Sizes);
 
-    private async Task<Dictionary<string, Category>> SeedCategoriesAsync(CancellationToken ct)
+    private async Task<Dictionary<string, Category>> SeedCategoriesAsync(ISet<string>? include, CancellationToken ct)
     {
         var existing = await context.Categories.ToDictionaryAsync(c => c.Slug, StringComparer.OrdinalIgnoreCase, ct);
 
         foreach (var seed in CatalogSeedData.Categories)
         {
-            if (existing.ContainsKey(seed.Slug))
+            if (existing.ContainsKey(seed.Slug) || include?.Contains(seed.Slug) == false)
             {
                 continue;
             }
@@ -136,6 +250,7 @@ public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider tim
         Func<TSeed, string> seedKey,
         Func<TSeed, int, TEntity> create,
         Func<TEntity, string> entityKey,
+        ISet<string>? include,
         CancellationToken ct) where TEntity : class
     {
         var existing = (await set.ToListAsync(ct)).ToDictionary(entityKey, StringComparer.OrdinalIgnoreCase);
@@ -143,7 +258,7 @@ public sealed class CatalogSeeder(ApplicationDbContext context, TimeProvider tim
         for (var i = 0; i < seeds.Count; i++)
         {
             var key = seedKey(seeds[i]);
-            if (!existing.ContainsKey(key))
+            if (!existing.ContainsKey(key) && include?.Contains(key) != false)
             {
                 var entity = create(seeds[i], i + 1);
                 existing[key] = entity;

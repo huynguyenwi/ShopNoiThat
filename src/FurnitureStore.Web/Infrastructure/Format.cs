@@ -1,4 +1,5 @@
 using System.Globalization;
+using FurnitureStore.Domain.Enums;
 
 namespace FurnitureStore.Web.Infrastructure;
 
@@ -15,6 +16,17 @@ public static class Format
     public static string Money(decimal value) => value.ToString("#,##0", Vietnamese) + "₫";
 
     public static string Money(decimal? value) => value.HasValue ? Money(value.Value) : string.Empty;
+
+    /// <summary>Delivery &amp; installation are not priced on the website; the store quotes them when it calls the customer.</summary>
+    public const string ShippingQuotedOnContact = "Cửa hàng báo khi liên hệ";
+
+    /// <summary>An order's delivery &amp; installation fee: 0 on a pending order means the store has not quoted it yet.</summary>
+    public static string ShippingFee(decimal fee, OrderStatus status) => fee > 0 ? Money(fee) : status switch
+    {
+        OrderStatus.Pending => ShippingQuotedOnContact,
+        OrderStatus.Cancelled => "—",
+        _ => "Miễn phí"
+    };
 
     public static string Number(long value) => value.ToString("#,##0", Vietnamese);
 

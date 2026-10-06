@@ -28,7 +28,6 @@ public sealed class CartService(
     ICouponRepository coupons,
     IRepository<ProductVariant> variants,
     IRepository<Product> products,
-    IShippingCalculator shipping,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<CartService> logger) : ICartService
@@ -37,11 +36,11 @@ public sealed class CartService(
     {
         if (owner.IsEmpty)
         {
-            return CartDto.Empty(shipping.FreeShippingThreshold);
+            return CartDto.Empty;
         }
 
         var cart = await carts.GetAsync(owner, cancellationToken);
-        return cart is null ? CartDto.Empty(shipping.FreeShippingThreshold) : await BuildAsync(cart, owner, cancellationToken);
+        return cart is null ? CartDto.Empty : await BuildAsync(cart, owner, cancellationToken);
     }
 
     public Task<int> CountAsync(CartOwner owner, CancellationToken cancellationToken = default) =>
@@ -276,8 +275,7 @@ public sealed class CartService(
             }
         }
 
-        var shippingFee = lines.Count == 0 ? 0 : shipping.Calculate(subtotal - discount);
-        return new CartDto(lines, subtotal, discount, shippingFee, Math.Max(0, subtotal - discount + shippingFee),
-            cart.CouponCode, couponMessage, shipping.FreeShippingThreshold, warnings);
+        // Delivery & installation are quoted by the store when it contacts the customer, so they are not in the total.
+        return new CartDto(lines, subtotal, discount, Math.Max(0, subtotal - discount), cart.CouponCode, couponMessage, warnings);
     }
 }

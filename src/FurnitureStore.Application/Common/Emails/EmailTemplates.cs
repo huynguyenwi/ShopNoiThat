@@ -7,6 +7,8 @@ namespace FurnitureStore.Application.Common.Emails;
 /// </summary>
 public static class EmailTemplates
 {
+    public static string Money(decimal value) => value.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + "₫";
+
     public static string Welcome(string siteName, string fullName, string shopUrl) => Layout(siteName,
         $"""
         <p>Xin chào <strong>{E(fullName)}</strong>,</p>
@@ -33,13 +35,12 @@ public static class EmailTemplates
     /// <param name="qrImageUrl">Absolute address of the order QR image (PNG: e-mail clients do not show SVG).</param>
     public static string OrderPlaced(string siteName, Domain.Entities.Order order, Sales.PaymentInstructionsDto? instructions, string orderUrl, string? qrImageUrl = null)
     {
-        static string Money(decimal value) => value.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + "₫";
 
         var rows = string.Concat(order.Items.Select(i =>
             $"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">{E(i.ProductName)}<br><span style="color:#7a6d62;font-size:13px">{E(i.VariantName)} × {i.Quantity}</span></td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">{Money(i.LineTotal)}</td></tr>"""));
 
         var payment = instructions is null
-            ? "<p>Phương thức thanh toán: <strong>Thanh toán khi nhận hàng (COD)</strong>.</p>"
+            ? "<p>Thanh toán: <strong>khi nhận hàng (COD)</strong> hoặc chuyển khoản theo hướng dẫn của nhân viên sau khi xác nhận đơn.</p>"
             : $"""
               <p>Vui lòng chuyển khoản <strong>{Money(instructions.Amount)}</strong> tới:</p>
               <p style="background:#faf7f2;padding:12px 16px;border-radius:8px">Ngân hàng: <strong>{E(instructions.BankName)}</strong><br>
@@ -50,12 +51,12 @@ public static class EmailTemplates
         return Layout(siteName,
             $"""
             <p>Xin chào <strong>{E(order.CustomerName)}</strong>,</p>
-            <p>Cảm ơn bạn đã đặt hàng. Mã đơn hàng của bạn là <strong>{E(order.OrderCode)}</strong>. Chúng tôi sẽ gọi xác nhận trong thời gian sớm nhất.</p>
+            <p>Cảm ơn bạn đã gửi yêu cầu đặt hàng. Mã đơn hàng của bạn là <strong>{E(order.OrderCode)}</strong>. Cửa hàng sẽ gọi cho bạn để xác nhận mẫu, giá và báo phí giao hàng &amp; lắp đặt.</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">{rows}
               <tr><td style="padding:6px 0">Tạm tính</td><td style="text-align:right">{Money(order.Subtotal)}</td></tr>
               <tr><td style="padding:6px 0">Giảm giá{(order.CouponCode is null ? "" : $" (mã {E(order.CouponCode)})")}</td><td style="text-align:right">-{Money(order.DiscountAmount)}</td></tr>
-              <tr><td style="padding:6px 0">Phí giao hàng</td><td style="text-align:right">{Money(order.ShippingFee)}</td></tr>
-              <tr><td style="padding:8px 0;font-weight:700">Tổng cộng</td><td style="text-align:right;font-weight:700">{Money(order.TotalAmount)}</td></tr>
+              <tr><td style="padding:6px 0">Giao hàng &amp; lắp đặt</td><td style="text-align:right">{(order.ShippingFee > 0 ? Money(order.ShippingFee) : "Cửa hàng báo khi liên hệ")}</td></tr>
+              <tr><td style="padding:8px 0;font-weight:700">{(order.ShippingFee > 0 ? "Tổng cộng" : "Tổng tiền hàng")}</td><td style="text-align:right;font-weight:700">{Money(order.TotalAmount)}</td></tr>
             </table>
             {payment}
             {(qrImageUrl is null ? "" : $"""
@@ -68,7 +69,6 @@ public static class EmailTemplates
 
     public static string QuoteReceived(string siteName, string customerName, string code, string summary, decimal unitPrice, int quantity, decimal total, string? quoteUrl)
     {
-        static string Money(decimal value) => value.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + "₫";
         return Layout(siteName,
             $"""
             <p>Xin chào <strong>{E(customerName)}</strong>,</p>
@@ -81,7 +81,6 @@ public static class EmailTemplates
 
     public static string QuoteAnswered(string siteName, string customerName, string code, decimal finalPrice, string? note, string? quoteUrl)
     {
-        static string Money(decimal value) => value.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + "₫";
         return Layout(siteName,
             $"""
             <p>Xin chào <strong>{E(customerName)}</strong>,</p>

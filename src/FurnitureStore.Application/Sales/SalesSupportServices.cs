@@ -6,14 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace FurnitureStore.Application.Sales;
 
-public sealed class ShippingCalculator(IOptions<ShippingSettings> options) : IShippingCalculator
-{
-    public decimal FreeShippingThreshold => options.Value.FreeShippingThreshold;
-
-    public decimal Calculate(decimal subtotalAfterDiscount, string? province = null) =>
-        subtotalAfterDiscount >= options.Value.FreeShippingThreshold ? 0 : options.Value.StandardFee;
-}
-
 /// <summary>Chooses the provider for an order's payment method among the methods enabled in configuration.</summary>
 public sealed class PaymentService(IEnumerable<IPaymentProvider> providers, IOptions<PaymentSettings> options) : IPaymentService
 {

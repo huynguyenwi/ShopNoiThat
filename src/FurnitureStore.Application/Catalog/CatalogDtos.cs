@@ -120,9 +120,15 @@ public sealed record SearchSuggestionDto(int Id, string Name, string Slug, strin
 
 public sealed record RoomSectionDto(CategoryNodeDto Room, IReadOnlyList<ProductCardDto> Products);
 
+public sealed record SizeInUseDto(string Name, string Slug, int ProductCount);
+
+/// <summary>The store's main product line, shown first on the home page (see ApplicationSettings.FocusCategorySlug).</summary>
+public sealed record FocusSectionDto(CategoryNodeDto Category, IReadOnlyList<ProductCardDto> Products, IReadOnlyList<SizeInUseDto> Sizes);
+
 public sealed record HomePageDto(
     IReadOnlyList<ProductCardDto> Featured,
     IReadOnlyList<ProductCardDto> NewArrivals,
     IReadOnlyList<ProductCardDto> BestSellers,
     IReadOnlyList<ProductCardDto> OnSale,
-    IReadOnlyList<RoomSectionDto> Rooms);
+    IReadOnlyList<RoomSectionDto> Rooms,
+    FocusSectionDto? Focus = null);

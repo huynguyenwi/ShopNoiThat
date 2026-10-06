@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Common.Utilities;
 using FurnitureStore.Application.Engagement;
 using FurnitureStore.Application.Sales;
@@ -32,7 +31,6 @@ public sealed record LocalMatch(LocalTopic Topic, int Score, IReadOnlyList<Local
 /// <summary>Live data the answers are built from (loaded by <see cref="AssistantService"/> only when the topic needs it).</summary>
 public sealed record LocalFacts(
     StoreInfoDto Store,
-    ShippingSettings Shipping,
     IReadOnlyList<AIKnowledgeEntry> Knowledge,
     IReadOnlyList<Coupon> Coupons,
     IReadOnlyList<OrderListItemDto>? MyOrders,
@@ -47,7 +45,7 @@ public sealed record LocalReply(string Text, IReadOnlyList<string> Suggestions);
 /// greetings, opening hours, address, hotline, delivery, warranty, returns, payment, how to order, order status,
 /// cancelling, coupons, account help, materials, styles, sizes, care, and questions about the product being viewed.
 /// Runs entirely on the server with no external service. Matching is accent-insensitive on whole words ("hong" never
-/// matches inside "khong"); answers only use store data (store information, shipping settings, running coupons, the
+/// matches inside "khong"); answers only use store data (store information, running coupons, the
 /// customer's own orders, the admin-editable knowledge base) plus general furniture know-how - never invented prices.
 /// </summary>
 public static partial class LocalAssistant
@@ -131,6 +129,11 @@ public static partial class LocalAssistant
 
     public static readonly IReadOnlyList<MaterialInfo> Materials =
     [
+        new("go-soi-nga", "Gỗ sồi Nga", ["go soi nga", "soi nga", "russian oak"],
+            "gỗ sồi tự nhiên nhập khẩu từ Nga, vân rõ và đều, màu vàng nâu nhạt; nhuộm màu óc chó lên rất đẹp.",
+            "cứng chắc, chịu lực tốt, ít cong vênh khi đã sấy đạt chuẩn; giá mềm hơn óc chó và sồi Mỹ - chất liệu chính cho bàn ghế ăn gia đình.",
+            "nặng; cần sơn phủ kỹ để chống ẩm ở mặt bàn ăn.",
+            "lau khăn ẩm vắt kỹ rồi lau khô; dùng lót nồi, lót cốc; tránh để nước canh, nước chấm đọng lâu trên mặt bàn."),
         new("go-oc-cho", "Gỗ óc chó", ["go oc cho", "oc cho", "walnut"],
             "gỗ tự nhiên cao cấp, vân đẹp, màu nâu sô-cô-la trầm ấm.",
             "rất bền, ít cong vênh, càng dùng càng đẹp, hợp phong cách sang trọng / cổ điển.",
@@ -216,6 +219,11 @@ public static partial class LocalAssistant
         var plain = Words(message);
         // Aliases are specific phrases: once accents are gone, single words collide ("nhung" = nhung / nhưng, "da" = da / đá).
         var materials = Materials.Where(m => m.Aliases.Any(a => Has(plain, a))).ToList();
+        // "gỗ sồi Nga" also contains "gỗ sồi": plain oak only counts when it is named on its own too.
+        if (materials.Any(m => m.Slug == "go-soi-nga") && !Has(plain.Replace(" soi nga ", " "), "soi"))
+        {
+            materials.RemoveAll(m => m.Slug == "go-soi");
+        }
         var style = AdviceKnowledge.Styles.FirstOrDefault(s => Has(plain, Plain(s.Name)) || Has(plain, s.Slug.Replace('-', ' ')));
         var furniture = FurnitureWord(plain);
         var cues = QuestionCues.Count(c => Has(plain, c));
@@ -338,13 +346,11 @@ public static partial class LocalAssistant
             case LocalTopic.Shipping:
             {
                 var policy = Knowledge(facts, "giao hang", "van chuyen", "lap dat")
-                             ?? $"Miễn phí giao hàng và lắp đặt cho đơn từ {Money(facts.Shipping.FreeShippingThreshold)}; đơn nhỏ hơn phí giao và lắp đặt là "
-                             + $"{Money(facts.Shipping.StandardFee)}. Thời gian giao được cửa hàng báo khi xác nhận đơn.";
+                             ?? "Phí giao hàng và lắp đặt không tính sẵn trên website: sau khi bạn gửi yêu cầu đặt hàng, cửa hàng gọi lại "
+                             + "và báo phí theo địa chỉ, số món và tầng lầu. Thời gian giao cũng được báo khi xác nhận đơn.";
                 if (facts.Focus is { } p)
                 {
-                    policy += p.Price >= facts.Shipping.FreeShippingThreshold
-                        ? $"\n{p.Name} có giá từ {Money(p.Price)} nên được miễn phí giao và lắp đặt."
-                        : $"\nVới {p.Name}, đơn đạt {Money(facts.Shipping.FreeShippingThreshold)} sẽ được miễn phí giao và lắp đặt.";
+                    policy += $"\nVới {p.Name}, nhân viên báo phí giao và lắp đặt khi gọi xác nhận đơn.";
                 }
 
                 return new(policy, ["Bảo hành bao lâu?", "Thanh toán thế nào?", "Có mã giảm giá không?"]);
@@ -370,7 +376,8 @@ public static partial class LocalAssistant
             case LocalTopic.Payment:
             {
                 var text = Knowledge(facts, "thanh toan", "chuyen khoan", "cod")
-                           ?? "Cửa hàng nhận thanh toán khi nhận hàng (COD) và chuyển khoản ngân hàng; thông tin chuyển khoản hiện ngay sau khi đặt hàng.";
+                           ?? "Website nhận yêu cầu đặt hàng, không thanh toán trực tuyến. Sau khi cửa hàng liên hệ xác nhận, bạn thanh toán "
+                           + "khi nhận hàng (COD) hoặc chuyển khoản theo hướng dẫn của nhân viên.";
                 // Asked about something the store does not offer online: say so (unless the admin's own text already covers it).
                 if (match.Mentions("tra gop", "vi dien tu", "momo", "vnpay", "the tin dung", "visa") && !Plain(text).Contains("tra gop", StringComparison.Ordinal))
                 {
@@ -388,9 +395,10 @@ public static partial class LocalAssistant
 
             case LocalTopic.HowToOrder:
                 return new("Đặt hàng trên website chỉ vài bước:\n1. Chọn sản phẩm, chọn màu / kích thước rồi bấm \"Thêm vào giỏ hàng\".\n"
-                    + "2. Mở giỏ hàng, nhập mã giảm giá nếu có.\n3. Bấm \"Tiến hành đặt hàng\", đăng nhập (hoặc đăng ký nhanh), điền địa chỉ nhận hàng.\n"
-                    + "4. Chọn thanh toán khi nhận hàng (COD) hoặc chuyển khoản, bấm \"Đặt hàng\".\n"
-                    + "Bạn nhận email xác nhận kèm mã QR đơn hàng; nhân viên sẽ gọi xác nhận trong giờ làm việc.",
+                    + "2. Mở giỏ hàng, nhập mã giảm giá nếu có.\n3. Bấm \"Liên hệ đặt hàng\", đăng nhập (hoặc đăng ký nhanh), điền số điện thoại, "
+                    + "địa chỉ nhận hàng rồi bấm \"Gửi yêu cầu\".\n"
+                    + "4. Nhân viên gọi lại xác nhận mẫu, giá, phí giao và lắp đặt; bạn thanh toán khi nhận hàng hoặc chuyển khoản theo hướng dẫn.\n"
+                    + "Bạn nhận email xác nhận kèm mã QR đơn hàng.",
                     ["Phí giao hàng bao nhiêu?", "Có mã giảm giá không?", "Kiểm tra đơn hàng ở đâu?"]);
 
             case LocalTopic.OrderStatus:
@@ -428,9 +436,9 @@ public static partial class LocalAssistant
 
                 var lines = facts.Coupons.Take(4).Select(c =>
                     $"• {c.Code}: {CouponText.Benefit(c.DiscountType, c.DiscountValue, c.MaxDiscountAmount)} ({CouponText.Conditions(c.MinOrderAmount, c.UsageLimitPerUser, c.EndsAt)})");
-                return new($"Mã giảm giá đang áp dụng:\n{string.Join("\n", lines)}\nNhập mã ở giỏ hàng hoặc trang thanh toán; "
+                return new($"Mã giảm giá đang áp dụng:\n{string.Join("\n", lines)}\nNhập mã ở giỏ hàng hoặc trang liên hệ đặt hàng; "
                     + "sản phẩm đang giảm giá xem ở mục Khuyến mãi (/products?onSale=true).",
-                    ["Cách đặt hàng?", "Phí giao hàng bao nhiêu?", "Sofa cho phòng khách"]);
+                    ["Cách đặt hàng?", "Phí giao hàng bao nhiêu?", "Bộ bàn ăn 6 ghế"]);
             }
 
             case LocalTopic.Account:

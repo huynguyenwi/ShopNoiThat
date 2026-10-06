@@ -75,11 +75,6 @@ public static class DependencyInjection
         services.AddOptions<PaymentSettings>()
             .Bind(configuration.GetSection(PaymentSettings.SectionName));
 
-        services.AddOptions<ShippingSettings>()
-            .Bind(configuration.GetSection(ShippingSettings.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
         services.AddOptions<AiSettings>()
             .Bind(configuration.GetSection(AiSettings.SectionName))
             .ValidateDataAnnotations()

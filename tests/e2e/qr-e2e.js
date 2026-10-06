@@ -136,7 +136,6 @@ async function register(page, who) {
     await customer.type('#Command_AddressLine', '12 Đường Quét Mã');
     await customer.select('#Command_Province', await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]));
     await customer.$eval('#Command_Ward', i => { i.value = 'Phường 1'; });
-    await customer.click('input[name="Command.PaymentMethod"][value="COD"]');
     await click(customer, 'button[form="checkoutForm"]');
     const code = await customer.$eval('[data-order-code]', e => e.textContent.trim());
     const orderId = sql(`SELECT Id FROM Orders WHERE OrderCode='${code}'`);

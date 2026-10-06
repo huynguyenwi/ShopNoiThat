@@ -1,5 +1,6 @@
 using FurnitureStore.Application.Common.Exceptions;
 using FurnitureStore.Application.Sales;
+using FurnitureStore.Domain.Enums;
 using FurnitureStore.Infrastructure.Identity;
 using FurnitureStore.Web.Infrastructure;
 using FurnitureStore.Web.ViewModels.Sales;
@@ -9,14 +10,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FurnitureStore.Web.Controllers;
 
-/// <summary>/checkout - requires sign-in (guests are sent to the login page and come back here).</summary>
+/// <summary>
+/// /checkout - "Liên hệ đặt hàng": the customer leaves contact and delivery details, the store calls back to confirm the order
+/// and quote delivery &amp; installation. Requires sign-in (guests are sent to the login page and come back here).
+/// </summary>
 [Route("checkout")]
 [Authorize(Policy = AuthorizationPolicies.SignedIn)]
 public sealed class CheckoutController(
     ICartService cart,
     IOrderService orders,
     IAddressService addresses,
-    IPaymentService payments,
     UserManager<ApplicationUser> userManager) : Controller
 {
     private string UserId => User.UserId()!;
@@ -56,6 +59,8 @@ public sealed class CheckoutController(
         try
         {
             ModelState.ThrowIfBindingFailed();
+            // No payment step: the customer pays on delivery, or by transfer when the staff who call back ask for it.
+            command.PaymentMethod = PaymentMethod.COD;
             var result = await orders.PlaceOrderAsync(UserId, command, cancellationToken);
             // Explicit URL: LowercaseUrls would otherwise lower-case the order code in the route.
             return Redirect($"/checkout/success/{result.OrderCode}");
@@ -109,7 +114,6 @@ public sealed class CheckoutController(
             Command = command,
             Cart = cartDto,
             SavedAddresses = saved,
-            PaymentMethods = payments.GetAvailableMethods(),
             Offers = await cart.GetOffersAsync(new CartOwner(UserId, null), cartDto, cancellationToken)
         };
     }

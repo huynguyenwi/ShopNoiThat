@@ -136,6 +136,51 @@ public sealed class AdminServiceTests : IAsyncLifetime
         Assert.Equal(stockAfterOrder + 2, await StockOfAsync(placed.OrderId));
     }
 
+    // ------------------------------------------------------------------ Delivery fee quoted by phone
+
+    [Fact]
+    public async Task ShippingFee_QuotedByPhone_UpdatesTheTotalToCollect_AndTellsTheCustomer()
+    {
+        var userId = await CreateCustomerAsync(_host);
+        var placed = await PlaceOrderAsync(_host, userId, "BBA-ANGIA");
+        var before = await Admin(a => a.GetAsync(placed.OrderId));
+        Assert.Equal(0, before.ShippingFee);                  // not priced on the website
+        Assert.True(before.CanChangeShippingFee);
+
+        await Admin(a => a.UpdateShippingFeeAsync(placed.OrderId, 450_000, before.Version));
+
+        var order = await Admin(a => a.GetAsync(placed.OrderId));
+        Assert.Equal(450_000, order.ShippingFee);
+        Assert.Equal(before.TotalAmount + 450_000, order.TotalAmount);
+        Assert.Equal(order.TotalAmount, Assert.Single(order.Payments).Amount);   // the COD amount to collect
+        Assert.True(await Db(db => db.Notifications.AnyAsync(n => n.UserId == userId && n.Title.Contains("đã báo phí giao hàng"))));
+        Assert.Contains(_host.Emails.Sent, e => e.Subject.Contains(placed.OrderCode) && e.HtmlBody.Contains("450.000₫"));
+        Assert.True(await Db(db => db.AuditLogs.AnyAsync(l => l.EntityName == nameof(Order) && l.EntityId == placed.OrderId.ToString()
+            && l.Action == AuditAction.Update && l.NewValues!.Contains("450000"))));
+    }
+
+    [Fact]
+    public async Task ShippingFee_StaleVersion_OutOfRange_AndDeliveredOrders_AreRejected()
+    {
+        var placed = await PlaceOrderAsync(_host, await CreateCustomerAsync(_host), "BBA-ANGIA");
+        var staleVersion = (await Admin(a => a.GetAsync(placed.OrderId))).Version;
+        await Admin(a => a.ChangeStatusAsync(placed.OrderId, OrderStatus.Confirmed, null, null));
+
+        await Assert.ThrowsAsync<ConflictException>(() => Admin(a => a.UpdateShippingFeeAsync(placed.OrderId, 300_000, staleVersion)));
+        await Assert.ThrowsAsync<DomainException>(() => Admin(a => a.UpdateShippingFeeAsync(placed.OrderId, -1, null)));
+        await Assert.ThrowsAsync<DomainException>(() => Admin(a => a.UpdateShippingFeeAsync(placed.OrderId, 100_000_001, null)));
+
+        foreach (var status in new[] { OrderStatus.Processing, OrderStatus.Shipping, OrderStatus.Delivered })
+        {
+            await Admin(a => a.ChangeStatusAsync(placed.OrderId, status, null, null));
+        }
+
+        await Assert.ThrowsAsync<DomainException>(() => Admin(a => a.UpdateShippingFeeAsync(placed.OrderId, 300_000, null)));
+        var order = await Admin(a => a.GetAsync(placed.OrderId));
+        Assert.False(order.CanChangeShippingFee);
+        Assert.Equal(0, order.ShippingFee);
+    }
+
     [Fact]
     public async Task Refund_AfterDelivery_RestocksInventory()
     {

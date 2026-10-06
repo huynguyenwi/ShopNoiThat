@@ -295,7 +295,7 @@ public sealed class ProductAdminServiceTests : IAsyncLifetime
         var searched = await Admin(s => s.ListAsync(new AdminProductQuery { Search = "sf-oslo-k" }));
         var outOfStock = await Admin(s => s.ListAsync(new AdminProductQuery { Stock = StockFilter.OutOfStock, PageSize = 100 }));
 
-        Assert.Equal(37, all.TotalCount);
+        Assert.Equal(43, all.TotalCount);
         Assert.Equal("SF-OSLO", Assert.Single(searched.Items).Sku);
         Assert.NotEmpty(outOfStock.Items);
     }

@@ -109,9 +109,3 @@ public interface INotificationService
     Task NotifyRoleAsync(string role, Domain.Enums.NotificationType type, string title, string message, string? link, CancellationToken cancellationToken = default);
     Task NotifyUserAsync(string userId, Domain.Enums.NotificationType type, string title, string message, string? link, CancellationToken cancellationToken = default);
 }
-
-public interface IShippingCalculator
-{
-    decimal Calculate(decimal subtotalAfterDiscount, string? province = null);
-    decimal FreeShippingThreshold { get; }
-}

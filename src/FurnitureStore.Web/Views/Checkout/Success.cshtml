@@ -1,18 +1,24 @@
 @model FurnitureStore.Application.Sales.OrderDetailDto
 @using FurnitureStore.Application.Qr
+@inject IStoreInfoService StoreInfo
 @{
-    ViewData["Title"] = "Đặt hàng thành công";
+    ViewData["Title"] = "Đã gửi yêu cầu đặt hàng";
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     var pay = Model.PaymentInstructions;
 }
 
 <section class="section">
     <div class="container" style="max-width: 760px">
         <div class="panel text-center p-4 p-md-5">
-            <span class="auth-icon" style="background:#e4f1e7;color:#3f7d4e"><i class="bi bi-bag-check" aria-hidden="true"></i></span>
-            <h1 class="h3">Cảm ơn bạn đã đặt hàng!</h1>
+            <span class="auth-icon" style="background:#e4f1e7;color:#3f7d4e"><i class="bi bi-telephone-inbound" aria-hidden="true"></i></span>
+            <h1 class="h3">Đã gửi yêu cầu đặt hàng!</h1>
             <p class="text-muted-fs mb-1">Mã đơn hàng</p>
             <p class="fs-4 fw-bold text-wood mb-3" data-order-code>@Model.OrderCode</p>
-            <p class="text-muted-fs">Chúng tôi đã gửi email xác nhận tới <strong>@Model.CustomerEmail</strong> và sẽ gọi điện xác nhận trong giờ làm việc.</p>
+            <p>Cửa hàng sẽ gọi cho bạn qua số <strong>@Model.CustomerPhone</strong> trong giờ làm việc để xác nhận mẫu, giá và báo phí giao hàng &amp; lắp đặt.</p>
+            <p class="text-muted-fs">Email xác nhận đã được gửi tới <strong>@Model.CustomerEmail</strong>.@if (!string.IsNullOrWhiteSpace(store.Hotline))
+            {
+                <text> Cần gấp? Gọi <a href="tel:@store.HotlineDigits">@store.Hotline</a>.</text>
+            }</p>
 
             @if (pay is not null)
             {
@@ -30,7 +36,8 @@
             }
             else
             {
-                <p class="mb-4"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Bạn sẽ thanh toán <strong>@Format.Money(Model.TotalAmount)</strong> khi nhận hàng.</p>
+                <p class="mb-4"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Tiền hàng <strong>@Format.Money(Model.TotalAmount)</strong>
+                    (chưa gồm phí giao hàng &amp; lắp đặt), thanh toán khi nhận hàng hoặc chuyển khoản theo hướng dẫn của nhân viên.</p>
             }
 
             <div class="order-qr mb-4" data-qr-card>

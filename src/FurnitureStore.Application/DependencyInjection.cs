@@ -31,7 +31,6 @@ public static class DependencyInjection
         services.AddScoped<IAttributeAdminService, AttributeAdminService>();
 
         // Sales
-        services.AddScoped<IShippingCalculator, ShippingCalculator>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<OrderWorkflow>();

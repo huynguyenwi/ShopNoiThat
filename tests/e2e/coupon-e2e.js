@@ -133,7 +133,6 @@ async function toast(page) {
     const province = await customer.$$eval('#Command_Province option', o => o.map(x => x.value).filter(Boolean)[0]);
     await customer.select('#Command_Province', province);
     await customer.$eval('#Command_Ward', i => { i.value = 'Phường Bến Nghé'; });
-    await customer.click('input[name="Command.PaymentMethod"][value="COD"]');
     await click(customer, 'button[form="checkoutForm"]');
     const orderCode = await text(customer, '[data-order-code]');
     const order = sql(`SELECT CONCAT(CouponCode,'|',DiscountAmount,'|',Status) FROM Orders WHERE OrderCode='${orderCode}'`);

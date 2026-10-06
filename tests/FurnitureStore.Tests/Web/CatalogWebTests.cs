@@ -24,6 +24,35 @@ public sealed partial class CatalogWebTests(FurnitureStoreWebApplicationFactory 
     }
 
     [Fact]
+    public async Task HomePage_LeadsWithTheDiningSets_AndTheirTableSizes()
+    {
+        var html = await factory.CreateClient().GetStringAsync("/");
+
+        var focus = FocusSectionRegex().Match(html);
+        Assert.True(focus.Success, "dining-set section missing");
+        Assert.True(focus.Index < html.IndexOf("Nội thất cho từng căn phòng", StringComparison.Ordinal), "the dining sets come first");
+        Assert.Contains("Bộ bàn ăn", focus.Value);
+        Assert.Contains("/products/bo-ban-an-go-soi-nga-an-gia", focus.Value);
+        Assert.Contains("href=\"/products?category=bo-ban-an&amp;size=set-4-ghe-120\"", focus.Value);
+        var text = WebUtility.HtmlDecode(focus.Value);                      // Razor writes "+" as &#x2B;
+        var four = text.IndexOf("Bàn 1m2 + 4 ghế", StringComparison.Ordinal);
+        var six = text.IndexOf("Bàn 1m6 + 6 ghế", StringComparison.Ordinal);
+        Assert.True(four >= 0 && six > four, $"4-chair at {four}, 6-chair at {six}");
+        Assert.True(six < text.IndexOf("1m6 (6 người)", StringComparison.Ordinal), "sizes most dining sets come in are listed first");
+        Assert.Contains("<a class=\"nav-link\" href=\"/products?category=bo-ban-an\">Bộ bàn ăn</a>", html);   // main menu
+    }
+
+    [Fact]
+    public async Task DiningSets_FilteredBySixChairSize_ListOnlyThatSize()
+    {
+        var html = await factory.CreateClient().GetStringAsync("/products?category=bo-ban-an&size=set-6-ghe-160");
+
+        Assert.Contains("Bộ bàn ăn gỗ sồi Nga An Gia", html);
+        Assert.Contains("Bộ bàn ăn gỗ sồi Nga ghế nệm Bình Minh", html);
+        Assert.DoesNotContain("Bộ bàn ăn 6 ghế gỗ sồi Family", html);     // sold by table length, not as a 4 / 6 chair set
+    }
+
+    [Fact]
     public async Task ProductList_RendersFiltersAndCards()
     {
         var response = await factory.CreateClient().GetAsync("/products?category=phong-an&sort=price-asc");
@@ -357,4 +386,7 @@ public sealed partial class CatalogWebTests(FurnitureStoreWebApplicationFactory 
 
     [GeneratedRegex("<option value=\"(\\d+)\"")]
     private static partial Regex OptionValueRegex();
+
+    [GeneratedRegex(@"<section[^>]*data-focus-section[\s\S]*?</section>")]
+    private static partial Regex FocusSectionRegex();
 }

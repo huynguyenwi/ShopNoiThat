@@ -32,7 +32,6 @@ public sealed class OrderService(
     IRepository<CustomerAddress> addresses,
     IInventoryRepository inventory,
     IPaymentService payments,
-    IShippingCalculator shipping,
     INotificationService notifications,
     OrderWorkflow workflow,
     IValidator<CheckoutCommand> validator,
@@ -114,7 +113,6 @@ public sealed class OrderService(
                 CouponId = coupon?.Id,
                 CouponCode = coupon?.Code,
                 DiscountAmount = discount,
-                ShippingFee = shipping.Calculate(subtotal - discount, command.Province),
                 CustomerName = command.FullName.Trim(),
                 CustomerPhone = command.Phone.Trim(),
                 CustomerEmail = command.Email.Trim(),
@@ -189,7 +187,7 @@ public sealed class OrderService(
             await unitOfWork.SaveChangesAsync(ct);
             await notifications.NotifyRoleAsync(AppRoles.Admin, NotificationType.OrderPlaced,
                 $"Đơn hàng mới {newOrder.OrderCode}",
-                $"{newOrder.CustomerName} đặt {newOrder.TotalQuantity} sản phẩm, tổng {newOrder.TotalAmount:#,0}đ.",
+                $"{newOrder.CustomerName} ({newOrder.CustomerPhone}) đặt {newOrder.TotalQuantity} sản phẩm, tiền hàng {newOrder.TotalAmount:#,0}đ. Gọi lại xác nhận và báo phí giao hàng.",
                 $"/admin/orders/details/{newOrder.Id}", ct);
 
             return newOrder;
@@ -317,7 +315,7 @@ public sealed class OrderService(
             var baseUrl = site.BaseUrl.TrimEnd('/');
             var html = EmailTemplates.OrderPlaced(site.SiteName, order, instructions, $"{baseUrl}/account/orders/{order.OrderCode}",
                 $"{baseUrl}{QrLinks.OrderImage(order.OrderCode, "png")}?scale=5");
-            await emailSender.SendAsync(new EmailMessage(order.CustomerEmail, $"Xác nhận đơn hàng {order.OrderCode}", html, order.CustomerName));
+            await emailSender.SendAsync(new EmailMessage(order.CustomerEmail, $"Đã nhận yêu cầu đặt hàng {order.OrderCode}", html, order.CustomerName));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

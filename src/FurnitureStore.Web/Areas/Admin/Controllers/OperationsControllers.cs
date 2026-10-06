@@ -67,6 +67,24 @@ public sealed class OrdersController(IOrderAdminService orders, IStoreInfoServic
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    /// <summary>Delivery &amp; installation fee quoted to the customer by phone.</summary>
+    [HttpPost]
+    public async Task<IActionResult> ShippingFee(int id, decimal shippingFee, Guid? version, CancellationToken cancellationToken)
+    {
+        try
+        {
+            ModelState.ThrowIfBindingFailed();
+            await orders.UpdateShippingFeeAsync(id, shippingFee, version, cancellationToken);
+            SetStatus("Đã lưu phí giao hàng & lắp đặt, tổng đơn đã được cập nhật.");
+        }
+        catch (Exception ex) when (ex is Domain.Exceptions.DomainException or AppValidationException or ConflictException)
+        {
+            SetError(ex is AppValidationException validation ? string.Join(" ", validation.Errors) : ex.Message);
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Note(int id, string? adminNote, CancellationToken cancellationToken)
     {

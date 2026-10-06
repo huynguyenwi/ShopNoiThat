@@ -190,6 +190,24 @@ public sealed class ProductRepository(ApplicationDbContext context) : EfReposito
         return (await prices.MinAsync(cancellationToken), await prices.MaxAsync(cancellationToken));
     }
 
+    public async Task<IReadOnlyList<SizeInUseDto>> GetSizesInUseAsync(IReadOnlyCollection<int> categoryIds, CancellationToken cancellationToken = default)
+    {
+        var rows = await Context.ProductVariantSizes.AsNoTracking()
+            .Where(vs => vs.Size.IsActive && vs.ProductVariant.IsActive
+                         && vs.ProductVariant.Product.Status == ProductStatus.Active && vs.ProductVariant.Product.Category.IsActive
+                         && categoryIds.Contains(vs.ProductVariant.Product.CategoryId))
+            .Select(vs => new { vs.SizeId, vs.Size.Name, vs.Size.Slug, vs.Size.DisplayOrder, vs.ProductVariant.ProductId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        // Sizes most products come in first.
+        return rows.GroupBy(r => (r.SizeId, r.Name, r.Slug, r.DisplayOrder))
+            .Select(g => (g.Key, Dto: new SizeInUseDto(g.Key.Name, g.Key.Slug, g.Select(r => r.ProductId).Distinct().Count())))
+            .OrderByDescending(x => x.Dto.ProductCount).ThenBy(x => x.Key.DisplayOrder).ThenBy(x => x.Key.Name)
+            .Select(x => x.Dto)
+            .ToList();
+    }
+
     public Task IncrementViewCountAsync(int productId, CancellationToken cancellationToken = default) =>
         Context.Products.Where(p => p.Id == productId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.ViewCount, p => p.ViewCount + 1), cancellationToken);

@@ -34,14 +34,15 @@
     {
         <div><dt>Giảm giá (@cart.CouponCode)</dt><dd class="text-success" data-summary="discount">-@Format.Money(cart.DiscountAmount)</dd></div>
     }
-    <div><dt>Giao hàng &amp; lắp đặt</dt><dd data-summary="shipping">@(cart.ShippingFee == 0 ? "Miễn phí" : Format.Money(cart.ShippingFee))</dd></div>
-    <div class="summary-total"><dt>Tổng thanh toán</dt><dd data-summary="total">@Format.Money(cart.Total)</dd></div>
+    <div><dt>Giao hàng &amp; lắp đặt</dt><dd class="text-muted-fs" data-summary="shipping">@Format.ShippingQuotedOnContact</dd></div>
+    <div class="summary-total"><dt>Tổng tiền hàng</dt><dd data-summary="total">@Format.Money(cart.Total)</dd></div>
 </dl>
+<p class="small text-muted-fs"><i class="bi bi-truck me-1" aria-hidden="true"></i>Chưa gồm phí giao hàng &amp; lắp đặt: nhân viên báo phí theo địa chỉ khi gọi xác nhận đơn.</p>
 @foreach (var warning in cart.Warnings)
 {
     <div class="alert alert-warning py-2 small">@warning</div>
 }
 <button type="submit" form="checkoutForm" class="btn btn-primary btn-lg w-100" disabled="@(!cart.CanCheckout)" data-submit-once>
-    <i class="bi bi-bag-check me-1" aria-hidden="true"></i>Đặt hàng
+    <i class="bi bi-send me-1" aria-hidden="true"></i>Gửi yêu cầu đặt hàng
 </button>
-<p class="small text-muted-fs text-center mt-2 mb-0">Bằng việc đặt hàng, bạn đồng ý với điều khoản mua bán của cửa hàng.</p>
+<p class="small text-muted-fs text-center mt-2 mb-0">Gửi yêu cầu không phát sinh thanh toán. Bằng việc gửi yêu cầu, bạn đồng ý với điều khoản mua bán của cửa hàng.</p>

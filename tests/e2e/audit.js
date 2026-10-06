@@ -6,11 +6,11 @@ fs.mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE || 'https://localhost:7160';
 const axeSource = fs.readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 
-const publicPages = ['/', '/products', '/products?category=phong-khach', '/products/sofa-bang-3-cho-oslo-khung-go-soi', '/cart', '/contact', '/tu-van', '/bao-gia',
+const publicPages = ['/', '/products', '/products?category=phong-khach', '/products?category=bo-ban-an&size=set-6-ghe-160', '/products/bo-ban-an-go-soi-nga-an-gia', '/products/sofa-bang-3-cho-oslo-khung-go-soi', '/cart', '/contact', '/tu-van', '/bao-gia',
   '/account/login', '/account/register', '/account/forgotpassword', '/this-page-does-not-exist'];
 const customerPages = ['/account/profile', '/account/orders', '/account/addresses', '/wishlist', '/account/quotes', '/account/ai-history', '/checkout'];
 const adminPages = ['/admin', '/admin/orders', '/admin/products', '/admin/products/create', '/admin/categories', '/admin/customers', '/admin/reviews',
-  '/admin/chat', '/admin/quotes', '/admin/price-rules', '/admin/coupons', '/admin/coupons/create', '/admin/coupons/1', '/admin/coupons/1/edit', '/admin/products/qrlabels?id=1', '/admin/orders/print/1', '/admin/ai', '/admin/ai-knowledge', '/admin/store', '/admin/audit-logs'];
+  '/admin/chat', '/admin/quotes', '/admin/price-rules', '/admin/coupons', '/admin/coupons/create', '/admin/coupons/1', '/admin/coupons/1/edit', '/admin/products/qrlabels?id=1', '/admin/orders/print/1', '/admin/orders/details/1', '/admin/ai', '/admin/ai-knowledge', '/admin/store', '/admin/audit-logs'];
 
 async function login(browser, email, password) {
   const ctx = await browser.createBrowserContext();

@@ -369,6 +369,42 @@ public sealed partial class AdminWebTests(FurnitureStoreWebApplicationFactory fa
         if (File.Exists(file)) File.Delete(file);
     }
 
+    [Fact]
+    public async Task OrderDetails_RecordsTheShippingFeeQuotedByPhone_ForTheSlipAndTheCustomer()
+    {
+        var (buyer, orderId, _, _) = await PlaceOrderThroughUiAsync();
+        var code = await DbAsync(db => db.Orders.Where(o => o.Id == orderId).Select(o => o.OrderCode).SingleAsync());
+        var admin = await AdminAsync();
+
+        var details = await admin.GetStringAsync($"/admin/orders/details/{orderId}");
+        Assert.Contains("data-shipping-fee-form", details);
+        Assert.Contains("Cửa hàng báo khi liên hệ", details);
+        Assert.Contains("Cửa hàng báo khi liên hệ", await buyer.GetStringAsync($"/account/orders/{code}"));
+        Assert.Contains("Chưa gồm phí giao hàng", await admin.GetStringAsync($"/admin/orders/print/{orderId}"));
+
+        var saved = await PostFormAsync(admin, $"/admin/orders/details/{orderId}", $"/admin/orders/shippingfee/{orderId}",
+            new Dictionary<string, string> { ["shippingFee"] = "350000" });
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+
+        var order = await DbAsync(db => db.Orders.Where(o => o.Id == orderId).Select(o => new { o.ShippingFee, o.TotalAmount }).SingleAsync());
+        Assert.Equal(350_000, order.ShippingFee);
+        Assert.Contains("350.000₫", await admin.GetStringAsync($"/admin/orders/details/{orderId}"));
+        var slip = await admin.GetStringAsync($"/admin/orders/print/{orderId}");
+        Assert.Contains($"Thu hộ (COD): {FurnitureStore.Web.Infrastructure.Format.Money(order.TotalAmount)}", slip);
+        Assert.DoesNotContain("Chưa gồm phí giao hàng", slip);
+        Assert.Contains("350.000₫", await buyer.GetStringAsync($"/account/orders/{code}"));
+
+        // A wrong amount is refused with a message; a customer cannot change it.
+        var invalid = await PostFormAsync(admin, $"/admin/orders/details/{orderId}", $"/admin/orders/shippingfee/{orderId}",
+            new Dictionary<string, string> { ["shippingFee"] = "-5" });
+        Assert.Equal(HttpStatusCode.Redirect, invalid.StatusCode);
+        Assert.Contains("Phí giao hàng &amp; lắp đặt phải từ 0", await admin.GetStringAsync($"/admin/orders/details/{orderId}"));
+        var byCustomer = await PostFormAsync(buyer, $"/account/orders/{code}", $"/admin/orders/shippingfee/{orderId}",
+            new Dictionary<string, string> { ["shippingFee"] = "0" });
+        Assert.NotEqual(HttpStatusCode.OK, byCustomer.StatusCode);
+        Assert.Equal(350_000, await DbAsync(db => db.Orders.Where(o => o.Id == orderId).Select(o => o.ShippingFee).SingleAsync()));
+    }
+
     /// <summary>Registers a new customer, adds one unit to the cart through the API and checks out (COD). Returns the buyer and the order id.</summary>
     private async Task<(HttpClient Buyer, int OrderId, int ProductId, string Slug)> PlaceOrderThroughUiAsync()
     {

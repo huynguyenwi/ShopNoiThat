@@ -109,24 +109,20 @@
                             {
                                 <div><dt>Giảm giá (@Model.CouponCode)</dt><dd class="text-success">-@Format.Money(Model.DiscountAmount)</dd></div>
                             }
-                            <div><dt>Giao hàng &amp; lắp đặt</dt><dd>@(Model.ShippingFee == 0 ? "Miễn phí" : Format.Money(Model.ShippingFee))</dd></div>
-                            <div class="summary-total"><dt>Tổng cộng</dt><dd>@Format.Money(Model.Total)</dd></div>
+                            <div><dt>Giao hàng &amp; lắp đặt</dt><dd class="text-muted-fs" data-summary="shipping">@Format.ShippingQuotedOnContact</dd></div>
+                            <div class="summary-total"><dt>Tổng tiền hàng</dt><dd>@Format.Money(Model.Total)</dd></div>
                         </dl>
-
-                        @if (Model.AmountToFreeShipping > 0)
-                        {
-                            <p class="small text-muted-fs"><i class="bi bi-truck me-1" aria-hidden="true"></i>Mua thêm @Format.Money(Model.AmountToFreeShipping) để được miễn phí giao hàng &amp; lắp đặt.</p>
-                        }
+                        <p class="small text-muted-fs"><i class="bi bi-truck me-1" aria-hidden="true"></i>Chưa gồm phí giao hàng &amp; lắp đặt: nhân viên báo phí theo địa chỉ khi gọi xác nhận đơn.</p>
 
                         @if (Model.CanCheckout)
                         {
-                            <a class="btn btn-primary btn-lg w-100" href="/checkout">Tiến hành đặt hàng <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                            <a class="btn btn-primary btn-lg w-100" href="/checkout"><i class="bi bi-telephone me-1" aria-hidden="true"></i>Liên hệ đặt hàng</a>
                         }
                         else
                         {
                             <button class="btn btn-primary btn-lg w-100" type="button" disabled>Vui lòng cập nhật giỏ hàng</button>
                         }
-                        <p class="small text-muted-fs text-center mt-2 mb-0"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Thanh toán an toàn · COD hoặc chuyển khoản</p>
+                        <p class="small text-muted-fs text-center mt-2 mb-0"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>Không thanh toán trực tuyến · cửa hàng gọi xác nhận trước khi giao</p>
                     </aside>
                 </div>
             </div>

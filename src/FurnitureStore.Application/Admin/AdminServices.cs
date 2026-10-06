@@ -78,6 +78,7 @@ public interface IOrderAdminService
     Task ChangeStatusAsync(int id, OrderStatus newStatus, string? note, Guid? expectedVersion, CancellationToken cancellationToken = default);
     Task ConfirmPaymentAsync(int id, string? reference, CancellationToken cancellationToken = default);
     Task UpdateAdminNoteAsync(int id, string? note, CancellationToken cancellationToken = default);
+    Task UpdateShippingFeeAsync(int id, decimal fee, Guid? expectedVersion, CancellationToken cancellationToken = default);
 }
 
 public sealed class OrderAdminService(
@@ -190,6 +191,37 @@ public sealed class OrderAdminService(
         var order = await orders.GetByIdAsync(id, cancellationToken) ?? throw new NotFoundException("đơn hàng", id);
         order.AdminNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim()[..Math.Min(note.Trim().Length, 1000)];
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Records the delivery &amp; installation fee quoted to the customer by phone; the order total follows.</summary>
+    public async Task UpdateShippingFeeAsync(int id, decimal fee, Guid? expectedVersion, CancellationToken cancellationToken = default)
+    {
+        var order = await orders.GetFullAsync(id, cancellationToken) ?? throw new NotFoundException("đơn hàng", id);
+        if (expectedVersion.HasValue && expectedVersion.Value != order.Version)
+        {
+            throw new ConflictException("Đơn hàng vừa được cập nhật bởi người khác. Vui lòng tải lại trang.");
+        }
+
+        var oldFee = order.ShippingFee;
+        order.ChangeShippingFee(fee);
+        // The unpaid payment record carries the amount to collect.
+        foreach (var payment in order.Payments.Where(p => p.Status != PaymentStatus.Paid))
+        {
+            payment.Amount = order.TotalAmount;
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var feeText = order.ShippingFee == 0 ? "miễn phí" : EmailTemplates.Money(order.ShippingFee);
+        var title = $"Đơn hàng {order.OrderCode}: đã báo phí giao hàng";
+        await notifications.NotifyUserAsync(order.UserId, NotificationType.OrderStatusChanged, title,
+            $"Phí giao hàng & lắp đặt: {feeText}. Tổng đơn: {EmailTemplates.Money(order.TotalAmount)}.", $"/account/orders/{order.OrderCode}", cancellationToken);
+        await auditLog.LogAsync(new AuditEntry(AuditAction.Update, nameof(Order), id.ToString(), $"Phí giao hàng đơn {order.OrderCode}",
+            OldValues: new { ShippingFee = oldFee }, NewValues: new { order.ShippingFee, order.TotalAmount }), cancellationToken);
+        logger.LogInformation("Shipping fee of order {OrderCode} set to {Fee} by {User}", order.OrderCode, order.ShippingFee, currentUser.UserName);
+
+        await TryEmailAsync(order, title,
+            $"""<p>Xin chào <strong>{System.Net.WebUtility.HtmlEncode(order.CustomerName)}</strong>,</p><p>Cửa hàng đã cập nhật phí giao hàng &amp; lắp đặt cho đơn <strong>{order.OrderCode}</strong>: <strong>{feeText}</strong>.</p><p>Tổng giá trị đơn hàng: <strong>{EmailTemplates.Money(order.TotalAmount)}</strong>.</p>""");
     }
 
     private async Task TryEmailAsync(Order order, string subject, string body)

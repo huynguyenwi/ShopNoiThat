@@ -16,6 +16,7 @@ public sealed class PriceRuleSeeder(ApplicationDbContext context, ILogger<PriceR
     private static readonly Dictionary<string, decimal> MaterialCostPerM2 = new()
     {
         ["go-oc-cho"] = 1_900_000,
+        ["go-soi-nga"] = 1_050_000,
         ["go-soi"] = 1_200_000,
         ["go-tan-bi"] = 950_000,
         ["go-cao-su"] = 550_000,
@@ -71,7 +72,7 @@ public sealed class PriceRuleSeeder(ApplicationDbContext context, ILogger<PriceR
         {
             if (materials.TryGetValue(slug, out var material))
             {
-                rules.Add(Rule($"MAT-{slug.ToUpperInvariant()}", $"Vật liệu: {material.Name}", PriceRuleType.MaterialCostPerSquareMeter, price, "đ/m²", materialId: material.Id));
+                rules.Add(Rule(MaterialCode(slug), $"Vật liệu: {material.Name}", PriceRuleType.MaterialCostPerSquareMeter, price, "đ/m²", materialId: material.Id));
             }
         }
 
@@ -105,6 +106,24 @@ public sealed class PriceRuleSeeder(ApplicationDbContext context, ILogger<PriceR
         await context.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Seeded {Count} price rules for custom quotes", rules.Count);
     }
+
+    /// <summary>
+    /// Price of a material created after the price list was seeded (see <see cref="CatalogSeeder"/>), or null when it has
+    /// no default price.
+    /// </summary>
+    internal static PriceRule? MaterialRuleFor(ProductMaterial material)
+    {
+        if (!MaterialCostPerM2.TryGetValue(material.Slug, out var price))
+        {
+            return null;
+        }
+
+        var rule = Rule(MaterialCode(material.Slug), $"Vật liệu: {material.Name}", PriceRuleType.MaterialCostPerSquareMeter, price, "đ/m²");
+        rule.Material = material;
+        return rule;
+    }
+
+    private static string MaterialCode(string slug) => $"MAT-{slug.ToUpperInvariant()}";
 
     private static PriceRule Rule(string code, string name, PriceRuleType type, decimal value, string unit, FurnitureType? furnitureType = null,
         int? materialId = null, FinishType? finish = null, int priority = 0, string? description = null) => new()

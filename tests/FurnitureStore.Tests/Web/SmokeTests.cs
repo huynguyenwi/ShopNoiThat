@@ -18,8 +18,8 @@ public sealed class SmokeTests(FurnitureStoreWebApplicationFactory factory) : IC
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains("Không gian đẹp", html);
-        Assert.Contains("Khám phá sản phẩm", html);
+        Assert.Contains("Bộ bàn ăn gỗ sồi Nga", html);
+        Assert.Contains("Xem bộ bàn ăn", html);
         Assert.Contains("<meta name=\"description\"", html);
         Assert.Contains("property=\"og:title\"", html);
         Assert.Contains("<meta name=\"csrf-token\"", html);

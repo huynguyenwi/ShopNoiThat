@@ -21,6 +21,7 @@ public static class OrderMapper
                 .Select(h => new OrderStatusHistoryDto(h.FromStatus, h.ToStatus, h.Note, h.ChangedBy, h.ChangedAt)).ToList(),
             order.Payments.OrderBy(p => p.Id)
                 .Select(p => new PaymentDto(p.Id, p.Method, p.Status, p.Amount, p.TransactionCode, p.CreatedAt, p.PaidAt, p.Note)).ToList(),
-            instructions);
+            instructions,
+            order.CanChangeShippingFee);
     }
 }
