@@ -1,0 +1,89 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AttributeListViewModel
+@using FurnitureStore.Application.Catalog.Admin
+@using FurnitureStore.Web.Areas.Admin.Models
+@{
+    var title = AttributeKinds.TitleOf(Model.Kind);
+    var route = AttributeKinds.RouteOf(Model.Kind);
+    ViewData["Title"] = title;
+}
+
+<partial name="_Tabs" model="Model.Kind" />
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>@title <span class="text-muted-fs fw-normal">(@Model.Items.Count)</span></h2>
+        <a class="btn btn-primary btn-sm" href="/admin/attributes/@route/create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm mới</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Tên</th>
+                    <th scope="col">Slug</th>
+                    @if (Model.Kind == AttributeKind.Color)
+                    {
+                        <th scope="col">Mã màu</th>
+                    }
+                    else if (Model.Kind == AttributeKind.Material)
+                    {
+                        <th scope="col">Nhóm</th>
+                    }
+                    else if (Model.Kind == AttributeKind.Size)
+                    {
+                        <th scope="col">D x R x C (mm)</th>
+                        <th scope="col">Loại</th>
+                    }
+                    else
+                    {
+                        <th scope="col">Mã</th>
+                    }
+                    <th scope="col" class="text-center">Thứ tự</th>
+                    <th scope="col" class="text-center">Đang dùng</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td class="fw-semibold">
+                            @if (item.HexCode is not null)
+                            {
+                                <span class="color-swatch me-2" style="background-color:@item.HexCode"></span>
+                            }
+                            @item.Name
+                        </td>
+                        <td><code>@item.Slug</code></td>
+                        @if (Model.Kind == AttributeKind.Color)
+                        {
+                            <td><code>@item.HexCode</code></td>
+                        }
+                        else if (Model.Kind == AttributeKind.Material)
+                        {
+                            <td>@(item.MaterialGroup.HasValue ? Labels.Of(item.MaterialGroup.Value) : "")</td>
+                        }
+                        else if (Model.Kind == AttributeKind.Size)
+                        {
+                            <td>@item.LengthMm x @item.WidthMm x @item.HeightMm</td>
+                            <td>@(item.FurnitureType.HasValue ? Labels.Of(item.FurnitureType.Value) : "Chung")</td>
+                        }
+                        else
+                        {
+                            <td><code>@item.Code</code></td>
+                        }
+                        <td class="text-center">@item.DisplayOrder</td>
+                        <td class="text-center">@item.UsageCount</td>
+                        <td><span class="badge @(item.IsActive ? "text-bg-success" : "text-bg-secondary")">@(item.IsActive ? "Hiện" : "Ẩn")</span></td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-light btn-sm" href="/admin/attributes/@route/@item.Id/edit" title="Sửa" aria-label="Sửa @item.Name"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                            <form method="post" action="/admin/attributes/@route/@item.Id/delete" asp-antiforgery="true" class="d-inline" data-confirm="Xóa &quot;@item.Name&quot;?">
+                                <button type="submit" class="btn btn-light btn-sm text-danger" title="Xóa" aria-label="Xóa @item.Name" disabled="@(item.UsageCount > 0)"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

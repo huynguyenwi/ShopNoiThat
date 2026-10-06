@@ -1,0 +1,89 @@
+@model FurnitureStore.Application.Quotes.QuoteDetailDto
+@using FurnitureStore.Domain.Entities
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Báo giá " + Model.Code;
+    var s = Model.Spec;
+    var b = Model.Breakdown;
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <a href="/account/quotes" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Yêu cầu báo giá</a>
+                <partial name="_StatusMessage" model="@(TempData[AccountQuotesController.MessageKey] as string)" />
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <h1 class="h4 mb-0">Báo giá @Model.Code</h1>
+                    <span class="badge @QuoteLabels.Badge(Model.Status)">@QuoteStatusTransitions.DisplayName(Model.Status)</span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <div class="panel h-100">
+                            <h2 class="h6">Yêu cầu</h2>
+                            <p class="small text-muted-fs" style="white-space: pre-line">@Model.RawRequest</p>
+                            <dl class="row small mb-0">
+                                <dt class="col-5">Sản phẩm</dt><dd class="col-7">@s.TypeName</dd>
+                                <dt class="col-5">Kích thước</dt><dd class="col-7">@s.LengthMm x @s.WidthMm x @s.HeightMm mm</dd>
+                                <dt class="col-5">Chất liệu</dt><dd class="col-7">@(s.MaterialName ?? "Xưởng tư vấn")</dd>
+                                <dt class="col-5">Hoàn thiện</dt><dd class="col-7">@s.FinishName</dd>
+                                @if (s.ColorName is not null) { <dt class="col-5">Màu</dt><dd class="col-7">@s.ColorName</dd> }
+                                <dt class="col-5">Số lượng</dt><dd class="col-7">@s.Quantity</dd>
+                                @if (Model.CustomerNote is not null) { <dt class="col-5">Ghi chú</dt><dd class="col-7">@Model.CustomerNote</dd> }
+                                <dt class="col-5">Ngày gửi</dt><dd class="col-7">@Format.DateTimeText(Model.CreatedAt)</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="panel quote-total h-100">
+                            <div class="small text-muted-fs text-uppercase">Giá dự kiến</div>
+                            <div class="fs-5 fw-semibold">@Format.Money(b.Total)</div>
+                            <div class="small text-muted-fs">@Format.Money(b.UnitPrice) / sản phẩm</div>
+                            @if (Model.FinalQuotedPrice is decimal final)
+                            {
+                                <hr />
+                                <div class="small text-muted-fs text-uppercase">Giá chính thức của cửa hàng</div>
+                                <div class="quote-price">@Format.Money(final)</div>
+                                @if (Model.QuotedAt is DateTime quotedAt)
+                                {
+                                    <div class="small text-muted-fs">Báo lúc @Format.DateTimeText(quotedAt)</div>
+                                }
+                            }
+
+                            @if (Model.Status == QuoteStatus.Quoted)
+                            {
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <form method="post" action="/account/quotes/@Model.Code/accept" asp-antiforgery="true">
+                                        <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Đồng ý báo giá</button>
+                                    </form>
+                                    <form method="post" action="/account/quotes/@Model.Code/reject" asp-antiforgery="true" data-confirm="Từ chối báo giá này?">
+                                        <button type="submit" class="btn btn-outline-secondary">Từ chối</button>
+                                    </form>
+                                </div>
+                            }
+                            else if (Model.Status is QuoteStatus.New or QuoteStatus.Reviewing)
+                            {
+                                <p class="small text-muted-fs mt-3 mb-2">Cửa hàng sẽ liên hệ số @Model.Phone để trao đổi và gửi giá chính thức.</p>
+                                <form method="post" action="/account/quotes/@Model.Code/cancel" asp-antiforgery="true" data-confirm="Hủy yêu cầu báo giá này?">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Hủy yêu cầu</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.AiExplanation))
+                {
+                    <div class="advisor-summary mt-3">@Model.AiExplanation</div>
+                }
+
+                <div class="panel mt-3">
+                    <h2 class="h6">Chi phí dự kiến (1 sản phẩm)</h2>
+                    <partial name="_QuoteBreakdown" model="b" />
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

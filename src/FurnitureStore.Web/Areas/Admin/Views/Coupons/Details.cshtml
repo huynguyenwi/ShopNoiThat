@@ -1,0 +1,128 @@
+@model FurnitureStore.Application.Sales.CouponDetailDto
+@using FurnitureStore.Application.Sales
+@{
+    var c = Model.Coupon;
+    ViewData["Title"] = "Mã giảm giá " + c.Code;
+    var selfUrl = $"/admin/coupons/{c.Id}";
+}
+
+<a href="/admin/coupons" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Mã giảm giá</a>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <span class="coupon-code-text fs-4 fw-bold">@c.Code</span>
+    <span class="badge @CouponBadge.For(c.Status)">@CouponText.StatusName(c.Status)</span>
+    <span class="badge text-bg-light border">@(c.IsPublic ? "Công khai" : "Riêng tư")</span>
+    <div class="ms-auto d-flex flex-wrap gap-2">
+        <a class="btn btn-primary btn-sm" href="@selfUrl/edit"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Sửa</a>
+        <form method="post" action="@selfUrl/active" asp-antiforgery="true">
+            <input type="hidden" name="active" value="@(c.IsActive ? "false" : "true")" />
+            <input type="hidden" name="returnUrl" value="@selfUrl" />
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+                <i class="bi @(c.IsActive ? "bi-pause-circle" : "bi-play-circle") me-1" aria-hidden="true"></i>@(c.IsActive ? "Tắt mã" : "Bật mã")
+            </button>
+        </form>
+        @if (Model.HasOrders)
+        {
+            <span class="d-inline-block" tabindex="0" title="Mã đã được dùng cho đơn hàng nên không thể xóa, chỉ có thể tắt.">
+                <button type="button" class="btn btn-outline-danger btn-sm" disabled><i class="bi bi-trash me-1" aria-hidden="true"></i>Xóa</button>
+            </span>
+        }
+        else
+        {
+            <form method="post" action="@selfUrl/delete" asp-antiforgery="true" data-confirm="Xóa mã @c.Code? Thao tác này không thể hoàn tác.">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1" aria-hidden="true"></i>Xóa</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Lượt đã dùng</div>
+                <div class="stat-number" data-stat="used">@c.UsedCount<span class="fs-6 text-muted-fs"> / @(c.UsageLimit?.ToString() ?? "∞")</span></div>
+                <div class="stat-sub">@(c.UsageLimit is int limit ? $"Còn {Math.Max(0, limit - c.UsedCount)} lượt" : "Không giới hạn tổng lượt")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-percent" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Tổng tiền đã giảm</div>
+                <div class="stat-number" data-stat="discount">@Format.Money(c.TotalDiscount)</div>
+                <div class="stat-sub">Không tính đơn đã hủy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Đơn hàng dùng mã</div>
+                <div class="stat-number" data-stat="orders">@Model.OrderCount</div>
+                <div class="stat-sub">Gồm cả đơn đã hủy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Doanh thu các đơn</div>
+                <div class="stat-number" data-stat="revenue">@Format.Money(Model.Revenue)</div>
+                <div class="stat-sub">Không tính đơn đã hủy / hoàn tiền</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-4">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Điều kiện áp dụng</h2></div>
+            <div class="admin-card-body">
+                <dl class="row small mb-0">
+                    <dt class="col-5">Chương trình</dt><dd class="col-7">@c.Name</dd>
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <dt class="col-5">Mô tả</dt><dd class="col-7">@Model.Description</dd>
+                    }
+                    <dt class="col-5">Ưu đãi</dt><dd class="col-7">@c.Benefit</dd>
+                    <dt class="col-5">Đơn tối thiểu</dt><dd class="col-7">@(c.MinOrderAmount > 0 ? Format.Money(c.MinOrderAmount) : "Không yêu cầu")</dd>
+                    <dt class="col-5">Bắt đầu</dt><dd class="col-7">@(c.StartsAt is DateTime s ? Format.DateTimeText(s) : "Ngay khi bật")</dd>
+                    <dt class="col-5">Kết thúc</dt><dd class="col-7">@(c.EndsAt is DateTime e ? Format.DateTimeText(e) : "Không giới hạn")</dd>
+                    <dt class="col-5">Mỗi khách</dt><dd class="col-7">@(c.UsageLimitPerUser is int perUser ? $"{perUser} lần" : "Không giới hạn")</dd>
+                    <dt class="col-5">Tạo lúc</dt><dd class="col-7">@Format.DateTimeText(Model.CreatedAt)@(string.IsNullOrEmpty(Model.CreatedBy) ? "" : " · " + Model.CreatedBy)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-8">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Đơn hàng dùng mã @(Model.OrderCount > Model.RecentOrders.Count ? $"({Model.RecentOrders.Count} đơn gần nhất)" : "")</h2></div>
+            <div class="table-responsive">
+                <table class="table admin-table table-hover mb-0 align-middle">
+                    <thead><tr><th>Đơn hàng</th><th>Khách hàng</th><th>Trạng thái</th><th class="text-end">Giảm / tổng tiền</th></tr></thead>
+                    <tbody>
+                        @if (Model.RecentOrders.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted-fs py-4">Chưa có đơn hàng nào dùng mã này.</td></tr>
+                        }
+                        @foreach (var o in Model.RecentOrders)
+                        {
+                            <tr>
+                                <td class="text-nowrap"><a class="fw-semibold" href="/admin/orders/details/@o.OrderId">@o.OrderCode</a><div class="small text-muted-fs">@Format.DateTimeText(o.PlacedAt)</div></td>
+                                <td class="small text-break">@o.CustomerName<div class="text-muted-fs">@o.CustomerEmail</div></td>
+                                <td><span class="badge text-bg-light border">@Labels.Of(o.Status)</span></td>
+                                <td class="text-end text-nowrap"><span class="text-success">-@Format.Money(o.DiscountAmount)</span><div class="small">@Format.Money(o.TotalAmount)</div></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

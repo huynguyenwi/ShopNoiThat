@@ -1,0 +1,76 @@
+@model FurnitureStore.Application.Engagement.StoreInfoCommand
+@{
+    ViewData["Title"] = "Thông tin cửa hàng";
+}
+
+<form method="post" asp-action="Index" novalidate style="max-width: 920px">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Thông tin hiển thị trên website</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label">Tên cửa hàng *</label>
+                <input asp-for="Name" class="form-control" maxlength="150" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Tagline" class="form-label">Khẩu hiệu</label>
+                <input asp-for="Tagline" class="form-control" maxlength="200" />
+            </div>
+            <div class="col-12">
+                <label asp-for="About" class="form-label">Giới thiệu</label>
+                <textarea asp-for="About" class="form-control" rows="3" maxlength="4000"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Address" class="form-label">Địa chỉ showroom *</label>
+                <input asp-for="Address" class="form-control" maxlength="300" />
+                <span asp-validation-for="Address" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="WorkshopAddress" class="form-label">Địa chỉ xưởng</label>
+                <input asp-for="WorkshopAddress" class="form-control" maxlength="300" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Hotline" class="form-label">Hotline *</label>
+                <input asp-for="Hotline" class="form-control" maxlength="30" />
+                <span asp-validation-for="Hotline" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Email" class="form-label">Email *</label>
+                <input asp-for="Email" class="form-control" maxlength="256" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="OpeningHours" class="form-label">Giờ mở cửa</label>
+                <input asp-for="OpeningHours" class="form-control" maxlength="150" />
+            </div>
+        </div>
+    </div>
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Mạng xã hội &amp; bản đồ</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-4">
+                <label asp-for="FacebookUrl" class="form-label">Facebook</label>
+                <input asp-for="FacebookUrl" class="form-control" placeholder="https://facebook.com/..." />
+                <span asp-validation-for="FacebookUrl" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="TikTokUrl" class="form-label">TikTok</label>
+                <input asp-for="TikTokUrl" class="form-control" placeholder="https://tiktok.com/@@..." />
+                <span asp-validation-for="TikTokUrl" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ZaloUrl" class="form-label">Zalo</label>
+                <input asp-for="ZaloUrl" class="form-control" placeholder="https://zalo.me/..." />
+                <span asp-validation-for="ZaloUrl" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="GoogleMapsEmbedUrl" class="form-label">Link nhúng Google Maps</label>
+                <input asp-for="GoogleMapsEmbedUrl" class="form-control" placeholder="https://www.google.com/maps?q=...&output=embed" />
+                <div class="form-text">Google Maps → Chia sẻ → Nhúng bản đồ → sao chép giá trị <code>src</code>.</div>
+                <span asp-validation-for="GoogleMapsEmbedUrl" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu thông tin</button>
+</form>

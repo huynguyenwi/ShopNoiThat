@@ -1,0 +1,121 @@
+@model FurnitureStore.Application.Admin.AdminUserDetailDto
+@{
+    var u = Model.User;
+    ViewData["Title"] = u.FullName;
+    var isSelf = u.Id == User.UserId();
+}
+
+<a href="/admin/customers" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Khách hàng</a>
+
+<div class="row g-3">
+    <div class="col-xl-4">
+        <div class="admin-card mb-3">
+            <div class="admin-card-body text-center">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img class="account-avatar account-avatar-lg mb-2" src="@Model.AvatarUrl" alt="" />
+                }
+                else
+                {
+                    <span class="account-avatar account-avatar-lg account-avatar-placeholder mb-2">@(u.FullName.FirstOrDefault())</span>
+                }
+                <h2 class="h5 mb-1">@u.FullName</h2>
+                <div class="small text-muted-fs">@u.Email</div>
+                <div class="small text-muted-fs">@u.PhoneNumber</div>
+                <div class="mt-2">
+                    @foreach (var r in u.Roles) { <span class="badge text-bg-light me-1">@r</span> }
+                </div>
+            </div>
+            <ul class="list-group list-group-flush small">
+                <li class="list-group-item d-flex justify-content-between"><span>Đăng ký</span><span>@Format.DateText(u.CreatedAt)</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Đăng nhập gần nhất</span><span>@(u.LastLoginAt.HasValue ? Format.DateTimeText(u.LastLoginAt.Value) : "-")</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Số đơn</span><span>@u.OrderCount</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Đã chi (đơn đã giao)</span><strong>@Format.Money(u.TotalSpent)</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Đăng nhập sai liên tiếp</span><span>@Model.AccessFailedCount</span></li>
+            </ul>
+        </div>
+
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Trạng thái tài khoản</h2></div>
+            <div class="admin-card-body">
+                @if (isSelf)
+                {
+                    <p class="small text-muted-fs mb-0">Đây là tài khoản của bạn.</p>
+                }
+                else if (u.IsActive)
+                {
+                    <form method="post" asp-action="Lock" asp-route-id="@u.Id" data-confirm="Khóa tài khoản @u.Email? Người dùng sẽ bị đăng xuất.">
+                        <label class="form-label small" for="reason">Lý do khóa</label>
+                        <input id="reason" name="reason" class="form-control form-control-sm mb-2" maxlength="200" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-lock me-1" aria-hidden="true"></i>Khóa tài khoản</button>
+                    </form>
+                }
+                else
+                {
+                    <p class="small text-danger">Tài khoản đang bị khóa.</p>
+                    <form method="post" asp-action="Unlock" asp-route-id="@u.Id">
+                        <button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-unlock me-1" aria-hidden="true"></i>Mở khóa</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Vai trò</h2></div>
+            <div class="admin-card-body">
+                @foreach (var role in new[] { AppRoles.User, AppRoles.Staff, AppRoles.Admin })
+                {
+                    var has = u.Roles.Contains(role);
+                    <form method="post" asp-action="Role" asp-route-id="@u.Id" class="d-flex justify-content-between align-items-center mb-2">
+                        <input type="hidden" name="role" value="@role" />
+                        <input type="hidden" name="enabled" value="@((!has).ToString().ToLowerInvariant())" />
+                        <span>@role</span>
+                        <button type="submit" class="btn btn-sm @(has ? "btn-outline-danger" : "btn-outline-primary")" disabled="@(isSelf && role == AppRoles.Admin)">@(has ? "Gỡ" : "Cấp")</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Đơn hàng gần đây</h2></div>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>Mã đơn</th><th>Ngày đặt</th><th class="text-end">Tổng</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                        @if (Model.RecentOrders.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted-fs py-4">Chưa có đơn hàng.</td></tr>
+                        }
+                        @foreach (var o in Model.RecentOrders)
+                        {
+                            <tr>
+                                <td><a href="/admin/orders/details/@o.Id" class="fw-semibold">@o.OrderCode</a></td>
+                                <td class="small">@Format.DateTimeText(o.PlacedAt)</td>
+                                <td class="text-end">@Format.Money(o.TotalAmount)</td>
+                                <td><span class="badge @Labels.BadgeClass(o.Status)">@Labels.Of(o.Status)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Sổ địa chỉ</h2></div>
+            <div class="admin-card-body">
+                @if (Model.Addresses.Count == 0)
+                {
+                    <p class="text-muted-fs mb-0">Chưa lưu địa chỉ.</p>
+                }
+                @foreach (var a in Model.Addresses)
+                {
+                    <div class="address-card @(a.IsDefault ? "is-default" : "")">
+                        <strong>@(a.Label ?? a.RecipientName)</strong> · @a.RecipientName · @a.Phone
+                        <div class="small text-muted-fs">@a.FullAddress</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nhà Mộc">
+  <rect width="64" height="64" rx="16" fill="#5b3a24"/>
+  <!-- roof -->
+  <path d="M14 30 L32 15 L50 30" fill="none" stroke="#e8d5b9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- armchair -->
+  <rect x="21" y="30" width="22" height="10" rx="4" fill="#c79a6b"/>
+  <rect x="17" y="34" width="7" height="12" rx="3" fill="#b07d4f"/>
+  <rect x="40" y="34" width="7" height="12" rx="3" fill="#b07d4f"/>
+  <rect x="21" y="38" width="22" height="7" rx="3" fill="#d9b48c"/>
+  <rect x="20" y="45" width="3" height="5" rx="1" fill="#e8d5b9"/>
+  <rect x="41" y="45" width="3" height="5" rx="1" fill="#e8d5b9"/>
+</svg>

@@ -1,0 +1,46 @@
+@* Read-only transcript of an AI conversation (customer history and admin review). *@
+@model IReadOnlyList<FurnitureStore.Application.AI.AiMessageDto>
+@{
+    var showTechnical = ViewData["ShowTechnical"] is true;
+}
+<div class="chat-messages ai-transcript">
+    @foreach (var m in Model)
+    {
+        var mine = m.Role == FurnitureStore.Domain.Enums.AIMessageRole.User;
+        <div class="chat-msg @(mine ? "from-me" : "from-other") @(m.IsError ? "ai-answer is-error" : "")">
+            <div class="chat-bubble">@m.Content</div>
+            @if (m.Products.Count > 0)
+            {
+                <div class="ai-cards">
+                    @foreach (var p in m.Products)
+                    {
+                        <a class="ai-card ai-card-compact" href="@p.Url">
+                            <div class="ai-card-media">
+                                @if (p.ImageUrl is not null)
+                                {
+                                    <img src="@p.ImageUrl" alt="" width="160" height="120" loading="lazy" />
+                                }
+                            </div>
+                            <div class="ai-card-body">
+                                <div class="ai-card-category">@p.CategoryName</div>
+                                <div class="ai-card-name">@p.Name</div>
+                                <div class="ai-card-price"><strong>@Format.Money(p.Price)</strong></div>
+                                @if (!string.IsNullOrEmpty(p.Reason))
+                                {
+                                    <div class="ai-card-reason">@p.Reason</div>
+                                }
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+            <div class="chat-meta">
+                @Format.DateTimeText(m.CreatedAt)
+                @if (showTechnical && !mine)
+                {
+                    <span> · @(m.Model ?? "?")@(m.PromptTokens is null ? "" : $" · {m.PromptTokens}+{m.CompletionTokens} tokens")@(m.IsError ? " · LỖI AI (đã dùng trả lời dự phòng)" : "")</span>
+                }
+            </div>
+        </div>
+    }
+</div>

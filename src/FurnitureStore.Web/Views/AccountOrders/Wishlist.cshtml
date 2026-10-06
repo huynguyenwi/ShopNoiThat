@@ -1,0 +1,33 @@
+@model IReadOnlyList<FurnitureStore.Application.Catalog.ProductCardDto>
+@{
+    ViewData["Title"] = "Sản phẩm yêu thích";
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <h1 class="h4 mb-4">Sản phẩm yêu thích (@Model.Count)</h1>
+                @if (Model.Count == 0)
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-heart" aria-hidden="true"></i>
+                        <h2 class="h5 mt-3">Chưa có sản phẩm yêu thích</h2>
+                        <p class="text-muted-fs">Nhấn biểu tượng trái tim trên sản phẩm để lưu lại xem sau.</p>
+                        <a class="btn btn-primary" href="/products">Khám phá sản phẩm</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="row g-3 g-md-4">
+                        @foreach (var product in Model)
+                        {
+                            <div class="col-6 col-md-4"><partial name="_ProductCard" model="product" /></div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

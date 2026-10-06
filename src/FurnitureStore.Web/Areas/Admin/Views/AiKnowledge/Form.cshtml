@@ -1,0 +1,48 @@
+@model FurnitureStore.Application.AI.AiKnowledgeCommand
+@{
+    var id = ViewData["Id"] as int?;
+    ViewData["Title"] = id is null ? "Thêm nội dung chatbot" : "Sửa nội dung chatbot";
+    var action = id is null ? "/admin/ai-knowledge/create" : $"/admin/ai-knowledge/{id}/edit";
+}
+
+<a href="/admin/ai-knowledge" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Nội dung chatbot</a>
+<form method="post" action="@action" asp-antiforgery="true" novalidate style="max-width: 820px">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="admin-card">
+        <div class="admin-card-body row g-3">
+            <div class="col-md-8">
+                <label asp-for="Title" class="form-label">Tiêu đề *</label>
+                <input asp-for="Title" class="form-control" maxlength="200" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Category" class="form-label">Nhóm *</label>
+                <input asp-for="Category" class="form-control" maxlength="100" list="knowledgeCategories" />
+                <datalist id="knowledgeCategories"><option value="Chính sách"></option><option value="Dịch vụ"></option><option value="Hỏi đáp"></option></datalist>
+                <span asp-validation-for="Category" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Content" class="form-label">Nội dung trợ lý được dùng *</label>
+                <textarea asp-for="Content" class="form-control" rows="6" maxlength="2000"></textarea>
+                <div class="form-text">Viết ngắn gọn, chính xác - trợ lý sẽ trích dẫn nội dung này cho khách.</div>
+                <span asp-validation-for="Content" class="text-danger small"></span>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="Keywords" class="form-label">Từ khóa (cách nhau bằng dấu phẩy)</label>
+                <input asp-for="Keywords" class="form-control" maxlength="500" placeholder="giao hàng, vận chuyển, ship" />
+                <span asp-validation-for="Keywords" class="text-danger small"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="DisplayOrder" class="form-label">Thứ tự</label>
+                <input asp-for="DisplayOrder" class="form-control" type="number" min="0" max="10000" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Đang dùng</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu</button>
+</form>

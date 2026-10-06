@@ -1,0 +1,169 @@
+@model FurnitureStore.Application.Admin.DashboardDto
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Tổng quan";
+    var chartData = JsonSerializer.Serialize(new
+    {
+        revenueByDay = new { labels = Model.RevenueByDay.Select(p => p.Label), values = Model.RevenueByDay.Select(p => p.Value) },
+        ordersByDay = Model.OrdersByDay.Select(p => p.Value),
+        revenueByMonth = new { labels = Model.RevenueByMonth.Select(p => p.Label), values = Model.RevenueByMonth.Select(p => p.Value) },
+        ordersByStatus = new { labels = Model.OrdersByStatus.Select(s => Labels.Of(s.Status)), values = Model.OrdersByStatus.Select(s => s.Count) },
+        topProducts = new { labels = Model.TopProducts.Select(t => t.Name.Length > 28 ? t.Name[..28] + "…" : t.Name), values = Model.TopProducts.Select(t => t.Quantity) }
+    }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default });
+}
+
+<p class="text-muted-fs mb-4">Xin chào <strong>@User.DisplayName()</strong>, đây là tình hình kinh doanh. Doanh thu tính trên các đơn đã xác nhận (không gồm đơn chờ, đã hủy, hoàn tiền).</p>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Tổng doanh thu</div>
+                <div class="stat-number" data-stat="total-revenue">@Format.Money(Model.TotalRevenue)</div>
+                <div class="stat-sub">Tháng này: @Format.Money(Model.MonthRevenue)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <span class="stat-icon"><i class="bi bi-calendar-day" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Doanh thu hôm nay</div>
+                <div class="stat-number">@Format.Money(Model.TodayRevenue)</div>
+                <div class="stat-sub">@Model.TodayOrders đơn đặt hôm nay</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card text-decoration-none text-reset" href="/admin/orders?status=Pending">
+            <span class="stat-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Tổng đơn hàng</div>
+                <div class="stat-number">@Format.Number(Model.TotalOrders)</div>
+                <div class="stat-sub @(Model.PendingOrders > 0 ? "text-warning-emphasis fw-semibold" : "")">@Model.PendingOrders đơn chờ xử lý</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card text-decoration-none text-reset" href="/admin/customers">
+            <span class="stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Khách hàng</div>
+                <div class="stat-number">@Format.Number(Model.TotalCustomers)</div>
+                <div class="stat-sub">+@Model.NewCustomersThisMonth trong tháng</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card text-decoration-none text-reset" href="/admin/products">
+            <span class="stat-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Sản phẩm</div>
+                <div class="stat-number">@Model.TotalProducts</div>
+                <div class="stat-sub">@Model.ActiveProducts đang bán</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card text-decoration-none text-reset" href="/admin/products?stock=LowStock">
+            <span class="stat-icon" style="background:#fbecd9;color:#b7791f"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>
+            <div>
+                <div class="stat-label">Biến thể sắp hết hàng</div>
+                <div class="stat-number">@Model.LowStockCount</div>
+                <div class="stat-sub">Tồn ≤ ngưỡng cảnh báo</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-xl-8">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Doanh thu &amp; đơn hàng 30 ngày gần nhất</h2></div>
+            <div class="admin-card-body"><div class="chart-box"><canvas id="revenueDayChart" aria-label="Biểu đồ doanh thu theo ngày" role="img"></canvas></div></div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Đơn hàng theo trạng thái</h2></div>
+            <div class="admin-card-body"><div class="chart-box"><canvas id="statusChart" aria-label="Biểu đồ đơn hàng theo trạng thái" role="img"></canvas></div></div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Doanh thu 12 tháng</h2></div>
+            <div class="admin-card-body"><div class="chart-box"><canvas id="revenueMonthChart" aria-label="Biểu đồ doanh thu theo tháng" role="img"></canvas></div></div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2>Top sản phẩm bán chạy (90 ngày)</h2></div>
+            <div class="admin-card-body"><div class="chart-box"><canvas id="topProductsChart" aria-label="Biểu đồ sản phẩm bán chạy" role="img"></canvas></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="admin-card h-100">
+            <div class="admin-card-header">
+                <h2>Đơn hàng mới nhất</h2>
+                <a href="/admin/orders" class="small">Xem tất cả</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table table-hover mb-0">
+                    <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Thời gian</th><th class="text-end">Tổng</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                        @foreach (var order in Model.RecentOrders)
+                        {
+                            <tr>
+                                <td><a href="/admin/orders/details/@order.Id" class="fw-semibold">@order.OrderCode</a></td>
+                                <td>@order.CustomerName</td>
+                                <td class="small text-muted-fs">@Format.DateTimeText(order.PlacedAt)</td>
+                                <td class="text-end">@Format.Money(order.TotalAmount)</td>
+                                <td><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="admin-card h-100">
+            <div class="admin-card-header">
+                <h2>Sản phẩm sắp hết hàng</h2>
+                <a href="/admin/products?stock=LowStock" class="small">Xem tất cả</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>Sản phẩm</th><th class="text-center">Tồn</th></tr></thead>
+                    <tbody>
+                        @if (Model.LowStock.Count == 0)
+                        {
+                            <tr><td colspan="2" class="text-center text-muted-fs py-4">Không có sản phẩm sắp hết hàng.</td></tr>
+                        }
+                        @foreach (var item in Model.LowStock)
+                        {
+                            <tr>
+                                <td>
+                                    <a href="/admin/products/edit/@item.ProductId" class="fw-semibold">@item.ProductName</a>
+                                    <div class="small text-muted-fs">@item.VariantName · @item.Sku</div>
+                                </td>
+                                <td class="text-center"><span class="badge @(item.Stock == 0 ? "text-bg-danger" : "text-bg-warning")">@item.Stock</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="dashboardData">@Html.Raw(chartData)</script>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,59 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Quotes.QuoteListItemDto>
+@using FurnitureStore.Application.Quotes
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Báo giá đặt đóng";
+    var query = (AdminQuoteQuery)ViewData["Query"]!;
+    Func<int, string> pageUrl = p => $"/admin/quotes?page={p}" + (query.Status.HasValue ? $"&status={query.Status}" : "")
+        + (string.IsNullOrEmpty(query.Search) ? "" : $"&search={Uri.EscapeDataString(query.Search)}");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="small text-muted mb-0">Giá dự kiến do hệ thống tính từ <a href="/admin/price-rules">bảng giá đặt đóng</a>. Nhập giá chính thức rồi chuyển sang "Đã báo giá" để gửi cho khách.</p>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small" for="search">Tìm mã, tên, số điện thoại, nội dung</label>
+                <input id="search" name="search" value="@query.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="status">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var s in Enum.GetValues<QuoteStatus>())
+                    {
+                        <option value="@s" selected="@(query.Status == s)">@QuoteLabels.Of(s)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead><tr><th>Mã</th><th>Khách hàng</th><th>Sản phẩm</th><th class="text-end">Dự kiến</th><th class="text-end">Giá báo</th><th>Trạng thái</th><th>Ngày gửi</th></tr></thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted-fs py-4">Chưa có yêu cầu báo giá.</td></tr>
+                }
+                @foreach (var q in Model.Items)
+                {
+                    <tr class="@(q.Status == QuoteStatus.New ? "fw-semibold" : "")">
+                        <td><a href="/admin/quotes/@q.Id">@q.Code</a></td>
+                        <td>@q.CustomerName<div class="small text-muted-fs fw-normal">@q.Phone@(q.IsGuest ? " · khách vãng lai" : "")</div></td>
+                        <td class="small fw-normal">@q.TypeName · @q.Dimensions<div class="text-muted-fs">@(q.MaterialName ?? "Chưa chọn chất liệu") · SL @q.Quantity</div></td>
+                        <td class="text-end fw-normal">@Format.Money(q.EstimatedTotal)</td>
+                        <td class="text-end">@(q.FinalQuotedPrice is decimal f ? Format.Money(f) : "-")</td>
+                        <td><span class="badge @QuoteLabels.Badge(q.Status)">@QuoteLabels.Of(q.Status)</span></td>
+                        <td class="small fw-normal">@Format.DateTimeText(q.CreatedAt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" /></div>
+</div>

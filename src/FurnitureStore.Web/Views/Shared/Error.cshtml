@@ -1,0 +1,36 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    ViewData["Robots"] = "noindex,nofollow";
+}
+
+<section class="error-page">
+    <div class="container" style="max-width: 720px">
+        <span class="error-icon"><i class="bi @Model.Icon" aria-hidden="true"></i></span>
+        <div class="error-code mb-2">LỖI @Model.StatusCode</div>
+        <h1 class="mb-3">@Model.Title</h1>
+        <p class="text-muted-fs mb-4">@Model.Message</p>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            <a class="btn btn-primary" href="/"><i class="bi bi-house me-1" aria-hidden="true"></i>Về trang chủ</a>
+            <a class="btn btn-outline-primary" href="/products">Xem sản phẩm</a>
+            @if (Model.StatusCode == 401)
+            {
+                <a class="btn btn-outline-primary" href="/account/login">Đăng nhập</a>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.RequestId))
+        {
+            <p class="small text-muted-fs mt-4 mb-0">Mã yêu cầu: <code>@Model.RequestId</code></p>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.Details))
+        {
+            <div class="mt-4">
+                <p class="small fw-semibold text-start mb-2">Chi tiết lỗi (chỉ hiển thị ở môi trường Development):</p>
+                <pre class="error-details">@Model.Details</pre>
+            </div>
+        }
+    </div>
+</section>

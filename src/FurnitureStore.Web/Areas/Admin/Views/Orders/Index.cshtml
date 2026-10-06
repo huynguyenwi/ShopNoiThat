@@ -1,0 +1,75 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AdminOrderListViewModel
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Đơn hàng";
+    var q = Model.Query;
+    Func<int, string> pageUrl = p => Model.Url(p);
+}
+
+<ul class="nav nav-pills gap-1 mb-3 flex-wrap">
+    <li class="nav-item"><a class="nav-link @(q.Status is null ? "active" : "")" href="@Model.Url(1, null, false)">Tất cả <span class="badge text-bg-light">@Model.StatusCounts.Sum(s => s.Count)</span></a></li>
+    @foreach (var s in Model.StatusCounts)
+    {
+        <li class="nav-item"><a class="nav-link @(q.Status == s.Status ? "active" : "")" href="@Model.Url(1, s.Status, false)">@Labels.Of(s.Status) <span class="badge text-bg-light">@s.Count</span></a></li>
+    }
+</ul>
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            @if (q.Status.HasValue)
+            {
+                <input type="hidden" name="status" value="@q.Status" />
+            }
+            <div class="col-md-4">
+                <label class="form-label small" for="search">Mã đơn / tên / SĐT / email</label>
+                <input id="search" name="search" value="@q.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small" for="paymentStatus">Thanh toán</label>
+                <select id="paymentStatus" name="paymentStatus" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var ps in Enum.GetValues<PaymentStatus>())
+                    {
+                        <option value="@ps" selected="@(q.PaymentStatus == ps)">@Labels.Of(ps)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="from">Từ ngày</label>
+                <input id="from" name="from" type="date" value="@q.From?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="to">Đến ngày</label>
+                <input id="to" name="to" type="date" value="@q.To?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead>
+                <tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th class="text-center">SL</th><th class="text-end">Tổng tiền</th><th>Thanh toán</th><th>Trạng thái</th></tr>
+            </thead>
+            <tbody>
+                @if (Model.Result.Items.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted-fs py-5">Không có đơn hàng phù hợp.</td></tr>
+                }
+                @foreach (var o in Model.Result.Items)
+                {
+                    <tr>
+                        <td><a class="fw-semibold" href="/admin/orders/details/@o.Id">@o.OrderCode</a></td>
+                        <td>@o.CustomerName<div class="small text-muted-fs">@o.CustomerPhone</div></td>
+                        <td class="small">@Format.DateTimeText(o.PlacedAt)</td>
+                        <td class="text-center">@o.ItemCount</td>
+                        <td class="text-end fw-semibold">@Format.Money(o.TotalAmount)</td>
+                        <td><span class="badge @Labels.BadgeClass(o.PaymentStatus)">@Labels.Of(o.PaymentStatus)</span><div class="small text-muted-fs">@(o.PaymentMethod == PaymentMethod.COD ? "COD" : "Chuyển khoản")</div></td>
+                        <td><span class="badge @Labels.BadgeClass(o.Status)">@Labels.Of(o.Status)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Result.Page, Model.Result.TotalPages, pageUrl)" /></div>
+</div>

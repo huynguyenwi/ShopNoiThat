@@ -1,0 +1,537 @@
+/* =========================================================
+   Admin area
+   ========================================================= */
+
+.admin-body {
+    background: #f6f3ee;
+}
+
+.admin-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 250px;
+    flex: 0 0 250px;
+    color: #d9cfc3;
+    /* Bootstrap's .offcanvas-lg forces "background-color: transparent !important" from lg up; keep the dark sidebar. */
+    background-color: var(--fs-ink) !important;
+    --bs-offcanvas-bg: var(--fs-ink);
+    --bs-offcanvas-color: #d9cfc3;
+}
+
+@media (min-width: 992px) {
+    .admin-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+}
+
+.admin-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.25rem 1rem;
+}
+
+.admin-sidebar .brand-sub {
+    color: #b8ab9c;
+}
+
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    padding: .5rem .75rem 1.5rem;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .85rem;
+    border-radius: var(--fs-radius-sm);
+    color: #d9cfc3;
+    font-size: .925rem;
+}
+
+.admin-nav-link:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.admin-nav-link.active {
+    background: var(--fs-wood-dark); /* white text 5.8:1 */
+    color: #fff;
+}
+
+.admin-nav-section {
+    font-size: .7rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #b8ab9c; /* 6.8:1 on the dark sidebar */
+    padding: 1rem .85rem .35rem;
+}
+
+.admin-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .85rem 1.5rem;
+    background: rgba(255, 255, 255, .95);
+    border-bottom: 1px solid var(--fs-line);
+}
+
+.admin-page-title {
+    font-family: var(--fs-font-body);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-main {
+    padding: 1.5rem;
+}
+
+@media (max-width: 575.98px) {
+    .admin-main {
+        padding: 1rem;
+    }
+}
+
+/* ---------- Cards & tables ---------- */
+.stat-card {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    height: 100%;
+    padding: 1.25rem;
+    background: var(--fs-white);
+    border: 1px solid var(--fs-line);
+    border-radius: var(--fs-radius);
+}
+
+.stat-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    border-radius: .75rem;
+    background: var(--fs-beige);
+    color: var(--fs-wood-dark);
+    font-size: 1.25rem;
+}
+
+.stat-label {
+    font-size: .8rem;
+    color: var(--fs-muted);
+}
+
+.stat-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-sub {
+    font-size: .8rem;
+    color: var(--fs-muted);
+}
+
+.admin-card {
+    background: var(--fs-white);
+    border: 1px solid var(--fs-line);
+    border-radius: var(--fs-radius);
+}
+
+.admin-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--fs-line);
+}
+
+.admin-card-header h2 {
+    font-family: var(--fs-font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-card-body {
+    padding: 1.25rem;
+}
+
+.admin-table {
+    margin: 0;
+    font-size: .9rem;
+}
+
+.admin-table th {
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--fs-muted);
+    background: var(--fs-cream);
+    white-space: nowrap;
+}
+
+.admin-table td,
+.admin-table th {
+    padding: .7rem 1rem;
+    vertical-align: middle;
+}
+
+.admin-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: .5rem;
+    border: 1px solid var(--fs-line);
+    background: var(--fs-cream);
+}
+
+.color-swatch {
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, .15);
+    vertical-align: middle;
+}
+
+.admin-body .btn {
+    border-radius: .5rem;
+}
+
+.status-select {
+    min-width: 140px;
+}
+
+/* ---------- Product form ---------- */
+.variant-table td {
+    min-width: 120px;
+    vertical-align: top;
+}
+
+.variant-table td:first-child,
+.variant-table td:nth-child(7),
+.variant-table td:last-child {
+    min-width: 0;
+}
+
+.variant-table .variant-details td {
+    background: var(--fs-cream);
+    border-top: 0;
+}
+
+.variant-row + .variant-row {
+    border-top: 2px solid var(--fs-line);
+}
+
+.image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+
+.image-previews img {
+    width: 72px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: .4rem;
+    border: 1px solid var(--fs-line);
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: .75rem;
+}
+
+.image-tile {
+    position: relative;
+    border: 2px solid var(--fs-line);
+    border-radius: .6rem;
+    overflow: hidden;
+    background: var(--fs-cream);
+}
+
+.image-tile.is-primary {
+    border-color: #3f7d4e;
+}
+
+.image-tile img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+
+.image-tile-meta {
+    position: absolute;
+    top: .35rem;
+    left: .35rem;
+    right: .35rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+}
+
+.image-tile-meta .badge {
+    max-width: 100%;
+}
+
+.image-tile-actions {
+    position: absolute;
+    bottom: .35rem;
+    right: .35rem;
+    display: flex;
+    gap: .25rem;
+}
+
+/* ---------- Dashboard charts ---------- */
+.chart-box {
+    position: relative;
+    height: 300px;
+}
+
+@media (max-width: 575.98px) {
+    .chart-box {
+        height: 240px;
+    }
+}
+
+/* ---------- Reviews & contact messages ---------- */
+.review-admin {
+    border: 1px solid var(--bs-border-color);
+    border-radius: .75rem;
+    padding: 1rem;
+    background: #fff;
+}
+
+.review-admin + .review-admin {
+    margin-top: .75rem;
+}
+
+.review-admin.is-hidden {
+    background: #f8f5f1;
+    border-style: dashed;
+    opacity: .75;
+}
+
+.review-admin .review-images img,
+.review-images img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: .5rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.contact-message {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: #faf7f2;
+    border-radius: .5rem;
+    padding: 1rem;
+}
+
+/* ---------- Customer chat ---------- */
+.admin-chat {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px);
+    min-height: 460px;
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .875rem;
+    overflow: hidden;
+}
+
+.admin-chat-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--bs-border-color);
+}
+
+.admin-chat-toolbar {
+    padding: .75rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.admin-chat-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+    margin-top: .5rem;
+}
+
+.admin-chat-filters .btn.active {
+    background: var(--fs-brown, #5b3a24);
+    color: #fff;
+}
+
+.admin-chat-conversations {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.admin-chat-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: .7rem .85rem;
+    border: 0;
+    border-bottom: 1px solid #f1ece5;
+    background: transparent;
+    font-size: .875rem;
+}
+
+.admin-chat-item:hover {
+    background: #faf7f2;
+}
+
+.admin-chat-item.active {
+    background: #f1e9dd;
+}
+
+.admin-chat-item.unread strong,
+.admin-chat-item.unread .admin-chat-preview {
+    font-weight: 700;
+    color: #2b2521;
+}
+
+.admin-chat-preview {
+    color: #7a6d62;
+    min-width: 0;
+}
+
+.admin-chat-thread {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: #faf7f2;
+}
+
+.admin-chat-empty {
+    margin: auto;
+    text-align: center;
+    color: #7a6d62;
+}
+
+.admin-chat-empty .bi {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: .5rem;
+}
+
+.admin-chat-thread-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.admin-chat-thread-inner[hidden],
+.admin-chat-empty[hidden] {
+    display: none;
+}
+
+.admin-chat-thread-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.admin-chat-contact a {
+    color: inherit;
+}
+
+.admin-chat-messages {
+    flex: 1;
+}
+
+@media (max-width: 991.98px) {
+    .admin-chat {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-chat .admin-chat-thread {
+        display: none;
+    }
+
+    .admin-chat.show-thread .admin-chat-list {
+        display: none;
+    }
+
+    .admin-chat.show-thread .admin-chat-thread {
+        display: flex;
+    }
+}
+
+/* Toasts: top-right in the back office so they never cover the chat input at the bottom. */
+.admin-body #fs-toast-container {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+}
+
+/* ---------- Top bar on phones ---------- */
+.admin-page-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+    .admin-topbar {
+        gap: .5rem;
+        padding: .65rem .75rem;
+    }
+
+    .admin-main {
+        padding: 1rem .75rem;
+    }
+}
+
+/* Outline "danger" buttons sit on the cream page background: Bootstrap's #dc3545 is below 4.5:1 there, #b02a37 passes. */
+.btn-outline-danger {
+    --bs-btn-color: #b02a37;
+    --bs-btn-border-color: #b02a37;
+    --bs-btn-hover-bg: #b02a37;
+    --bs-btn-hover-border-color: #b02a37;
+    --bs-btn-active-bg: #9a2430;
+    --bs-btn-active-border-color: #9a2430;
+    --bs-btn-disabled-color: #b02a37;
+    --bs-btn-disabled-border-color: #b02a37;
+}

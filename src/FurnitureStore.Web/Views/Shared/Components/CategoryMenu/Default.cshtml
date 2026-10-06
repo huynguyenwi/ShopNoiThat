@@ -1,0 +1,40 @@
+@model IReadOnlyList<FurnitureStore.Application.Catalog.CategoryNodeDto>
+@using FurnitureStore.Application.Catalog
+<li class="nav-item dropdown mega-dropdown">
+    <a class="nav-link dropdown-toggle" href="/products" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Danh mục</a>
+    <div class="dropdown-menu mega-menu">
+        <div class="mega-menu-grid">
+            @foreach (var room in Model)
+            {
+                <div class="mega-menu-column">
+                    <a class="mega-menu-heading" href="/products?category=@room.Slug">
+                        @if (!string.IsNullOrEmpty(room.IconCssClass))
+                        {
+                            <i class="bi @room.IconCssClass me-2" aria-hidden="true"></i>
+                        }
+                        @room.Name
+                    </a>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var child in room.Children)
+                        {
+                            <li><a class="dropdown-item" href="/products?category=@child.Slug">@child.Name <span class="text-muted-fs small">(@child.ProductCount)</span></a></li>
+                        }
+                    </ul>
+                </div>
+            }
+            <div class="mega-menu-column">
+                <span class="mega-menu-heading">Theo loại</span>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var type in FurnitureTypes.All.Where(t => t.Type != FurnitureStore.Domain.Enums.FurnitureType.Other))
+                    {
+                        <li><a class="dropdown-item" href="/products?type=@type.Key">@type.Name</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+        <div class="mega-menu-footer">
+            <a href="/products"><i class="bi bi-grid me-1" aria-hidden="true"></i>Xem tất cả sản phẩm</a>
+            <a href="/products?onSale=true"><i class="bi bi-tag me-1" aria-hidden="true"></i>Đang khuyến mãi</a>
+        </div>
+    </div>
+</li>

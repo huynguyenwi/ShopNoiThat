@@ -1,0 +1,34 @@
+@model FurnitureStore.Application.Catalog.ProductDetailDto
+@{
+    ViewData["Title"] = Model.Name;
+}
+<div class="d-flex justify-content-between mb-3">
+    <a asp-action="Index" class="text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Danh sách sản phẩm</a>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Sửa</a>
+</div>
+<div class="admin-card">
+    <div class="admin-card-body row g-4">
+        <div class="col-md-4">
+            <img class="img-fluid rounded" src="@Model.PrimaryImageUrl" alt="" />
+        </div>
+        <div class="col-md-8">
+            <h2 class="h4">@Model.Name</h2>
+            <p class="text-muted-fs">@Model.Sku · @Model.Category.Name</p>
+            <p>@Model.ShortDescription</p>
+            <table class="table admin-table">
+                <thead><tr><th>SKU</th><th>Biến thể</th><th class="text-end">Giá</th><th class="text-end">Tồn</th></tr></thead>
+                <tbody>
+                    @foreach (var v in Model.Variants)
+                    {
+                        <tr>
+                            <td>@v.Sku @if (v.IsDefault){<span class="badge text-bg-light">Mặc định</span>}</td>
+                            <td>@v.Name</td>
+                            <td class="text-end">@Format.Money(v.Price)</td>
+                            <td class="text-end @(v.Stock == 0 ? "text-danger" : v.IsLowStock ? "text-warning" : "")">@v.Stock</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

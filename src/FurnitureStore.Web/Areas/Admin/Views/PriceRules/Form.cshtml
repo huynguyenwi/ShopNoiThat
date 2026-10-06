@@ -1,0 +1,108 @@
+@model FurnitureStore.Web.Areas.Admin.Controllers.PriceRuleFormViewModel
+@using FurnitureStore.Domain.Enums
+@{
+    var c = Model.Command;
+    ViewData["Title"] = Model.Id is null ? "Thêm tham số giá" : "Sửa tham số giá " + c.Code;
+    var action = Model.Id is null ? "/admin/price-rules/create" : $"/admin/price-rules/{Model.Id}/edit";
+}
+
+<a href="/admin/price-rules" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Bảng giá đặt đóng</a>
+<form method="post" action="@action" asp-antiforgery="true" novalidate style="max-width: 860px">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="admin-card mb-3">
+        <div class="admin-card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label" for="Command_Code">Mã *</label>
+                <input class="form-control" id="Command_Code" name="Command.Code" value="@c.Code" maxlength="60" />
+                @Html.ValidationMessage("Command.Code", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-8">
+                <label class="form-label" for="Command_Name">Tên *</label>
+                <input class="form-control" id="Command_Name" name="Command.Name" value="@c.Name" maxlength="200" />
+                @Html.ValidationMessage("Command.Name", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="Command_RuleType">Tham số *</label>
+                <select class="form-select" id="Command_RuleType" name="Command.RuleType">
+                    @foreach (var t in Enum.GetValues<PriceRuleType>())
+                    {
+                        <option value="@t" selected="@(c.RuleType == t)">@QuoteLabels.Of(t)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="Command_Value">Giá trị *</label>
+                <input class="form-control" id="Command_Value" name="Command.Value" type="number" step="any" min="0" value="@c.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)" />
+                @Html.ValidationMessage("Command.Value", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="Command_Unit">Đơn vị *</label>
+                <input class="form-control" id="Command_Unit" name="Command.Unit" value="@c.Unit" maxlength="30" list="priceUnits" />
+                <datalist id="priceUnits"><option value="đ/m²"></option><option value="đ/sản phẩm"></option><option value="%"></option><option value="hệ số"></option></datalist>
+                @Html.ValidationMessage("Command.Unit", new { @class = "text-danger small" })
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Phạm vi áp dụng (để trống = áp dụng cho tất cả)</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label" for="Command_FurnitureType">Loại sản phẩm</label>
+                <select class="form-select" id="Command_FurnitureType" name="Command.FurnitureType">
+                    <option value="">Tất cả</option>
+                    @foreach (var t in Enum.GetValues<FurnitureType>())
+                    {
+                        <option value="@t" selected="@(c.FurnitureType == t)">@Labels.Of(t)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_MaterialId">Chất liệu</label>
+                <select class="form-select" id="Command_MaterialId" name="Command.MaterialId">
+                    <option value="">Tất cả</option>
+                    @foreach (var m in Model.Options.Materials)
+                    {
+                        <option value="@m.Id" selected="@(c.MaterialId == m.Id)">@m.Name</option>
+                    }
+                </select>
+                @Html.ValidationMessage("Command.MaterialId", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_FinishType">Kiểu sơn</label>
+                <select class="form-select" id="Command_FinishType" name="Command.FinishType">
+                    <option value="">Tất cả</option>
+                    @foreach (var f in Enum.GetValues<FinishType>())
+                    {
+                        <option value="@f" selected="@(c.FinishType == f)">@QuoteLabels.Of(f)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="Command_Priority">Độ ưu tiên</label>
+                <input class="form-control" id="Command_Priority" name="Command.Priority" type="number" min="0" max="1000" value="@c.Priority" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="Command_EffectiveFrom">Hiệu lực từ</label>
+                <input class="form-control" id="Command_EffectiveFrom" name="Command.EffectiveFrom" type="date" value="@c.EffectiveFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="Command_EffectiveTo">Đến hết ngày</label>
+                <input class="form-control" id="Command_EffectiveTo" name="Command.EffectiveTo" type="date" value="@c.EffectiveTo?.ToString("yyyy-MM-dd")" />
+                @Html.ValidationMessage("Command.EffectiveTo", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="Command_IsActive" name="Command.IsActive" value="true" checked="@c.IsActive" />
+                    <input type="hidden" name="Command.IsActive" value="false" />
+                    <label class="form-check-label" for="Command_IsActive">Đang áp dụng</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="Command_Description">Mô tả</label>
+                <textarea class="form-control" id="Command_Description" name="Command.Description" rows="2" maxlength="1000">@c.Description</textarea>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu</button>
+</form>

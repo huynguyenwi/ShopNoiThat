@@ -1,0 +1,4 @@
+@microsoft/signalr 8.0.7 - JavaScript client for ASP.NET Core SignalR
+Source: https://github.com/dotnet/aspnetcore (src/SignalR/clients/ts/signalr)
+License: MIT - Copyright (c) .NET Foundation and Contributors
+Downloaded from https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js

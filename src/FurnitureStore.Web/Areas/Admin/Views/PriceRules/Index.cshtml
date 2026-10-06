@@ -1,0 +1,75 @@
+@model IReadOnlyList<FurnitureStore.Application.Quotes.PriceRuleDto>
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Bảng giá đặt đóng";
+    var type = ViewData["Type"] as PriceRuleType?;
+}
+
+<div class="admin-card mb-3">
+    <div class="admin-card-body small">
+        <strong>Công thức:</strong> diện tích bao ngoài × hệ số vật liệu = diện tích vật liệu;
+        giá = vật liệu (m² × đơn giá) + công (cơ bản + m² × đơn giá) + hoàn thiện + sơn + phụ kiện, cộng chi phí chung % và lợi nhuận %.
+        Với mỗi tham số, hệ thống chọn dòng <em>cụ thể nhất</em> (loại sản phẩm / chất liệu / kiểu sơn), sau đó dòng có độ ưu tiên cao nhất,
+        chỉ trong thời gian hiệu lực. AI không được thay đổi các con số này.
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <form method="get" class="d-flex gap-2">
+        <label class="visually-hidden" for="type">Loại tham số</label>
+        <select id="type" name="type" class="form-select form-select-sm" data-autosubmit>
+            <option value="">Tất cả tham số</option>
+            @foreach (var t in Enum.GetValues<PriceRuleType>())
+            {
+                <option value="@t" selected="@(type == t)">@QuoteLabels.Of(t)</option>
+            }
+        </select>
+        <noscript><button class="btn btn-sm btn-outline-primary" type="submit">Lọc</button></noscript>
+    </form>
+    <a class="btn btn-primary btn-sm" href="/admin/price-rules/create@(type is null ? "" : "?type=" + type)"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm tham số</a>
+</div>
+
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0 align-middle">
+            <thead><tr><th>Mã / tên</th><th>Tham số</th><th>Áp dụng cho</th><th class="text-end">Giá trị</th><th class="text-center">Ưu tiên</th><th>Hiệu lực</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    var scope = new[] { r.FurnitureType is FurnitureType ft ? Labels.Of(ft) : null, r.MaterialName, r.FinishType is FinishType fi ? QuoteLabels.Of(fi) : null }
+                        .Where(x => x is not null).ToList();
+                    <tr class="@(r.IsActive ? "" : "text-muted")">
+                        <td><a href="/admin/price-rules/@r.Id/edit" class="fw-semibold">@r.Code</a><div class="small">@r.Name</div></td>
+                        <td class="small">@QuoteLabels.Of(r.RuleType)</td>
+                        <td class="small">@(scope.Count == 0 ? "Tất cả" : string.Join(" · ", scope))</td>
+                        <td class="text-end text-nowrap">@(r.Unit.StartsWith("đ") ? Format.Number((long)r.Value) : r.Value.ToString("0.####")) <span class="small text-muted">@r.Unit</span></td>
+                        <td class="text-center">@r.Priority</td>
+                        <td class="small">
+                            @if (!r.IsActive)
+                            {
+                                <span class="badge text-bg-secondary">Tắt</span>
+                            }
+                            else if (r.EffectiveFrom is null && r.EffectiveTo is null)
+                            {
+                                <span class="badge text-bg-success">Luôn áp dụng</span>
+                            }
+                            else
+                            {
+                                <span>@(r.EffectiveFrom is DateTime from ? Format.DateText(from) : "...") → @(r.EffectiveTo is DateTime to ? Format.DateText(to) : "...")</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <form method="post" action="/admin/price-rules/@r.Id/active" class="d-inline" asp-antiforgery="true">
+                                <input type="hidden" name="active" value="@(r.IsActive ? "false" : "true")" />
+                                <button type="submit" class="btn btn-light btn-sm" title="@(r.IsActive ? "Tắt" : "Bật")"><i class="bi @(r.IsActive ? "bi-toggle-on text-success" : "bi-toggle-off")" aria-hidden="true"></i><span class="visually-hidden">@(r.IsActive ? "Tắt" : "Bật")</span></button>
+                            </form>
+                            <form method="post" action="/admin/price-rules/@r.Id/delete" class="d-inline" asp-antiforgery="true" data-confirm="Xóa tham số @r.Code?">
+                                <button type="submit" class="btn btn-light btn-sm text-danger" aria-label="Xóa"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

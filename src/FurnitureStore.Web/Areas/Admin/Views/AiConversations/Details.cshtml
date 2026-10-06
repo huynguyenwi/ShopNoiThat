@@ -1,0 +1,43 @@
+@model FurnitureStore.Application.AI.AiConversationDto
+@{
+    ViewData["Title"] = "Hội thoại AI #" + Model.Conversation.Id;
+    ViewData["ShowTechnical"] = true;
+    var c = Model.Conversation;
+}
+
+<a href="/admin/ai" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Hội thoại AI</a>
+<div class="row g-3">
+    <div class="col-lg-8">
+        <partial name="~/Views/Shared/_AiMessages.cshtml" model="Model.Messages" view-data="ViewData" />
+    </div>
+    <div class="col-lg-4">
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Thông tin</h2></div>
+            <div class="admin-card-body small">
+                <dl class="row mb-0">
+                    <dt class="col-5">Tiêu đề</dt><dd class="col-7">@c.Title</dd>
+                    <dt class="col-5">Loại</dt><dd class="col-7">@AiLabels.Of(c.Type)</dd>
+                    <dt class="col-5">Khách</dt>
+                    <dd class="col-7">
+                        @if (c.UserId is not null)
+                        {
+                            <a href="/admin/customers/details/@c.UserId">@(c.UserName ?? "Tài khoản")</a>
+                        }
+                        else
+                        {
+                            <span>Khách vãng lai</span>
+                        }
+                    </dd>
+                    @if (c.ProductName is not null)
+                    {
+                        <dt class="col-5">Sản phẩm</dt><dd class="col-7">@c.ProductName</dd>
+                    }
+                    <dt class="col-5">Tin nhắn</dt><dd class="col-7">@c.MessageCount</dd>
+                    <dt class="col-5">Tokens</dt><dd class="col-7">@Format.Number(c.TotalTokens)</dd>
+                    <dt class="col-5">Bắt đầu</dt><dd class="col-7">@Format.DateTimeText(c.CreatedAt)</dd>
+                    <dt class="col-5">Gần nhất</dt><dd class="col-7">@Format.DateTimeText(c.LastMessageAt)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,143 @@
+@model FurnitureStore.Web.ViewModels.Sales.CheckoutViewModel
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Đặt hàng";
+    var c = Model.Command;
+    var message = TempData[CartController.MessageKey] as string;
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small mb-2">
+                <li class="breadcrumb-item"><a href="/cart">Giỏ hàng</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Đặt hàng</li>
+            </ol>
+        </nav>
+        <h1 class="page-title">Thông tin đặt hàng</h1>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <partial name="_StatusMessage" model="message" />
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <form method="post" asp-action="Place" novalidate id="checkoutForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                        <div class="panel mb-4">
+                            <h2 class="h5 mb-3"><i class="bi bi-person me-2" aria-hidden="true"></i>Người nhận hàng</h2>
+
+                            @if (Model.SavedAddresses.Count > 0)
+                            {
+                                <div class="saved-addresses mb-3" role="radiogroup" aria-label="Địa chỉ đã lưu">
+                                    @foreach (var address in Model.SavedAddresses)
+                                    {
+                                        <label class="saved-address">
+                                            <input type="radio" name="savedAddress" class="form-check-input"
+                                                   data-address-fill
+                                                   data-name="@address.RecipientName" data-phone="@address.Phone" data-line="@address.AddressLine"
+                                                   data-ward="@address.Ward" data-district="@address.District" data-province="@address.Province"
+                                                   checked="@(address.AddressLine == c.AddressLine && address.Phone == c.Phone)" />
+                                            <span>
+                                                <strong>@address.RecipientName</strong> · @address.Phone
+                                                @if (address.IsDefault)
+                                                {
+                                                    <span class="badge text-bg-light">Mặc định</span>
+                                                }
+                                                <span class="d-block small text-muted-fs">@address.FullAddress</span>
+                                            </span>
+                                        </label>
+                                    }
+                                </div>
+                            }
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="Command.FullName" class="form-label">Họ và tên *</label>
+                                    <input asp-for="Command.FullName" class="form-control" autocomplete="name" required maxlength="150" />
+                                    <span asp-validation-for="Command.FullName" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Command.Phone" class="form-label">Số điện thoại *</label>
+                                    <input asp-for="Command.Phone" class="form-control" type="tel" autocomplete="tel" required placeholder="0912345678" />
+                                    <span asp-validation-for="Command.Phone" class="text-danger small"></span>
+                                </div>
+                                <div class="col-12">
+                                    <label asp-for="Command.Email" class="form-label">Email nhận xác nhận đơn *</label>
+                                    <input asp-for="Command.Email" class="form-control" type="email" autocomplete="email" required />
+                                    <span asp-validation-for="Command.Email" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Command.Province" class="form-label">Tỉnh / Thành phố *</label>
+                                    <select asp-for="Command.Province" class="form-select" required>
+                                        <option value="">— Chọn tỉnh / thành —</option>
+                                        @foreach (var province in Model.Provinces)
+                                        {
+                                            <option value="@province">@province</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="Command.Province" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Command.Ward" class="form-label">Phường / Xã *</label>
+                                    <input asp-for="Command.Ward" class="form-control" required maxlength="100" placeholder="VD: Phường Tân Phong" />
+                                    <span asp-validation-for="Command.Ward" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Command.District" class="form-label">Quận / Huyện <span class="text-muted-fs small">(không bắt buộc)</span></label>
+                                    <input asp-for="Command.District" class="form-control" maxlength="100" />
+                                    <div class="form-text">Từ 07/2025 địa chỉ hành chính chỉ còn 2 cấp: Tỉnh - Phường/Xã.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Command.AddressLine" class="form-label">Số nhà, tên đường *</label>
+                                    <input asp-for="Command.AddressLine" class="form-control" autocomplete="street-address" required maxlength="300" />
+                                    <span asp-validation-for="Command.AddressLine" class="text-danger small"></span>
+                                </div>
+                                <div class="col-12">
+                                    <label asp-for="Command.Note" class="form-label">Ghi chú giao hàng</label>
+                                    <textarea asp-for="Command.Note" class="form-control" rows="2" maxlength="1000" placeholder="VD: Giao giờ hành chính, nhà có thang máy..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input asp-for="Command.SaveAddress" class="form-check-input" />
+                                        <label asp-for="Command.SaveAddress" class="form-check-label">Lưu địa chỉ này vào sổ địa chỉ</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="h5 mb-3"><i class="bi bi-credit-card me-2" aria-hidden="true"></i>Phương thức thanh toán</h2>
+                            @foreach (var method in Model.PaymentMethods)
+                            {
+                                var id = "pay-" + method.Method;
+                                <label class="payment-option" for="@id">
+                                    <input type="radio" class="form-check-input" id="@id" name="Command.PaymentMethod" value="@method.Method"
+                                           checked="@(c.PaymentMethod == method.Method)" data-payment-method />
+                                    <span>
+                                        <strong>@method.Name</strong>
+                                        <span class="d-block small text-muted-fs">@method.Description</span>
+                                    </span>
+                                    <i class="bi @(method.Method == PaymentMethod.COD ? "bi-cash-coin" : "bi-bank") ms-auto fs-4 text-wood" aria-hidden="true"></i>
+                                </label>
+                            }
+                            <span asp-validation-for="Command.PaymentMethod" class="text-danger small"></span>
+                            <p class="small text-muted-fs mt-3 mb-0"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+                                Chúng tôi không thu thập hay lưu thông tin thẻ ngân hàng. Thanh toán VNPay / MoMo sẽ được bổ sung sau.</p>
+                        </div>
+                </form>
+            </div>
+
+            <div class="col-lg-5">
+                <aside class="order-summary sticky-lg-top" data-checkout-summary>
+                    <partial name="_CheckoutSummary" model="Model.Summary" />
+                </aside>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/checkout.js" asp-append-version="true"></script>
+}

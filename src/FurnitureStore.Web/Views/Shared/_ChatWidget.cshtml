@@ -1,0 +1,63 @@
+@* Customer ↔ shop chat (SignalR). Behaviour in wwwroot/js/chat-widget.js; messages are rendered with textContent only. *@
+@{
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var hasChat = signedIn || FurnitureStore.Web.Services.ChatIdentity.GuestKey(Context) is not null;
+}
+<div class="chat-widget" id="chatWidget" data-signed-in="@(signedIn ? "true" : "false")" data-has-chat="@(hasChat ? "true" : "false")">
+    <button type="button" class="chat-launcher" id="chatLauncher" aria-controls="chatPanel" aria-expanded="false">
+        <i class="bi bi-chat-dots-fill" aria-hidden="true"></i>
+        <span class="chat-launcher-label">Chat với Nhà Mộc</span>
+        <span class="chat-unread d-none" id="chatUnread" aria-label="Tin nhắn chưa đọc">0</span>
+    </button>
+
+    <section class="chat-panel" id="chatPanel" role="dialog" aria-labelledby="chatTitle" hidden>
+        <header class="chat-panel-header">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+                <span class="chat-avatar"><img src="~/images/logo-mark.svg" alt="" width="32" height="32" /></span>
+                <div class="min-w-0">
+                    <div class="fw-semibold text-truncate" id="chatTitle">Nhà Mộc Furniture</div>
+                    <div class="chat-status" id="chatStatus">Thường trả lời trong vài phút</div>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" id="chatClose" aria-label="Thu nhỏ khung chat"></button>
+        </header>
+
+        <div class="chat-body" id="chatBody">
+            <div class="chat-loading text-center py-5" id="chatLoading">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"><span class="visually-hidden">Đang tải...</span></div>
+            </div>
+
+            <form class="chat-start" id="chatStartForm" hidden novalidate>
+                <p class="small mb-3">Xin chào! Để lại thông tin để cửa hàng có thể liên hệ lại nếu bạn rời trang.</p>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="chatName">Tên của bạn *</label>
+                    <input class="form-control form-control-sm" id="chatName" name="name" maxlength="150" autocomplete="name" required />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="chatPhone">Số điện thoại</label>
+                    <input class="form-control form-control-sm" id="chatPhone" name="phone" type="tel" maxlength="15" autocomplete="tel" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="chatEmail">Email</label>
+                    <input class="form-control form-control-sm" id="chatEmail" name="email" type="email" maxlength="256" autocomplete="email" />
+                </div>
+                <div class="form-text mb-2">Nhập số điện thoại hoặc email. Hoặc <a href="/account/login">đăng nhập</a> để lưu lịch sử chat.</div>
+                <div class="alert alert-danger py-2 small d-none" id="chatStartError" role="alert"></div>
+                <button type="submit" class="btn btn-primary btn-sm w-100">Bắt đầu chat</button>
+            </form>
+
+            <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Tin nhắn" hidden>
+                <button type="button" class="btn btn-link btn-sm w-100 chat-older" id="chatOlder" hidden>Xem tin nhắn cũ hơn</button>
+                <div class="chat-msg from-shop chat-welcome">
+                    <div class="chat-bubble">Xin chào! Nhà Mộc có thể giúp gì cho bạn? Hỏi chúng tôi về sản phẩm, kích thước, chất liệu hay đặt đóng theo yêu cầu nhé.</div>
+                </div>
+            </div>
+            <div class="chat-typing" id="chatTyping" hidden><span></span><span></span><span></span> <em id="chatTypingName"></em></div>
+        </div>
+
+        <form class="chat-compose" id="chatCompose" hidden novalidate>
+            <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Nhập tin nhắn..." aria-label="Nội dung tin nhắn"></textarea>
+            <button type="submit" class="btn btn-primary chat-send" id="chatSend" aria-label="Gửi tin nhắn"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+        </form>
+    </section>
+</div>

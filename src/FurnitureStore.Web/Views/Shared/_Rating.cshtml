@@ -1,0 +1,19 @@
+@* Model: (average, count). Count 0 renders the stars of a single review without the "(n)" counter. *@
+@model (decimal Average, int Count)
+@{
+    var rounded = Math.Round(Model.Average * 2, MidpointRounding.AwayFromZero) / 2;
+    var label = Model.Count > 0
+        ? $"Đánh giá {Model.Average:0.0} trên 5 sao, {Model.Count} lượt"
+        : $"{Model.Average:0} trên 5 sao";
+}
+<div class="rating" role="img" aria-label="@label">
+    @for (var i = 1; i <= 5; i++)
+    {
+        var icon = rounded >= i ? "bi-star-fill" : rounded >= i - 0.5m ? "bi-star-half" : "bi-star";
+        <i class="bi @icon" aria-hidden="true"></i>
+    }
+    @if (Model.Count > 0)
+    {
+        <span class="rating-count">(@Model.Count)</span>
+    }
+</div>

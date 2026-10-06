@@ -1,0 +1,82 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AdminReviewListViewModel
+@{
+    ViewData["Title"] = "Đánh giá sản phẩm";
+    var q = Model.Query;
+    Func<int, string> pageUrl = Model.PageUrl;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="admin-card">
+    <div class="admin-card-header"><h2>Đánh giá <span class="text-muted-fs fw-normal">(@Model.Result.TotalCount)</span></h2></div>
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small" for="search">Nội dung / người đánh giá / sản phẩm</label>
+                <input id="search" name="search" value="@q.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="rating">Số sao</label>
+                <select id="rating" name="rating" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @for (var s = 5; s >= 1; s--)
+                    {
+                        <option value="@s" selected="@(q.Rating == s)">@s sao</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small" for="hidden">Hiển thị</label>
+                <select id="hidden" name="hidden" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    <option value="false" selected="@(q.Hidden == false)">Đang hiện</option>
+                    <option value="true" selected="@(q.Hidden == true)">Đã ẩn</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="admin-card-body">
+        @if (Model.Result.Items.Count == 0)
+        {
+            <p class="text-center text-muted-fs py-4 mb-0">Chưa có đánh giá phù hợp.</p>
+        }
+        @foreach (var r in Model.Result.Items)
+        {
+            <div class="review-admin @(r.IsHidden ? "is-hidden" : "")">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <div>
+                        <partial name="_Rating" model="((decimal)r.Rating, 0)" />
+                        <strong class="ms-1">@r.Title</strong>
+                        <div class="small text-muted-fs">@r.ReviewerName · @Format.DateTimeText(r.CreatedAt) · <a href="/products/@r.ProductSlug" target="_blank" rel="noopener">@r.ProductName</a>
+                            @if (r.IsVerifiedPurchase) { <span class="badge text-bg-light">Đã mua hàng</span> }
+                            @if (r.IsHidden) { <span class="badge text-bg-secondary">Đã ẩn</span> }
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1 align-items-start">
+                        <form method="post" asp-action="Visibility" asp-route-id="@r.Id">
+                            <input type="hidden" name="hidden" value="@((!r.IsHidden).ToString().ToLowerInvariant())" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button type="submit" class="btn btn-light btn-sm">@(r.IsHidden ? "Hiện" : "Ẩn")</button>
+                        </form>
+                        <form method="post" asp-action="Delete" asp-route-id="@r.Id" data-confirm="Xóa vĩnh viễn đánh giá này?">
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button type="submit" class="btn btn-light btn-sm text-danger" aria-label="Xóa đánh giá"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                        </form>
+                    </div>
+                </div>
+                <p class="mb-2 mt-2">@r.Comment</p>
+                @if (r.ImageUrls.Count > 0)
+                {
+                    <div class="image-previews mb-2">@foreach (var url in r.ImageUrls) { <img src="@url" alt="" /> }</div>
+                }
+                <form method="post" asp-action="Reply" asp-route-id="@r.Id" class="d-flex gap-2">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <label class="visually-hidden" for="reply-@r.Id">Phản hồi</label>
+                    <input id="reply-@r.Id" name="reply" value="@r.AdminReply" class="form-control form-control-sm" maxlength="2000" placeholder="Phản hồi của cửa hàng..." />
+                    <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">Lưu phản hồi</button>
+                </form>
+            </div>
+        }
+        <partial name="_Pagination" model="(Model.Result.Page, Model.Result.TotalPages, pageUrl)" />
+    </div>
+</div>

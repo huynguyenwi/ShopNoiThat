@@ -1,0 +1,158 @@
+@model FurnitureStore.Web.ViewModels.Catalog.ProductListViewModel
+@using FurnitureStore.Application.Catalog
+@{
+    var r = Model.Request;
+    var o = Model.Options;
+    var priceRanges = new (decimal? Min, decimal? Max, string Label)[]
+    {
+        (null, 3_000_000, "Dưới 3 triệu"),
+        (3_000_000, 10_000_000, "3 - 10 triệu"),
+        (10_000_000, 20_000_000, "10 - 20 triệu"),
+        (20_000_000, null, "Trên 20 triệu")
+    };
+}
+<form id="filterForm" class="filter-form" action="/products" method="get" data-filter-form>
+    @if (!string.IsNullOrWhiteSpace(r.Q))
+    {
+        <input type="hidden" name="q" value="@r.Q" />
+    }
+    <input type="hidden" name="sort" value="@r.Sort" data-sort-field />
+
+    <div class="filter-group">
+        <h3 class="filter-title">Danh mục</h3>
+        <div class="filter-options filter-scroll">
+            <label class="form-check">
+                <input class="form-check-input" type="radio" name="category" value="" @(string.IsNullOrEmpty(r.Category) ? "checked" : "") />
+                <span class="form-check-label">Tất cả</span>
+            </label>
+            @foreach (var room in o.Categories)
+            {
+                <label class="form-check fw-semibold">
+                    <input class="form-check-input" type="radio" name="category" value="@room.Slug" @(r.Category == room.Slug ? "checked" : "") />
+                    <span class="form-check-label">@room.Name <span class="text-muted-fs fw-normal">(@room.ProductCount)</span></span>
+                </label>
+                @foreach (var child in room.Children)
+                {
+                    <label class="form-check ms-3">
+                        <input class="form-check-input" type="radio" name="category" value="@child.Slug" @(r.Category == child.Slug ? "checked" : "") />
+                        <span class="form-check-label">@child.Name <span class="text-muted-fs">(@child.ProductCount)</span></span>
+                    </label>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Loại sản phẩm</h3>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var type in FurnitureTypes.All.Where(t => t.Type != FurnitureStore.Domain.Enums.FurnitureType.Other))
+            {
+                var id = "type-" + type.Key;
+                <input type="radio" class="btn-check" name="type" id="@id" value="@type.Key" @(string.Equals(r.Type, type.Key, StringComparison.OrdinalIgnoreCase) ? "checked" : "") autocomplete="off" />
+                <label class="btn btn-sm btn-chip" for="@id">@type.Name</label>
+            }
+            <input type="radio" class="btn-check" name="type" id="type-all" value="" @(string.IsNullOrEmpty(r.Type) ? "checked" : "") autocomplete="off" />
+            <label class="btn btn-sm btn-chip" for="type-all">Tất cả</label>
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Khoảng giá (₫)</h3>
+        <div class="d-flex gap-2 mb-2">
+            <label class="visually-hidden" for="minPrice">Giá từ</label>
+            <input id="minPrice" class="form-control form-control-sm" type="number" name="minPrice" min="0" step="100000" placeholder="Từ" value="@r.MinPrice?.ToString("0")" />
+            <label class="visually-hidden" for="maxPrice">Giá đến</label>
+            <input id="maxPrice" class="form-control form-control-sm" type="number" name="maxPrice" min="0" step="100000" placeholder="Đến" value="@r.MaxPrice?.ToString("0")" />
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            @foreach (var range in priceRanges)
+            {
+                <button type="button" class="btn btn-sm btn-chip" data-price-min="@range.Min?.ToString("0")" data-price-max="@range.Max?.ToString("0")">@range.Label</button>
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Màu sắc</h3>
+        <div class="swatch-options">
+            @foreach (var color in o.Colors)
+            {
+                var id = "color-" + color.Slug;
+                <input type="checkbox" class="btn-check" name="color" id="@id" value="@color.Slug" @(r.Color.Contains(color.Slug) ? "checked" : "") autocomplete="off" />
+                <label class="swatch-option" for="@id" title="@color.Name">
+                    <span class="swatch-dot swatch-dot-lg" style="background-color:@color.Hex"></span>
+                    <span class="visually-hidden">@color.Name</span>
+                </label>
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Chất liệu</h3>
+        <div class="filter-options filter-scroll">
+            @foreach (var material in o.Materials)
+            {
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox" name="material" value="@material.Slug" @(r.Material.Contains(material.Slug) ? "checked" : "") />
+                    <span class="form-check-label">@material.Name</span>
+                </label>
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Phong cách</h3>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var style in o.Styles)
+            {
+                var id = "style-" + style.Slug;
+                <input type="checkbox" class="btn-check" name="style" id="@id" value="@style.Slug" @(r.Style.Contains(style.Slug) ? "checked" : "") autocomplete="off" />
+                <label class="btn btn-sm btn-chip" for="@id">@style.Name</label>
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Kích thước</h3>
+        <div class="filter-options filter-scroll">
+            @foreach (var size in o.Sizes)
+            {
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox" name="size" value="@size.Slug" @(r.Size.Contains(size.Slug) ? "checked" : "") />
+                    <span class="form-check-label">@size.Name</span>
+                </label>
+            }
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <h3 class="filter-title">Đánh giá</h3>
+        @foreach (var stars in new[] { 4, 3 })
+        {
+            <label class="form-check">
+                <input class="form-check-input" type="radio" name="rating" value="@stars" @(r.Rating == stars ? "checked" : "") />
+                <span class="form-check-label">Từ @stars <i class="bi bi-star-fill text-warning" aria-hidden="true"></i> trở lên</span>
+            </label>
+        }
+        <label class="form-check">
+            <input class="form-check-input" type="radio" name="rating" value="" @(r.Rating is null ? "checked" : "") />
+            <span class="form-check-label">Tất cả</span>
+        </label>
+    </div>
+
+    <div class="filter-group">
+        <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" name="onSale" value="true" @(r.OnSale ? "checked" : "") />
+            <span class="form-check-label">Đang giảm giá</span>
+        </label>
+        <label class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" name="inStock" value="true" @(r.InStock ? "checked" : "") />
+            <span class="form-check-label">Chỉ hiện hàng còn</span>
+        </label>
+    </div>
+
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">Áp dụng bộ lọc</button>
+        <a class="btn btn-link btn-sm" href="/products">Xóa tất cả bộ lọc</a>
+    </div>
+</form>

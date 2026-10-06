@@ -1,0 +1,142 @@
+@using Microsoft.AspNetCore.Antiforgery
+@inject IOptions<ApplicationSettings> SiteOptions
+@inject IAntiforgery Antiforgery
+@inject FurnitureStore.Application.Chat.IChatService Chat
+@inject FurnitureStore.Application.Quotes.IQuoteService Quotes
+@{
+    var site = SiteOptions.Value;
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var csrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    var waitingChats = await Chat.CountWaitingAsync(Context.RequestAborted);
+    var newQuotes = isAdmin ? await Quotes.CountNewAsync(Context.RequestAborted) : 0;
+
+    // Sidebar entries. STAFF accounts only see the modules they are allowed to use (the server enforces it anyway).
+    var navigation = new (string Controller, string Label, string Icon, string Url, string? Section)[]
+    {
+        ("Dashboard", "Tổng quan", "bi-speedometer2", "/admin", null),
+        ("Orders", "Đơn hàng", "bi-receipt", "/admin/orders", "Bán hàng"),
+        ("Coupons", "Mã giảm giá", "bi-ticket-perforated", "/admin/coupons", null),
+        ("Chat", "Chat khách hàng", "bi-chat-dots", "/admin/chat", null),
+        ("Quotes", "Báo giá đặt đóng", "bi-calculator", "/admin/quotes", null),
+        ("Customers", "Khách hàng", "bi-people", "/admin/customers", null),
+        ("Reviews", "Đánh giá", "bi-star-half", "/admin/reviews", null),
+        ("Contacts", "Liên hệ", "bi-envelope", "/admin/contacts", null),
+        ("Products", "Sản phẩm", "bi-box-seam", "/admin/products", "Catalog"),
+        ("Categories", "Danh mục", "bi-diagram-3", "/admin/categories", null),
+        ("Attributes", "Màu, chất liệu, kích thước", "bi-palette", "/admin/attributes/colors", null),
+        ("PriceRules", "Bảng giá đặt đóng", "bi-cash-coin", "/admin/price-rules", null),
+        ("AiConversations", "Hội thoại AI", "bi-stars", "/admin/ai", "Trợ lý AI"),
+        ("AiKnowledge", "Nội dung chatbot", "bi-journal-richtext", "/admin/ai-knowledge", null),
+        ("Store", "Thông tin cửa hàng", "bi-shop-window", "/admin/store", "Hệ thống"),
+        ("Activity", "Nhật ký hoạt động", "bi-journal-text", "/admin/audit-logs", null)
+    };
+    if (!isAdmin)
+    {
+        navigation = navigation.Where(n => n.Controller == "Chat").Select(n => n with { Section = "Bán hàng" }).ToArray();
+    }
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="csrf-token" content="@csrfToken" />
+    <title>@ViewData["Title"] | Quản trị @site.SiteName</title>
+    <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="admin-body">
+    <a class="visually-hidden-focusable skip-link" href="#admin-main">Bỏ qua đến nội dung chính</a>
+
+    <div class="admin-shell">
+        <aside class="admin-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="adminSidebar" aria-label="Menu quản trị">
+            <div class="admin-sidebar-header">
+                <a class="brand" href="@(isAdmin ? "/admin" : "/admin/chat")">
+                    <img src="~/images/logo-mark.svg" width="36" height="36" alt="" />
+                    <span>
+                        <span class="brand-name text-white">Nhà Mộc</span>
+                        <span class="brand-sub">Quản trị</span>
+                    </span>
+                </a>
+                <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#adminSidebar" aria-label="Đóng menu"></button>
+            </div>
+            <nav class="admin-nav">
+                @foreach (var item in navigation)
+                {
+                    var active = string.Equals(controller, item.Controller, StringComparison.OrdinalIgnoreCase);
+                    if (item.Section is not null)
+                    {
+                        <div class="admin-nav-section">@item.Section</div>
+                    }
+                    <a class="admin-nav-link @(active ? "active" : "")" href="@item.Url" aria-current="@(active ? "page" : null)">
+                        <i class="bi @item.Icon" aria-hidden="true"></i><span>@item.Label</span>
+                        @if (item.Controller == "Chat")
+                        {
+                            <span class="badge rounded-pill text-bg-danger ms-auto @(waitingChats == 0 ? "d-none" : "")" id="adminChatBadge" aria-label="Cuộc trò chuyện chờ trả lời">@waitingChats</span>
+                        }
+                        else if (item.Controller == "Quotes" && newQuotes > 0)
+                        {
+                            <span class="badge rounded-pill text-bg-warning ms-auto" aria-label="Yêu cầu báo giá mới">@newQuotes</span>
+                        }
+                    </a>
+                }
+                <hr class="border-secondary" />
+                <a class="admin-nav-link" href="/" target="_blank" rel="noopener"><i class="bi bi-shop" aria-hidden="true"></i><span>Xem cửa hàng</span></a>
+            </nav>
+        </aside>
+
+        <div class="admin-content">
+            <header class="admin-topbar">
+                <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar" aria-controls="adminSidebar" aria-label="Mở menu">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <h1 class="admin-page-title">@ViewData["Title"]</h1>
+                <div class="ms-auto">
+                    @if (isAdmin)
+                    {
+                        @await Component.InvokeAsync("AdminNotificationBell")
+                    }
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle" aria-hidden="true"></i><span class="d-none d-sm-inline ms-1">@User.DisplayName()</span><span class="visually-hidden d-sm-none">Tài khoản @User.DisplayName()</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/account/profile">Hồ sơ cá nhân</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <form method="post" action="/account/logout" asp-antiforgery="true">
+                                <button type="submit" class="dropdown-item">Đăng xuất</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </header>
+
+            <main id="admin-main" class="admin-main">
+                <partial name="_StatusMessage" model="@(TempData[AdminControllerBase.StatusMessageKey] as string)" />
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/admin.js" asp-append-version="true"></script>
+    <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+    <script src="~/js/chat-core.js" asp-append-version="true"></script>
+    <script src="~/js/admin-chat.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

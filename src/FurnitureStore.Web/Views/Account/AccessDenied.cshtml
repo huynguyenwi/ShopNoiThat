@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Không có quyền truy cập";
+}
+
+<section class="error-page">
+    <div class="container" style="max-width: 640px">
+        <span class="error-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+        <div class="error-code mb-2">LỖI 403</div>
+        <h1 class="mb-3">Không có quyền truy cập</h1>
+        <p class="text-muted-fs mb-4">Tài khoản <strong>@User.Identity?.Name</strong> không được phép truy cập trang này.
+            Nếu bạn là quản trị viên, hãy đăng nhập bằng tài khoản quản trị.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            <a class="btn btn-primary" href="/"><i class="bi bi-house me-1" aria-hidden="true"></i>Về trang chủ</a>
+            <form method="post" action="/account/logout" asp-antiforgery="true">
+                <button type="submit" class="btn btn-outline-primary">Đăng nhập tài khoản khác</button>
+            </form>
+        </div>
+    </div>
+</section>

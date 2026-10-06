@@ -1,0 +1,144 @@
+@model CouponFormViewModel
+@using System.Globalization
+@using FurnitureStore.Application.Sales
+@using FurnitureStore.Domain.Enums
+@{
+    var c = Model.Command;
+    var isEdit = Model.Id is not null;
+    var codeLocked = Model.Detail?.HasOrders == true;
+    ViewData["Title"] = isEdit ? "Sửa mã giảm giá " + c.Code : "Tạo mã giảm giá";
+    var action = isEdit ? $"/admin/coupons/{Model.Id}/edit" : "/admin/coupons/create";
+    string Num(decimal? value) => value?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty;
+    string Local(DateTime? value) => value?.ToString("yyyy-MM-dd'T'HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+    var isPercent = c.DiscountType == DiscountType.Percentage;
+}
+
+<a href="@(isEdit ? $"/admin/coupons/{Model.Id}" : "/admin/coupons")" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>@(isEdit ? "Chi tiết mã" : "Mã giảm giá")</a>
+
+<form method="post" action="@action" asp-antiforgery="true" novalidate class="coupon-form" data-coupon-form-admin>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Thông tin mã</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-5">
+                <label class="form-label" for="Command_Code">Mã giảm giá *</label>
+                <div class="input-group">
+                    <input class="form-control text-uppercase coupon-code-text" id="Command_Code" name="Command.Code" value="@c.Code" maxlength="30"
+                           autocomplete="off" spellcheck="false" readonly="@codeLocked" aria-describedby="codeHelp" />
+                    @if (!codeLocked)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" data-generate-code title="Tạo mã ngẫu nhiên"><i class="bi bi-shuffle" aria-hidden="true"></i><span class="visually-hidden">Tạo mã ngẫu nhiên</span></button>
+                    }
+                </div>
+                <div id="codeHelp" class="form-text">
+                    @(codeLocked ? "Mã đã được dùng cho đơn hàng nên không thể đổi." : "3–30 ký tự: chữ không dấu, số, gạch dưới hoặc gạch ngang. Tự chuyển thành chữ in hoa.")
+                </div>
+                @Html.ValidationMessage("Command.Code", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-7">
+                <label class="form-label" for="Command_Name">Tên chương trình *</label>
+                <input class="form-control" id="Command_Name" name="Command.Name" value="@c.Name" maxlength="150" placeholder="VD: Giảm 10% mừng khai trương" />
+                @Html.ValidationMessage("Command.Name", new { @class = "text-danger small" })
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="Command_Description">Mô tả cho khách</label>
+                <textarea class="form-control" id="Command_Description" name="Command.Description" rows="2" maxlength="500">@c.Description</textarea>
+                @Html.ValidationMessage("Command.Description", new { @class = "text-danger small" })
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Mức giảm &amp; điều kiện</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label" for="Command_DiscountType">Kiểu giảm *</label>
+                <select class="form-select" id="Command_DiscountType" name="Command.DiscountType" data-discount-type>
+                    <option value="@DiscountType.Percentage" selected="@isPercent">Theo phần trăm (%)</option>
+                    <option value="@DiscountType.FixedAmount" selected="@(!isPercent)">Số tiền cố định (₫)</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_DiscountValue">Mức giảm *</label>
+                <div class="input-group">
+                    <input class="form-control" id="Command_DiscountValue" name="Command.DiscountValue" type="number" min="0" step="any" value="@Num(c.DiscountValue == 0 ? null : c.DiscountValue)" />
+                    <span class="input-group-text" data-discount-unit>@(isPercent ? "%" : "₫")</span>
+                </div>
+                @Html.ValidationMessage("Command.DiscountValue", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4" data-percent-only>
+                <label class="form-label" for="Command_MaxDiscountAmount">Giảm tối đa</label>
+                <div class="input-group">
+                    <input class="form-control" id="Command_MaxDiscountAmount" name="Command.MaxDiscountAmount" type="number" min="0" step="1000" value="@Num(c.MaxDiscountAmount)" aria-describedby="maxHelp" />
+                    <span class="input-group-text">₫</span>
+                </div>
+                <div id="maxHelp" class="form-text">Chỉ dùng cho giảm theo %. Để trống = không giới hạn.</div>
+                @Html.ValidationMessage("Command.MaxDiscountAmount", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_MinOrderAmount">Đơn hàng tối thiểu</label>
+                <div class="input-group">
+                    <input class="form-control" id="Command_MinOrderAmount" name="Command.MinOrderAmount" type="number" min="0" step="1000" value="@Num(c.MinOrderAmount)" aria-describedby="minHelp" />
+                    <span class="input-group-text">₫</span>
+                </div>
+                <div id="minHelp" class="form-text">Tính trên tạm tính (chưa gồm phí giao hàng). Để trống = mọi đơn.</div>
+                @Html.ValidationMessage("Command.MinOrderAmount", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_UsageLimit">Tổng số lượt</label>
+                <input class="form-control" id="Command_UsageLimit" name="Command.UsageLimit" type="number" min="1" step="1" value="@c.UsageLimit" aria-describedby="limitHelp" />
+                <div id="limitHelp" class="form-text">@(Model.Detail is null ? "Để trống = không giới hạn." : $"Đã dùng {Model.Detail.Coupon.UsedCount} lượt. Để trống = không giới hạn.")</div>
+                @Html.ValidationMessage("Command.UsageLimit", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_UsageLimitPerUser">Số lượt mỗi khách</label>
+                <input class="form-control" id="Command_UsageLimitPerUser" name="Command.UsageLimitPerUser" type="number" min="1" step="1" value="@c.UsageLimitPerUser" aria-describedby="perUserHelp" />
+                <div id="perUserHelp" class="form-text">VD: 1 = mỗi tài khoản dùng một lần.</div>
+                @Html.ValidationMessage("Command.UsageLimitPerUser", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_StartsAt">Bắt đầu</label>
+                <input class="form-control" id="Command_StartsAt" name="Command.StartsAt" type="datetime-local" value="@Local(c.StartsAt)" aria-describedby="timeHelp" />
+                @Html.ValidationMessage("Command.StartsAt", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="Command_EndsAt">Kết thúc</label>
+                <input class="form-control" id="Command_EndsAt" name="Command.EndsAt" type="datetime-local" value="@Local(c.EndsAt)" aria-describedby="timeHelp" />
+                @Html.ValidationMessage("Command.EndsAt", new { @class = "text-danger small" })
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div id="timeHelp" class="form-text mb-2">Giờ Việt Nam. Để trống = áp dụng ngay / không hết hạn.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Hiển thị</h2></div>
+        <div class="admin-card-body row g-3">
+            <div class="col-md-6">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="Command_IsActive" name="Command.IsActive" value="true" checked="@c.IsActive" />
+                    <input type="hidden" name="Command.IsActive" value="false" />
+                    <label class="form-check-label" for="Command_IsActive">Đang bật (khách có thể áp dụng)</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="Command_IsPublic" name="Command.IsPublic" value="true" checked="@c.IsPublic" />
+                    <input type="hidden" name="Command.IsPublic" value="false" />
+                    <label class="form-check-label" for="Command_IsPublic">Công khai: hiện trong "Ưu đãi dành cho bạn" ở giỏ hàng / thanh toán</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="coupon-preview" aria-live="polite">
+                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Khách sẽ thấy: <strong data-coupon-preview>@(c.DiscountValue > 0
+                        ? CouponText.Benefit(c.DiscountType, c.DiscountValue, c.MaxDiscountAmount) + " · " + CouponText.Conditions(c.MinOrderAmount ?? 0, c.UsageLimitPerUser, null)
+                        : "nhập mức giảm để xem trước")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>@(isEdit ? "Lưu thay đổi" : "Tạo mã giảm giá")</button>
+</form>

@@ -1,0 +1,5 @@
+@model (int Count, string CssClass)
+<a class="header-action @Model.CssClass" href="/cart" aria-label="Giỏ hàng (@Model.Count sản phẩm)" title="Giỏ hàng">
+    <i class="bi bi-bag" aria-hidden="true"></i>
+    <span class="badge rounded-pill @(Model.Count == 0 ? "d-none" : "")" data-cart-count>@Model.Count</span>
+</a>

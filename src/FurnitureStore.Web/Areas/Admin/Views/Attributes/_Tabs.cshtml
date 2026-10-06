@@ -1,0 +1,10 @@
+@model FurnitureStore.Application.Catalog.Admin.AttributeKind
+@using FurnitureStore.Web.Areas.Admin.Models
+<ul class="nav nav-pills gap-1 mb-3">
+    @foreach (var item in AttributeKinds.All)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(item.Kind == Model ? "active" : "")" href="/admin/attributes/@item.Route"><i class="bi @item.Icon me-1" aria-hidden="true"></i>@item.Title</a>
+        </li>
+    }
+</ul>

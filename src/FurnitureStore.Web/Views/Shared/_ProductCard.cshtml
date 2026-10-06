@@ -1,0 +1,50 @@
+@model FurnitureStore.Application.Catalog.ProductCardDto
+<article class="product-card">
+    <a class="product-card-media" href="@Model.Url" aria-label="@Model.Name">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <img src="@Model.ImageUrl" alt="@Model.Name" loading="lazy" width="400" height="300" />
+        }
+        <span class="product-badges">
+            @if (Model.DiscountPercent > 0)
+            {
+                <span class="badge badge-sale">-@Model.DiscountPercent%</span>
+            }
+            @if (Model.IsNew)
+            {
+                <span class="badge badge-new">Mới</span>
+            }
+            @if (!Model.InStock)
+            {
+                <span class="badge badge-out">Hết hàng</span>
+            }
+        </span>
+    </a>
+    <button type="button" class="product-card-wishlist" data-wishlist-product="@Model.Id" aria-label="Thêm @Model.Name vào yêu thích" title="Yêu thích">
+        <i class="bi bi-heart" aria-hidden="true"></i>
+    </button>
+    <div class="product-card-body">
+        <div class="product-card-category">@Model.CategoryName</div>
+        <h3 class="product-card-title"><a href="@Model.Url">@Model.Name</a></h3>
+        @if (Model.ReviewCount > 0)
+        {
+            <partial name="_Rating" model="(Model.AverageRating, Model.ReviewCount)" />
+        }
+        <div class="product-card-price">
+            <span class="price">@Format.Money(Model.Price)</span>
+            @if (Model.OriginalPrice.HasValue)
+            {
+                <span class="price-old">@Format.Money(Model.OriginalPrice.Value)</span>
+            }
+        </div>
+        @if (Model.ColorHexes.Count > 0)
+        {
+            <div class="product-card-swatches" role="img" aria-label="Có @Model.ColorHexes.Count màu lựa chọn">
+                @foreach (var hex in Model.ColorHexes)
+                {
+                    <span class="swatch-dot" style="background-color:@hex"></span>
+                }
+            </div>
+        }
+    </div>
+</article>

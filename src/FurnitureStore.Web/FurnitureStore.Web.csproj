@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Presentation layer + composition root: MVC controllers, views, Admin area, API endpoints. -->
+  <PropertyGroup>
+    <RootNamespace>FurnitureStore.Web</RootNamespace>
+    <UserSecretsId>furniturestore-web-7c1e2b8a-5d4f-4e7a-9b61-3f2c8d9e0a15</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FurnitureStore.Application\FurnitureStore.Application.csproj" />
+    <ProjectReference Include="..\FurnitureStore.Infrastructure\FurnitureStore.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Needed by `dotnet ef` (design-time) when Web is the startup project. Not shipped at runtime. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FurnitureStore.Tests" />
+  </ItemGroup>
+
+  <!-- Never ship local user uploads, development settings or runtime data (dev e-mails, data-protection keys).
+       Upload / e-mail folders are created on demand by the storage services. -->
+  <ItemGroup>
+    <Content Update="wwwroot\uploads\**" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
+  </ItemGroup>
+
+</Project>

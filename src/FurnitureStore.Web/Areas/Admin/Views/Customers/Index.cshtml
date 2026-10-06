@@ -1,0 +1,71 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AdminUserListViewModel
+@using FurnitureStore.Application.Admin
+@{
+    ViewData["Title"] = "Khách hàng";
+    var q = Model.Query;
+    Func<int, string> pageUrl = Model.PageUrl;
+}
+
+<div class="admin-card">
+    <div class="admin-card-header"><h2>Tài khoản <span class="text-muted-fs fw-normal">(@Format.Number(Model.Result.TotalCount))</span></h2></div>
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small" for="search">Tên / email / số điện thoại</label>
+                <input id="search" name="search" value="@q.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small" for="role">Vai trò</label>
+                <select id="role" name="role" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var role in AppRoles.All)
+                    {
+                        <option value="@role" selected="@(string.Equals(q.Role, role, StringComparison.OrdinalIgnoreCase))">@role</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="status">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm">
+                    <option value="All">Tất cả</option>
+                    <option value="Active" selected="@(q.Status == UserStatusFilter.Active)">Hoạt động</option>
+                    <option value="Locked" selected="@(q.Status == UserStatusFilter.Locked)">Đã khóa</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead><tr><th>Khách hàng</th><th>Vai trò</th><th class="text-center">Đơn</th><th class="text-end">Đã chi</th><th>Đăng ký</th><th>Đăng nhập gần nhất</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+                @foreach (var u in Model.Result.Items)
+                {
+                    <tr>
+                        <td><a class="fw-semibold" href="/admin/customers/details/@u.Id">@u.FullName</a><div class="small text-muted-fs">@u.Email · @u.PhoneNumber</div></td>
+                        <td>@foreach (var r in u.Roles) { <span class="badge text-bg-light me-1">@r</span> }</td>
+                        <td class="text-center">@u.OrderCount</td>
+                        <td class="text-end">@Format.Money(u.TotalSpent)</td>
+                        <td class="small">@Format.DateText(u.CreatedAt)</td>
+                        <td class="small">@(u.LastLoginAt.HasValue ? Format.DateTimeText(u.LastLoginAt.Value) : "-")</td>
+                        <td>
+                            @if (!u.IsActive)
+                            {
+                                <span class="badge text-bg-danger">Đã khóa</span>
+                            }
+                            else if (u.IsLockedOut)
+                            {
+                                <span class="badge text-bg-warning">Tạm khóa (sai mật khẩu)</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success">Hoạt động</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Result.Page, Model.Result.TotalPages, pageUrl)" /></div>
+</div>

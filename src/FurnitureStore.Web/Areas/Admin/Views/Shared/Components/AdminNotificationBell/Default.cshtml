@@ -1,0 +1,8 @@
+@model int
+<a class="btn btn-light btn-sm position-relative" href="/admin/notifications" aria-label="Thông báo (@Model chưa đọc)" title="Thông báo">
+    <i class="bi bi-bell" aria-hidden="true"></i>
+    @if (Model > 0)
+    {
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger">@(Model > 99 ? "99+" : Model.ToString())</span>
+    }
+</a>

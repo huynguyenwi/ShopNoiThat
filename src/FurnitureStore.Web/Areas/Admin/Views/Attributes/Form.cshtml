@@ -1,0 +1,109 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AttributeFormViewModel
+@using FurnitureStore.Application.Catalog.Admin
+@using FurnitureStore.Domain.Enums
+@using FurnitureStore.Web.Areas.Admin.Models
+@{
+    var route = AttributeKinds.RouteOf(Model.Kind);
+    var title = AttributeKinds.TitleOf(Model.Kind);
+    var isEdit = Model.Id.HasValue;
+    ViewData["Title"] = (isEdit ? "Sửa " : "Thêm ") + title.ToLowerInvariant();
+    var action = isEdit ? $"/admin/attributes/{route}/{Model.Id}/edit" : $"/admin/attributes/{route}/create";
+    var c = Model.Command;
+}
+<partial name="_Tabs" model="Model.Kind" />
+
+<form action="@action" method="post" novalidate style="max-width: 720px">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="admin-card">
+        <div class="admin-card-body row g-3">
+            <div class="col-md-7">
+                <label asp-for="Command.Name" class="form-label">Tên *</label>
+                <input asp-for="Command.Name" class="form-control" required maxlength="100" />
+                <span asp-validation-for="Command.Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="Command.Slug" class="form-label">Slug</label>
+                <input asp-for="Command.Slug" class="form-control" maxlength="120" placeholder="Tự tạo từ tên" />
+                <span asp-validation-for="Command.Slug" class="text-danger small"></span>
+            </div>
+
+            @switch (Model.Kind)
+            {
+                case AttributeKind.Color:
+                    <div class="col-md-5">
+                        <label asp-for="Command.HexCode" class="form-label">Mã màu *</label>
+                        <div class="input-group">
+                            <input type="color" class="form-control form-control-color" value="@(c.HexCode ?? "#b07d4f")" aria-label="Chọn màu" data-color-picker />
+                            <input asp-for="Command.HexCode" class="form-control text-uppercase" maxlength="7" placeholder="#RRGGBB" data-color-text />
+                        </div>
+                        <span asp-validation-for="Command.HexCode" class="text-danger small"></span>
+                    </div>
+                    break;
+                case AttributeKind.Material:
+                    <div class="col-md-6">
+                        <label asp-for="Command.MaterialGroup" class="form-label">Nhóm chất liệu *</label>
+                        <select asp-for="Command.MaterialGroup" class="form-select" asp-items="Labels.Options<MaterialGroup>(Labels.Of, c.MaterialGroup)">
+                            <option value="">— Chọn —</option>
+                        </select>
+                        <span asp-validation-for="Command.MaterialGroup" class="text-danger small"></span>
+                    </div>
+                    break;
+                case AttributeKind.Size:
+                    <div class="col-4">
+                        <label asp-for="Command.LengthMm" class="form-label">Dài (mm) *</label>
+                        <input asp-for="Command.LengthMm" class="form-control" type="number" min="1" max="10000" />
+                        <span asp-validation-for="Command.LengthMm" class="text-danger small"></span>
+                    </div>
+                    <div class="col-4">
+                        <label asp-for="Command.WidthMm" class="form-label">Rộng (mm) *</label>
+                        <input asp-for="Command.WidthMm" class="form-control" type="number" min="1" max="10000" />
+                        <span asp-validation-for="Command.WidthMm" class="text-danger small"></span>
+                    </div>
+                    <div class="col-4">
+                        <label asp-for="Command.HeightMm" class="form-label">Cao (mm) *</label>
+                        <input asp-for="Command.HeightMm" class="form-control" type="number" min="1" max="10000" />
+                        <span asp-validation-for="Command.HeightMm" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Command.FurnitureType" class="form-label">Dùng cho loại</label>
+                        <select asp-for="Command.FurnitureType" class="form-select" asp-items="Labels.Options<FurnitureType>(Labels.Of, c.FurnitureType)">
+                            <option value="">Chung</option>
+                        </select>
+                    </div>
+                    break;
+                case AttributeKind.Style:
+                    <div class="col-md-6">
+                        <label asp-for="Command.Code" class="form-label">Mã (tiếng Anh) *</label>
+                        <input asp-for="Command.Code" class="form-control" maxlength="50" placeholder="Scandinavian" />
+                        <div class="form-text">Dùng cho AI gợi ý phong cách.</div>
+                        <span asp-validation-for="Command.Code" class="text-danger small"></span>
+                    </div>
+                    break;
+            }
+
+            @if (Model.Kind is AttributeKind.Material or AttributeKind.Style)
+            {
+                <div class="col-12">
+                    <label asp-for="Command.Description" class="form-label">Mô tả</label>
+                    <textarea asp-for="Command.Description" class="form-control" rows="3" maxlength="1000"></textarea>
+                </div>
+            }
+
+            <div class="col-md-4">
+                <label asp-for="Command.DisplayOrder" class="form-label">Thứ tự</label>
+                <input asp-for="Command.DisplayOrder" class="form-control" type="number" min="0" max="10000" />
+            </div>
+            <div class="col-md-8 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input asp-for="Command.IsActive" class="form-check-input" role="switch" />
+                    <label asp-for="Command.IsActive" class="form-check-label">Hiển thị cho khách chọn</label>
+                </div>
+            </div>
+        </div>
+        <div class="admin-card-body border-top d-flex justify-content-between">
+            <a class="btn btn-light" href="/admin/attributes/@route">Hủy</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu</button>
+        </div>
+    </div>
+</form>

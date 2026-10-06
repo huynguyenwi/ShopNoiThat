@@ -1,0 +1,21 @@
+@model (string Id, string Eyebrow, string Title, string MoreUrl, IReadOnlyList<FurnitureStore.Application.Catalog.ProductCardDto> Products, bool Muted)
+@if (Model.Products.Count > 0)
+{
+    <section class="section @(Model.Muted ? "bg-cream" : "")" aria-labelledby="@Model.Id">
+        <div class="container">
+            <div class="section-header">
+                <div>
+                    <p class="section-eyebrow">@Model.Eyebrow</p>
+                    <h2 id="@Model.Id" class="section-title">@Model.Title</h2>
+                </div>
+                <a class="btn btn-outline-primary" href="@Model.MoreUrl">Xem tất cả <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+            </div>
+            <div class="product-row">
+                @foreach (var product in Model.Products)
+                {
+                    <div class="product-row-item"><partial name="_ProductCard" model="product" /></div>
+                }
+            </div>
+        </div>
+    </section>
+}

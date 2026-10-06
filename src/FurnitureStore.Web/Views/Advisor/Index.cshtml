@@ -1,0 +1,228 @@
+@model FurnitureStore.Web.Controllers.AdvisorViewModel
+@{
+    ViewData["Title"] = "Tư vấn nội thất bằng AI";
+    ViewData["MetaDescription"] = "Nhận gợi ý sản phẩm theo phòng và ngân sách, tư vấn phối màu và chọn phong cách nội thất - dựa trên sản phẩm thật của Nhà Mộc.";
+    var rooms = Model.Options.Categories;
+    var styles = Model.Options.Styles;
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small mb-2"><li class="breadcrumb-item"><a href="/">Trang chủ</a></li><li class="breadcrumb-item active" aria-current="page">Tư vấn AI</li></ol>
+        </nav>
+        <h1 class="page-title"><i class="bi bi-stars text-wood me-2" aria-hidden="true"></i>Tư vấn nội thất</h1>
+        <p class="text-muted-fs mb-0">
+            Cho chúng tôi biết căn phòng và mong muốn của bạn - trợ lý sẽ chọn sản phẩm có sẵn, gợi ý màu và phong cách phù hợp.
+            @if (!Model.AiEnabled)
+            {
+                <span class="badge text-bg-light border ms-1">Chế độ tự động</span>
+            }
+        </p>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <ul class="nav nav-tabs advisor-tabs mb-4" role="tablist">
+            <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-recommend" type="button" role="tab"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i>Gợi ý sản phẩm</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-colors" type="button" role="tab"><i class="bi bi-palette me-1" aria-hidden="true"></i>Phối màu</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-styles" type="button" role="tab"><i class="bi bi-house-heart me-1" aria-hidden="true"></i>Chọn phong cách</button></li>
+            <li class="nav-item"><a class="nav-link" href="/bao-gia"><i class="bi bi-calculator me-1" aria-hidden="true"></i>Báo giá đặt đóng</a></li>
+        </ul>
+
+        <div class="tab-content">
+            @* ---------------------------------------------------------------- recommend *@
+            <div class="tab-pane fade show active" id="tab-recommend" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <form class="panel" data-advisor-form="recommend" novalidate>
+                            <div class="mb-3">
+                                <label class="form-label" for="recRoom">Phòng</label>
+                                <select class="form-select" id="recRoom" name="roomType">
+                                    <option value="">- Không chọn -</option>
+                                    @foreach (var room in rooms)
+                                    {
+                                        <option value="@room.Name">@room.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label" for="recArea">Diện tích (m²)</label>
+                                    <input class="form-control" id="recArea" name="roomAreaM2" type="number" min="2" max="500" step="0.5" inputmode="decimal" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" for="recPeople">Số người dùng</label>
+                                    <input class="form-control" id="recPeople" name="people" type="number" min="1" max="20" inputmode="numeric" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="recBudget">Ngân sách</label>
+                                <select class="form-select" id="recBudget" name="budget">
+                                    <option value="">- Chưa xác định -</option>
+                                    <option value="5000000">Dưới 5 triệu</option>
+                                    <option value="10000000">Khoảng 10 triệu</option>
+                                    <option value="20000000">Khoảng 20 triệu</option>
+                                    <option value="30000000">Khoảng 30 triệu</option>
+                                    <option value="50000000">Khoảng 50 triệu</option>
+                                    <option value="100000000">Khoảng 100 triệu</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="recStyle">Phong cách</label>
+                                <select class="form-select" id="recStyle" name="style">
+                                    <option value="">- Bất kỳ -</option>
+                                    @foreach (var style in styles)
+                                    {
+                                        <option value="@style.Name">@style.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label" for="recColor">Màu yêu thích</label>
+                                    <input class="form-control" id="recColor" name="colors" maxlength="100" placeholder="VD: nâu, xám" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" for="recMaterial">Chất liệu</label>
+                                    <input class="form-control" id="recMaterial" name="materials" maxlength="100" placeholder="VD: gỗ sồi" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="recNeeds">Nhu cầu cụ thể</label>
+                                <textarea class="form-control" id="recNeeds" name="needs" rows="3" maxlength="500" placeholder="VD: cần sofa và kệ tivi, nhà có trẻ nhỏ"></textarea>
+                            </div>
+                            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-stars me-1" aria-hidden="true"></i>Gợi ý cho tôi</button>
+                        </form>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="advisor-result" data-advisor-result="recommend">
+                            <p class="text-muted-fs">Ví dụ: <em>phòng khách 20m², phong cách hiện đại, ngân sách 30 triệu</em> - trợ lý sẽ chọn một bộ sofa, bàn trà, kệ tivi vừa ngân sách.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ---------------------------------------------------------------- colors *@
+            <div class="tab-pane fade" id="tab-colors" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <form class="panel" data-advisor-form="colors" novalidate>
+                            <div class="mb-3">
+                                <label class="form-label" for="colWall">Màu tường</label>
+                                <select class="form-select" id="colWall" name="wallColor">
+                                    <option value="trắng">Trắng</option>
+                                    <option value="kem be">Kem / be</option>
+                                    <option value="xám">Xám</option>
+                                    <option value="xanh">Xanh (rêu, dương, pastel)</option>
+                                    <option value="tối màu, đen">Tối màu / đen</option>
+                                    <option value="ốp gỗ màu gỗ tự nhiên">Ốp gỗ</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="colFloor">Màu sàn</label>
+                                <select class="form-select" id="colFloor" name="floorColor">
+                                    <option value="">- Không rõ -</option>
+                                    <option value="sàn gỗ sáng">Gỗ sáng</option>
+                                    <option value="sàn gỗ tối màu">Gỗ tối</option>
+                                    <option value="gạch trắng">Gạch trắng / sáng</option>
+                                    <option value="gạch xám tối">Gạch xám / tối</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="colStyle">Phong cách</label>
+                                <select class="form-select" id="colStyle" name="style">
+                                    <option value="">- Bất kỳ -</option>
+                                    @foreach (var style in styles)
+                                    {
+                                        <option value="@style.Name">@style.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <fieldset class="mb-3">
+                                <legend class="form-label fs-6">Món cần chọn màu</legend>
+                                @foreach (var (item, index) in new[] { "Gỗ chủ đạo", "Bàn", "Ghế", "Sofa", "Tủ" }.Select((x, i) => (x, i)))
+                                {
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="colItem@(index)" name="furniture" value="@item" />
+                                        <label class="form-check-label" for="colItem@(index)">@item</label>
+                                    </div>
+                                }
+                            </fieldset>
+                            <div class="mb-3">
+                                <label class="form-label" for="colNote">Ghi chú</label>
+                                <textarea class="form-control" id="colNote" name="note" rows="2" maxlength="300" placeholder="VD: phòng hướng tây, ít ánh sáng"></textarea>
+                            </div>
+                            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-palette me-1" aria-hidden="true"></i>Gợi ý màu</button>
+                        </form>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="advisor-result" data-advisor-result="colors">
+                            <p class="text-muted-fs">Ví dụ: <em>tường trắng, nên chọn bàn màu gì?</em> - trợ lý gợi ý màu gỗ, bàn, ghế, sofa, tủ và các mẫu đang bán có màu đó.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ---------------------------------------------------------------- styles *@
+            <div class="tab-pane fade" id="tab-styles" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <form class="panel" data-advisor-form="styles" novalidate>
+                            <div class="mb-3">
+                                <label class="form-label" for="styRoom">Phòng</label>
+                                <select class="form-select" id="styRoom" name="roomType">
+                                    <option value="">- Không chọn -</option>
+                                    @foreach (var room in rooms)
+                                    {
+                                        <option value="@room.Name">@room.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label" for="styArea">Diện tích (m²)</label>
+                                    <input class="form-control" id="styArea" name="roomAreaM2" type="number" min="2" max="500" step="0.5" inputmode="decimal" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" for="styBudget">Ngân sách (triệu)</label>
+                                    <input class="form-control" id="styBudget" name="budgetMillions" type="number" min="1" max="5000" inputmode="numeric" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="styColors">Màu bạn thích</label>
+                                <input class="form-control" id="styColors" name="colors" maxlength="100" placeholder="VD: trắng, gỗ sáng" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="styPurpose">Mục đích</label>
+                                <select class="form-select" id="styPurpose" name="purpose">
+                                    <option value="">- Không chọn -</option>
+                                    <option value="gia đình có trẻ nhỏ">Gia đình có trẻ nhỏ</option>
+                                    <option value="làm việc tập trung">Làm việc tập trung</option>
+                                    <option value="tiếp khách sang trọng">Tiếp khách</option>
+                                    <option value="thư giãn, gần gũi thiên nhiên">Thư giãn, gần thiên nhiên</option>
+                                    <option value="cá tính, khác biệt">Cá tính</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="styPrefs">Sở thích</label>
+                                <textarea class="form-control" id="styPrefs" name="preferences" rows="2" maxlength="300" placeholder="VD: thích gọn gàng, ít đồ"></textarea>
+                            </div>
+                            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-house-heart me-1" aria-hidden="true"></i>Tìm phong cách</button>
+                        </form>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="advisor-result" data-advisor-result="styles">
+                            <p class="text-muted-fs">Cửa hàng có 8 phong cách: @string.Join(", ", styles.Select(s => s.Name)). Trợ lý chọn phong cách hợp với diện tích, ngân sách và sở thích của bạn.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/ai-advisor.js" asp-append-version="true"></script>
+}

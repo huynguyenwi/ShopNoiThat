@@ -1,0 +1,111 @@
+@model FurnitureStore.Web.ViewModels.Sales.AddressPageViewModel
+@{
+    ViewData["Title"] = "Sổ địa chỉ";
+    var isEdit = Model.EditingId.HasValue;
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <partial name="_StatusMessage" model="@(TempData[AccountController.StatusMessageKey] as string)" />
+                <div class="row g-4">
+                    <div class="col-xl-6">
+                        <div class="panel h-100">
+                            <h1 class="h5 mb-3">Sổ địa chỉ (@Model.Addresses.Count)</h1>
+                            @if (Model.Addresses.Count == 0)
+                            {
+                                <p class="text-muted-fs">Bạn chưa lưu địa chỉ nào.</p>
+                            }
+                            @foreach (var a in Model.Addresses)
+                            {
+                                <div class="address-card @(a.IsDefault ? "is-default" : "")">
+                                    <div class="d-flex justify-content-between gap-2">
+                                        <strong>@(a.Label ?? a.RecipientName)</strong>
+                                        @if (a.IsDefault)
+                                        {
+                                            <span class="badge text-bg-success">Mặc định</span>
+                                        }
+                                    </div>
+                                    <div class="small">@a.RecipientName · @a.Phone</div>
+                                    <div class="small text-muted-fs">@a.FullAddress</div>
+                                    <div class="d-flex gap-3 mt-2 small">
+                                        <a href="/account/addresses?edit=@a.Id">Sửa</a>
+                                        @if (!a.IsDefault)
+                                        {
+                                            <form method="post" action="/account/addresses/@a.Id/default" asp-antiforgery="true"><button type="submit" class="btn btn-link btn-sm p-0">Đặt mặc định</button></form>
+                                        }
+                                        <form method="post" action="/account/addresses/@a.Id/delete" asp-antiforgery="true" data-confirm="Xóa địa chỉ này?"><button type="submit" class="btn btn-link btn-sm p-0 text-danger">Xóa</button></form>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-xl-6">
+                        <div class="panel">
+                            <h2 class="h5 mb-3">@(isEdit ? "Sửa địa chỉ" : "Thêm địa chỉ mới")</h2>
+                            <form method="post" action="/account/addresses@(isEdit ? $"?id={Model.EditingId}" : "")" asp-antiforgery="true" novalidate>
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+                                <div class="row g-2">
+                                    <div class="col-sm-5">
+                                        <label asp-for="Command.Label" class="form-label small">Tên gợi nhớ</label>
+                                        <input asp-for="Command.Label" class="form-control" maxlength="50" placeholder="Nhà riêng, Công ty..." />
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <label asp-for="Command.RecipientName" class="form-label small">Người nhận *</label>
+                                        <input asp-for="Command.RecipientName" class="form-control" maxlength="150" />
+                                        <span asp-validation-for="Command.RecipientName" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <label asp-for="Command.Phone" class="form-label small">Điện thoại *</label>
+                                        <input asp-for="Command.Phone" class="form-control" type="tel" />
+                                        <span asp-validation-for="Command.Phone" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <label asp-for="Command.Province" class="form-label small">Tỉnh / Thành phố *</label>
+                                        <select asp-for="Command.Province" class="form-select">
+                                            <option value="">— Chọn —</option>
+                                            @foreach (var province in Model.Provinces)
+                                            {
+                                                <option value="@province">@province</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Command.Province" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label asp-for="Command.Ward" class="form-label small">Phường / Xã *</label>
+                                        <input asp-for="Command.Ward" class="form-control" maxlength="100" />
+                                        <span asp-validation-for="Command.Ward" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label asp-for="Command.District" class="form-label small">Quận / Huyện</label>
+                                        <input asp-for="Command.District" class="form-control" maxlength="100" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label asp-for="Command.AddressLine" class="form-label small">Số nhà, tên đường *</label>
+                                        <input asp-for="Command.AddressLine" class="form-control" maxlength="300" />
+                                        <span asp-validation-for="Command.AddressLine" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input asp-for="Command.IsDefault" class="form-check-input" />
+                                            <label asp-for="Command.IsDefault" class="form-check-label small">Đặt làm địa chỉ mặc định</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button type="submit" class="btn btn-primary">Lưu địa chỉ</button>
+                                    @if (isEdit)
+                                    {
+                                        <a class="btn btn-light" href="/account/addresses">Hủy</a>
+                                    }
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

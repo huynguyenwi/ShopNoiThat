@@ -1,0 +1,160 @@
+@model FurnitureStore.Web.Controllers.QuotePageViewModel
+@using FurnitureStore.Domain.Enums
+@using FurnitureStore.Application.Quotes
+@{
+    ViewData["Title"] = "Báo giá nội thất đặt đóng theo yêu cầu";
+    ViewData["MetaDescription"] = "Nhận báo giá dự kiến cho bàn, tủ, giường, kệ, sofa đóng theo kích thước và chất liệu bạn chọn - tính từ bảng giá của xưởng Nhà Mộc.";
+    var materialsByGroup = Model.Options.Materials;
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small mb-2"><li class="breadcrumb-item"><a href="/">Trang chủ</a></li><li class="breadcrumb-item active" aria-current="page">Báo giá đặt đóng</li></ol>
+        </nav>
+        <h1 class="page-title"><i class="bi bi-calculator text-wood me-2" aria-hidden="true"></i>Báo giá nội thất đặt đóng</h1>
+        <p class="text-muted-fs mb-0">
+            Mô tả món bạn cần - hệ thống tính giá dự kiến từ bảng giá vật liệu và nhân công của xưởng.
+            Giá chính thức do cửa hàng xác nhận sau khi trao đổi chi tiết.
+        </p>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <form class="panel mb-4" id="quoteParseForm" novalidate>
+                    <label class="form-label fw-semibold" for="quoteText">1. Mô tả yêu cầu</label>
+                    <textarea class="form-control" id="quoteText" rows="3" maxlength="2000" placeholder="VD: Tôi muốn bàn gỗ óc chó dài 2m2 rộng 1m cao 75cm, sơn PU">@Model.InitialText</textarea>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-stars me-1" aria-hidden="true"></i>Phân tích & tính giá</button>
+                        @if (!Model.AiEnabled)
+                        {
+                            <span class="small text-muted-fs align-self-center">Phân tích tự động theo từ khóa</span>
+                        }
+                    </div>
+                </form>
+
+                <form class="panel" id="quoteSpecForm" novalidate>
+                    <div class="fw-semibold mb-3">2. Thông số (có thể chỉnh)</div>
+                    <div class="mb-3">
+                        <label class="form-label" for="qKind">Loại sản phẩm *</label>
+                        <select class="form-select" id="qKind" name="kind" required>
+                            <option value="">- Chọn -</option>
+                            @foreach (var kind in Model.Kinds)
+                            {
+                                <option value="@kind.Slug" data-length="@kind.LengthMm" data-width="@kind.WidthMm" data-height="@kind.HeightMm">@kind.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label" for="qLength">Dài (mm)</label>
+                            <input class="form-control" id="qLength" name="lengthMm" type="number" min="@PriceCalculatorService.MinLengthMm" max="@PriceCalculatorService.MaxLengthMm" step="10" inputmode="numeric" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label" for="qWidth">Rộng / sâu</label>
+                            <input class="form-control" id="qWidth" name="widthMm" type="number" min="@PriceCalculatorService.MinWidthMm" max="@PriceCalculatorService.MaxWidthMm" step="10" inputmode="numeric" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label" for="qHeight">Cao</label>
+                            <input class="form-control" id="qHeight" name="heightMm" type="number" min="@PriceCalculatorService.MinHeightMm" max="@PriceCalculatorService.MaxHeightMm" step="10" inputmode="numeric" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label" for="qMaterial">Chất liệu</label>
+                            <select class="form-select" id="qMaterial" name="materialId">
+                                <option value="">- Để xưởng tư vấn -</option>
+                                @foreach (var material in materialsByGroup)
+                                {
+                                    <option value="@material.Id">@material.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label" for="qFinish">Hoàn thiện</label>
+                            <select class="form-select" id="qFinish" name="finish">
+                                <option value="">- Mặc định -</option>
+                                @foreach (var finish in Enum.GetValues<FinishType>())
+                                {
+                                    <option value="@finish">@PriceCalculatorService.FinishName(finish)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-5">
+                            <label class="form-label" for="qColor">Màu</label>
+                            <select class="form-select" id="qColor" name="colorId">
+                                <option value="">- Chưa chọn -</option>
+                                @foreach (var color in Model.Options.Colors)
+                                {
+                                    <option value="@color.Id">@color.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label" for="qStyle">Phong cách</label>
+                            <select class="form-select" id="qStyle" name="styleId">
+                                <option value="">- Bất kỳ -</option>
+                                @foreach (var style in Model.Options.Styles)
+                                {
+                                    <option value="@style.Id">@style.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-3">
+                            <label class="form-label" for="qQuantity">Số lượng</label>
+                            <input class="form-control" id="qQuantity" name="quantity" type="number" min="1" max="@PriceCalculatorService.MaxQuantity" value="1" inputmode="numeric" />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Tính lại giá</button>
+                </form>
+            </div>
+
+            <div class="col-lg-7">
+                <div id="quoteResult" class="advisor-result">
+                    <div class="panel text-muted-fs">
+                        <p class="mb-2"><strong>Cách tính giá:</strong> diện tích vật liệu × đơn giá chất liệu + công gia công + hoàn thiện, sơn + phụ kiện + chi phí chung và lợi nhuận của xưởng.</p>
+                        <p class="mb-0">Ví dụ: <em>“giường gỗ sồi 1m6 lau dầu”</em>, <em>“tủ quần áo 1m6 cao 2m sơn 2K”</em>, <em>“kệ tivi gỗ óc chó dài 1m8”</em>.</p>
+                    </div>
+                </div>
+
+                <form class="panel mt-4" id="quoteSubmitForm" hidden novalidate>
+                    <div class="fw-semibold mb-3">3. Gửi yêu cầu để cửa hàng báo giá chính thức</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="qName">Họ tên *</label>
+                            <input class="form-control" id="qName" name="name" maxlength="150" autocomplete="name" value="@Model.Name" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="qPhone">Số điện thoại *</label>
+                            <input class="form-control" id="qPhone" name="phone" type="tel" autocomplete="tel" value="@Model.Phone" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="qEmail">Email</label>
+                            <input class="form-control" id="qEmail" name="email" type="email" autocomplete="email" value="@Model.Email" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="qNote">Ghi chú</label>
+                            <input class="form-control" id="qNote" name="note" maxlength="1000" placeholder="VD: cần giao trước Tết" />
+                        </div>
+                    </div>
+                    <div class="alert alert-danger py-2 small mt-3 d-none" id="quoteSubmitError" role="alert"></div>
+                    <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-send me-1" aria-hidden="true"></i>Gửi yêu cầu báo giá</button>
+                    @if (User.Identity?.IsAuthenticated != true)
+                    {
+                        <div class="form-text"><a href="/account/login?returnUrl=%2Fbao-gia">Đăng nhập</a> để theo dõi và xác nhận báo giá trực tuyến.</div>
+                    }
+                </form>
+                <div id="quoteSuccess" hidden></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/quote.js" asp-append-version="true"></script>
+}

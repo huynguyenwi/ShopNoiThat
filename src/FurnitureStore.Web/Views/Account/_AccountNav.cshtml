@@ -1,0 +1,36 @@
+@using FurnitureStore.Web.Infrastructure
+@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var path = Context.Request.Path.Value ?? string.Empty;
+    string Active(string name) => string.Equals(action, name, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+    string ActivePath(string prefix) => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+    var avatar = User.AvatarUrl();
+}
+<aside class="account-nav">
+    <div class="account-nav-user">
+        @if (!string.IsNullOrEmpty(avatar))
+        {
+            <img class="account-avatar" src="@avatar" alt="" width="56" height="56" />
+        }
+        else
+        {
+            <span class="account-avatar account-avatar-placeholder" aria-hidden="true">@(User.DisplayName().FirstOrDefault())</span>
+        }
+        <div class="min-w-0">
+            <div class="fw-semibold text-truncate">@User.DisplayName()</div>
+            <div class="small text-muted-fs text-truncate">@User.Identity?.Name</div>
+        </div>
+    </div>
+    <nav class="list-group list-group-flush" aria-label="Tài khoản">
+        <a class="list-group-item list-group-item-action @Active("Profile")" href="/account/profile"><i class="bi bi-person me-2" aria-hidden="true"></i>Hồ sơ cá nhân</a>
+        <a class="list-group-item list-group-item-action @ActivePath("/account/orders")" href="/account/orders"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Đơn hàng của tôi</a>
+        <a class="list-group-item list-group-item-action @ActivePath("/account/addresses")" href="/account/addresses"><i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Sổ địa chỉ</a>
+        <a class="list-group-item list-group-item-action @ActivePath("/wishlist")" href="/wishlist"><i class="bi bi-heart me-2" aria-hidden="true"></i>Sản phẩm yêu thích</a>
+        <a class="list-group-item list-group-item-action @ActivePath("/account/quotes")" href="/account/quotes"><i class="bi bi-calculator me-2" aria-hidden="true"></i>Yêu cầu báo giá</a>
+        <a class="list-group-item list-group-item-action @ActivePath("/account/ai-history")" href="/account/ai-history"><i class="bi bi-stars me-2" aria-hidden="true"></i>Lịch sử tư vấn AI</a>
+        <a class="list-group-item list-group-item-action @Active("ChangePassword")" href="/account/changepassword"><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>Đổi mật khẩu</a>
+    </nav>
+    <form method="post" action="/account/logout" asp-antiforgery="true" class="p-3 pt-2">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Đăng xuất</button>
+    </form>
+</aside>

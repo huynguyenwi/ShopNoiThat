@@ -1,0 +1,27 @@
+@model QrLabelsViewModel
+@using FurnitureStore.Application.Qr
+@{
+    Layout = "_PrintLayout";
+    ViewData["Title"] = "In tem QR sản phẩm";
+    ViewData["BackUrl"] = Model.BackUrl;
+    ViewData["ToolbarNote"] = Model.TotalCount > Model.Labels.Count
+        ? $"{Model.Labels.Count} / {Model.TotalCount} sản phẩm — tối đa {ProductsController.MaxQrLabels} tem mỗi lần, hãy lọc bớt danh sách"
+        : $"{Model.Labels.Count} tem · khổ A4, 3 tem mỗi hàng";
+}
+
+@if (Model.Labels.Count == 0)
+{
+    <p class="text-center text-muted py-5 mb-0">Không có sản phẩm nào khớp bộ lọc.</p>
+}
+<div class="qr-labels">
+    @foreach (var label in Model.Labels)
+    {
+        <div class="qr-label" data-qr-label="@label.ProductId">
+            <img src="@QrLinks.ProductImage(label.ProductId)" width="144" height="144" alt="Mã QR sản phẩm @label.Name" />
+            <div class="qr-label-name">@label.Name</div>
+            <div class="qr-label-meta">SKU @label.Sku</div>
+            <div class="qr-label-price">Giá từ @Format.Money(label.Price)</div>
+            <div class="qr-label-store">Quét để xem chi tiết · @Model.StoreName@(string.IsNullOrWhiteSpace(Model.StoreHotline) ? "" : " · " + Model.StoreHotline)</div>
+        </div>
+    }
+</div>

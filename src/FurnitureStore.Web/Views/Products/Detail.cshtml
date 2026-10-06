@@ -1,0 +1,461 @@
+@model FurnitureStore.Web.ViewModels.Catalog.ProductDetailViewModel
+@using System.Text.Encodings.Web
+@using System.Text.Json
+@using FurnitureStore.Application.Catalog
+@using FurnitureStore.Web.ViewModels.Catalog
+@using FurnitureStore.Application.Qr
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    var p = Model.Product;
+    var selected = Model.SelectedVariant;
+    var stats = Model.Reviews.Stats;
+    var eligibility = Model.ReviewEligibility;
+    var baseUrl = SiteOptions.Value.BaseUrl.TrimEnd('/');
+    ViewData["Title"] = p.MetaTitle ?? p.Name;
+    ViewData["MetaDescription"] = p.MetaDescription ?? p.ShortDescription;
+    ViewData["Canonical"] = baseUrl + p.Url;
+    ViewData["OgType"] = "product";
+    // Only raster images can be shared on social networks (the demo placeholders are SVG).
+    var shareImage = p.Images.Select(i => i.Url).FirstOrDefault(u => System.Text.RegularExpressions.Regex.IsMatch(u, @"\.(jpe?g|png|webp)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase));
+    if (shareImage is not null)
+    {
+        ViewData["OgImage"] = baseUrl + shareImage;
+    }
+
+    var productImages = p.Images.Where(i => i.VariantId is null).ToList();
+    var initialImages = selected is not null && selected.ImageUrls.Count > 0
+        ? selected.ImageUrls.Concat(productImages.Select(i => i.Url)).Distinct().ToList()
+        : productImages.Select(i => i.Url).ToList();
+    var mainImage = initialImages.FirstOrDefault() ?? p.PrimaryImageUrl;
+
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, Encoder = JavaScriptEncoder.Default };
+    var clientData = JsonSerializer.Serialize(new
+    {
+        productId = p.Id,
+        productName = p.Name,
+        productImages = productImages.Select(i => i.Url),
+        selectedVariantId = selected?.Id,
+        variants = p.Variants.Select(v => new
+        {
+            v.Id, v.Sku, v.Name, v.Price, v.OriginalPrice, v.DiscountPercent, v.Stock, v.IsLowStock,
+            v.ColorId, v.MaterialId, v.SizeId, v.StyleId, v.DimensionsText,
+            images = v.ImageUrls,
+            parts = v.Parts.Select(x => new { x.Kind, x.Name, x.Part })
+        })
+    }, jsonOptions);
+
+    var jsonLd = JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "Product",
+        ["name"] = p.Name,
+        ["sku"] = p.Sku,
+        ["description"] = p.ShortDescription,
+        ["image"] = p.Images.Select(i => baseUrl + i.Url).Take(5),
+        ["category"] = p.Category.Name,
+        ["brand"] = new Dictionary<string, string> { ["@type"] = "Brand", ["name"] = SiteOptions.Value.SiteName },
+        ["offers"] = new Dictionary<string, object?>
+        {
+            ["@type"] = "AggregateOffer",
+            ["priceCurrency"] = "VND",
+            ["lowPrice"] = p.Variants.Count > 0 ? p.Variants.Min(v => v.Price) : p.Price,
+            ["highPrice"] = p.Variants.Count > 0 ? p.Variants.Max(v => v.Price) : p.Price,
+            ["offerCount"] = p.Variants.Count,
+            ["availability"] = p.StockQuantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            ["url"] = baseUrl + p.Url
+        },
+        ["aggregateRating"] = p.ReviewCount > 0
+            ? new Dictionary<string, object> { ["@type"] = "AggregateRating", ["ratingValue"] = p.AverageRating, ["reviewCount"] = p.ReviewCount }
+            : null
+    }, new JsonSerializerOptions { Encoder = JavaScriptEncoder.Default, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+
+    var crumbs = new List<(string Name, string Url)> { ("Trang chủ", baseUrl + "/") };
+    if (p.ParentCategory is not null) crumbs.Add((p.ParentCategory.Name, baseUrl + "/products?category=" + p.ParentCategory.Slug));
+    crumbs.Add((p.Category.Name, baseUrl + "/products?category=" + p.Category.Slug));
+    crumbs.Add((p.Name, baseUrl + p.Url));
+    var breadcrumbLd = JsonSerializer.Serialize(new Dictionary<string, object>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "BreadcrumbList",
+        ["itemListElement"] = crumbs.Select((c, i) => new Dictionary<string, object> { ["@type"] = "ListItem", ["position"] = i + 1, ["name"] = c.Name, ["item"] = c.Url })
+    }, new JsonSerializerOptions { Encoder = JavaScriptEncoder.Default });
+}
+
+@section Head {
+    <script type="application/ld+json">@Html.Raw(jsonLd)</script>
+    <script type="application/ld+json">@Html.Raw(breadcrumbLd)</script>
+}
+
+<section class="section pt-3 pb-5">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/">Trang chủ</a></li>
+                @if (p.ParentCategory is not null)
+                {
+                    <li class="breadcrumb-item"><a href="/products?category=@p.ParentCategory.Slug">@p.ParentCategory.Name</a></li>
+                }
+                <li class="breadcrumb-item"><a href="/products?category=@p.Category.Slug">@p.Category.Name</a></li>
+                <li class="breadcrumb-item active text-truncate" aria-current="page">@p.Name</li>
+            </ol>
+        </nav>
+
+        <div class="row g-4 g-lg-5" id="productDetail" data-product-id="@p.Id">
+            <div class="col-lg-7">
+                <div class="product-gallery">
+                    <div class="gallery-main">
+                        <img id="galleryMain" src="@mainImage" alt="@p.Name" width="800" height="600" fetchpriority="high" />
+                        @if (selected?.DiscountPercent > 0)
+                        {
+                            <span class="badge badge-sale gallery-badge" data-variant-badge>-@selected.DiscountPercent%</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-sale gallery-badge d-none" data-variant-badge></span>
+                        }
+                    </div>
+                    <div class="gallery-thumbs" id="galleryThumbs" role="list">
+                        @foreach (var (url, index) in initialImages.Select((u, i) => (u, i)))
+                        {
+                            <button type="button" class="gallery-thumb @(index == 0 ? "active" : "")" data-image="@url" role="listitem" aria-label="Xem ảnh @(index + 1)">
+                                <img src="@url" alt="" width="120" height="90" loading="lazy" />
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="product-info">
+                    <div class="product-category-link"><a href="/products?category=@p.Category.Slug">@p.Category.Name</a>@if (p.Style is not null){<span> · @p.Style.Name</span>}</div>
+                    <h1 class="product-title">@p.Name</h1>
+                    <div class="product-meta">
+                        <span>SKU: <strong id="variantSku">@(selected?.Sku ?? p.Sku)</strong></span>
+                        @if (p.ReviewCount > 0)
+                        {
+                            <a href="#reviews" class="text-decoration-none"><partial name="_Rating" model="(p.AverageRating, p.ReviewCount)" /></a>
+                        }
+                        <span>Đã bán @Format.Number(p.SoldCount)</span>
+                    </div>
+
+                    <div class="product-price-block">
+                        <span class="product-price" id="variantPrice">@Format.Money(selected?.Price ?? p.Price)</span>
+                        <span class="product-price-old @(selected?.OriginalPrice is null ? "d-none" : "")" id="variantOldPrice">@Format.Money(selected?.OriginalPrice)</span>
+                        <span class="badge badge-sale @(selected?.DiscountPercent > 0 ? "" : "d-none")" id="variantDiscount">-@(selected?.DiscountPercent)%</span>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(p.ShortDescription))
+                    {
+                        <p class="product-short">@p.ShortDescription</p>
+                    }
+
+                    <div class="variant-options">
+                        @if (p.ColorOptions.Count > 0)
+                        {
+                            var current = p.ColorOptions.FirstOrDefault(c => c.Id == selected?.ColorId);
+                            <div class="variant-group" data-option-group="color">
+                                <div class="variant-label">Màu sắc: <strong data-option-label>@current?.Name</strong></div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var color in p.ColorOptions)
+                                    {
+                                        <button type="button" class="swatch-button @(color.Id == selected?.ColorId ? "active" : "")" data-option="color" data-value="@color.Id" data-label="@color.Name" aria-pressed="@(color.Id == selected?.ColorId ? "true" : "false")" title="@color.Name">
+                                            <span class="swatch-dot swatch-dot-lg" style="background-color:@color.Hex"></span>
+                                            <span class="visually-hidden">@color.Name</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (p.MaterialOptions.Count > 1)
+                        {
+                            var current = p.MaterialOptions.FirstOrDefault(m => m.Id == selected?.MaterialId);
+                            <div class="variant-group" data-option-group="material">
+                                <div class="variant-label">Chất liệu: <strong data-option-label>@current?.Name</strong></div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var material in p.MaterialOptions)
+                                    {
+                                        <button type="button" class="option-button @(material.Id == selected?.MaterialId ? "active" : "")" data-option="material" data-value="@material.Id" data-label="@material.Name" aria-pressed="@(material.Id == selected?.MaterialId ? "true" : "false")">@material.Name</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else if (p.MaterialOptions.Count == 1)
+                        {
+                            <div class="variant-group">
+                                <div class="variant-label">Chất liệu: <strong>@p.MaterialOptions[0].Name</strong></div>
+                            </div>
+                        }
+
+                        @if (p.SizeOptions.Count > 0)
+                        {
+                            var current = p.SizeOptions.FirstOrDefault(s => s.Id == selected?.SizeId);
+                            <div class="variant-group" data-option-group="size">
+                                <div class="variant-label">Kích thước: <strong data-option-label>@current?.Name</strong></div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var size in p.SizeOptions)
+                                    {
+                                        <button type="button" class="option-button @(size.Id == selected?.SizeId ? "active" : "")" data-option="size" data-value="@size.Id" data-label="@size.Name" aria-pressed="@(size.Id == selected?.SizeId ? "true" : "false")" title="@size.Description">@size.Name</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (p.StyleOptions.Count > 1)
+                        {
+                            var current = p.StyleOptions.FirstOrDefault(s => s.Id == selected?.StyleId);
+                            <div class="variant-group" data-option-group="style">
+                                <div class="variant-label">Mẫu mã: <strong data-option-label>@current?.Name</strong></div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var style in p.StyleOptions)
+                                    {
+                                        <button type="button" class="option-button @(style.Id == selected?.StyleId ? "active" : "")" data-option="style" data-value="@style.Id" data-label="@style.Name" aria-pressed="@(style.Id == selected?.StyleId ? "true" : "false")">@style.Name</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <ul class="variant-parts @(selected?.Parts.Count > 0 ? "" : "d-none")" id="variantParts">
+                        @foreach (var part in selected?.Parts ?? [])
+                        {
+                            <li>@part.Kind @(part.Part is null ? "" : $"({part.Part})"): <strong>@part.Name</strong></li>
+                        }
+                    </ul>
+
+                    <div class="product-facts">
+                        <div><i class="bi bi-rulers" aria-hidden="true"></i> Kích thước: <span id="variantDimensions">@(selected?.DimensionsText ?? "-")</span></div>
+                        <div id="variantStock" class="stock-status"></div>
+                    </div>
+
+                    <form class="purchase-box" data-purchase-form>
+                        <input type="hidden" name="variantId" id="selectedVariantId" value="@selected?.Id" />
+                        <div class="quantity-stepper" data-quantity>
+                            <button type="button" class="btn" data-quantity-step="-1" aria-label="Giảm số lượng"><i class="bi bi-dash" aria-hidden="true"></i></button>
+                            <label for="quantityInput" class="visually-hidden">Số lượng</label>
+                            <input id="quantityInput" name="quantity" type="number" min="1" max="99" value="1" inputmode="numeric" />
+                            <button type="button" class="btn" data-quantity-step="1" aria-label="Tăng số lượng"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-lg flex-grow-1" data-add-to-cart><i class="bi bi-bag-plus me-1" aria-hidden="true"></i>Thêm vào giỏ hàng</button>
+                        <button type="button" class="btn btn-wood btn-lg w-100" data-buy-now>Mua ngay</button>
+                        <button type="button" class="btn btn-outline-primary w-100" data-wishlist-product="@p.Id"><i class="bi bi-heart me-1" aria-hidden="true"></i>Thêm vào yêu thích</button>
+                        @if (!FurnitureStore.Web.Services.ChatIdentity.IsStaff(User))
+                        {
+                            <div class="d-flex flex-wrap justify-content-center gap-1 mt-1">
+                                <button type="button" class="btn btn-link text-decoration-none" data-ai-product="@p.Id"><i class="bi bi-stars me-1" aria-hidden="true"></i>AI tư vấn sản phẩm này</button>
+                                <button type="button" class="btn btn-link text-decoration-none" data-chat-product="@p.Id" data-chat-product-name="@p.Name"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Chat với tư vấn viên</button>
+                            </div>
+                            <a class="small d-block text-center text-decoration-none" href="/bao-gia?q=@Uri.EscapeDataString(p.Category.Name + " " + string.Join(" ", p.MaterialOptions.Take(1).Select(m => m.Name)))"><i class="bi bi-rulers me-1" aria-hidden="true"></i>Cần kích thước khác? Nhận báo giá đặt đóng</a>
+                        }
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none d-block mx-auto" data-bs-toggle="modal" data-bs-target="#productQrModal">
+                            <i class="bi bi-qr-code me-1" aria-hidden="true"></i>Mã QR sản phẩm
+                        </button>
+                    </form>
+
+                    <ul class="service-list">
+                        <li><i class="bi bi-shield-check" aria-hidden="true"></i>Bảo hành @p.WarrantyMonths tháng</li>
+                        <li><i class="bi bi-truck" aria-hidden="true"></i>Giao hàng & lắp đặt tận nơi</li>
+                        <li><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Đổi trả 7 ngày nếu lỗi sản xuất</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="product-tabs mt-5">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-description" type="button" role="tab">Mô tả</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-specs" type="button" role="tab">Thông số kỹ thuật</button></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-description" role="tabpanel">
+                    @if (!string.IsNullOrEmpty(p.Description))
+                    {
+                        @foreach (var paragraph in p.Description.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        {
+                            <p>@paragraph</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted-fs">Đang cập nhật mô tả.</p>
+                    }
+                </div>
+                <div class="tab-pane fade" id="tab-specs" role="tabpanel">
+                    <table class="table spec-table">
+                        <tbody>
+                            <tr><th scope="row">Mã sản phẩm</th><td>@p.Sku</td></tr>
+                            <tr><th scope="row">Loại</th><td>@FurnitureTypes.NameOf(p.FurnitureType)</td></tr>
+                            @if (p.Style is not null)
+                            {
+                                <tr><th scope="row">Phong cách</th><td>@p.Style.Name</td></tr>
+                            }
+                            <tr><th scope="row">Chất liệu</th><td>@string.Join(", ", p.MaterialOptions.Select(m => m.Name))</td></tr>
+                            <tr><th scope="row">Màu sắc</th><td>@string.Join(", ", p.ColorOptions.Select(c => c.Name))</td></tr>
+                            @if (p.SizeOptions.Count > 0)
+                            {
+                                <tr><th scope="row">Kích thước</th><td>@string.Join(" · ", p.SizeOptions.Select(s => $"{s.Name} ({s.Description})"))</td></tr>
+                            }
+                            else if (p.LengthMm.HasValue)
+                            {
+                                <tr><th scope="row">Kích thước (D x R x C)</th><td>@Format.Dimensions(p.LengthMm, p.WidthMm, p.HeightMm)</td></tr>
+                            }
+                            @if (p.WeightKg.HasValue)
+                            {
+                                <tr><th scope="row">Khối lượng</th><td>@p.WeightKg.Value.ToString("0.#") kg</td></tr>
+                            }
+                            <tr><th scope="row">Bảo hành</th><td>@p.WarrantyMonths tháng</td></tr>
+                            @if (!string.IsNullOrEmpty(p.Origin))
+                            {
+                                <tr><th scope="row">Xuất xứ</th><td>@p.Origin</td></tr>
+                            }
+                            @if (!string.IsNullOrEmpty(p.CareInstructions))
+                            {
+                                <tr><th scope="row">Bảo quản</th><td>@p.CareInstructions</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <section class="product-reviews mt-5" id="reviews" aria-labelledby="reviewsTitle">
+            <h2 class="section-title mb-3" id="reviewsTitle">Đánh giá từ khách hàng</h2>
+            <partial name="_StatusMessage" model="@(TempData[ProductsController.ReviewMessageKey] as string)" />
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="panel review-summary">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="review-score">@stats.Average.ToString("0.0")</div>
+                            <div>
+                                <partial name="_Rating" model="(stats.Average, 0)" />
+                                <div class="small text-muted-fs">@Format.Number(stats.Count) đánh giá</div>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled review-bars mt-3 mb-0">
+                            @for (var star = 5; star >= 1; star--)
+                            {
+                                var count = stats.Distribution.Count >= star ? stats.Distribution[star - 1] : 0;
+                                var percent = stats.Count == 0 ? 0 : (int)Math.Round(count * 100.0 / stats.Count);
+                                <li>
+                                    <span class="small">@star <i class="bi bi-star-fill text-warning" aria-hidden="true"></i></span>
+                                    <div class="progress" role="progressbar" aria-label="@star sao" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar" style="width: @percent%"></div>
+                                    </div>
+                                    <span class="small text-muted-fs">@count</span>
+                                </li>
+                            }
+                        </ul>
+
+                        <hr />
+                        @if (eligibility.CanReview)
+                        {
+                            <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#reviewFormPanel"
+                                    aria-expanded="@(Model.ShowReviewForm ? "true" : "false")" aria-controls="reviewFormPanel">
+                                <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>@(eligibility.Existing is null ? "Viết đánh giá" : "Sửa đánh giá của bạn")
+                            </button>
+                        }
+                        else if (User.Identity?.IsAuthenticated != true)
+                        {
+                            <p class="small text-muted-fs mb-2">@eligibility.Reason</p>
+                            <a class="btn btn-outline-primary w-100" href="/account/login?returnUrl=@Uri.EscapeDataString(p.Url + "#reviews")">Đăng nhập</a>
+                        }
+                        else
+                        {
+                            <p class="small text-muted-fs mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>@eligibility.Reason</p>
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    @if (eligibility.CanReview)
+                    {
+                        <div class="collapse @(Model.ShowReviewForm ? "show" : "")" id="reviewFormPanel">
+                            <form class="panel mb-4" method="post" action="@(p.Url)/reviews" enctype="multipart/form-data" asp-antiforgery="true" novalidate>
+                                <h3 class="h6 mb-3">@(eligibility.Existing is null ? "Đánh giá của bạn" : "Cập nhật đánh giá của bạn")</h3>
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+                                <fieldset class="mb-3">
+                                    <legend class="form-label fs-6 mb-1">Chấm điểm *</legend>
+                                    <div class="star-input">
+                                        @for (var star = 5; star >= 1; star--)
+                                        {
+                                            <input type="radio" id="reviewStar@(star)" name="Review.Rating" value="@star" checked="@(Model.ReviewForm.Rating == star)" />
+                                            <label for="reviewStar@(star)" title="@star sao"><i class="bi bi-star-fill" aria-hidden="true"></i><span class="visually-hidden">@star sao</span></label>
+                                        }
+                                    </div>
+                                    @Html.ValidationMessage("Review.Rating", new { @class = "text-danger small" })
+                                </fieldset>
+                                <div class="mb-3">
+                                    <label class="form-label" for="reviewTitle">Tiêu đề</label>
+                                    <input class="form-control" id="reviewTitle" name="Review.Title" value="@Model.ReviewForm.Title" maxlength="200" />
+                                    @Html.ValidationMessage("Review.Title", new { @class = "text-danger small" })
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="reviewComment">Nhận xét *</label>
+                                    <textarea class="form-control" id="reviewComment" name="Review.Comment" rows="4" minlength="10" maxlength="2000" required>@Model.ReviewForm.Comment</textarea>
+                                    @Html.ValidationMessage("Review.Comment", new { @class = "text-danger small" })
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="reviewImages">Ảnh thực tế (tối đa 3 ảnh, mỗi ảnh ≤ 5MB)</label>
+                                    <input class="form-control" id="reviewImages" type="file" name="images" accept=".jpg,.jpeg,.png,.webp" multiple data-max-files="3" />
+                                    @if (eligibility.Existing?.ImageUrls.Count > 0)
+                                    {
+                                        <div class="form-text">Chọn ảnh mới sẽ thay thế @eligibility.Existing.ImageUrls.Count ảnh đã gửi trước đó.</div>
+                                    }
+                                </div>
+                                <button class="btn btn-primary" type="submit"><i class="bi bi-send me-1" aria-hidden="true"></i>Gửi đánh giá</button>
+                            </form>
+                        </div>
+                    }
+                    <partial name="_ReviewList" model="new ReviewListViewModel(p.Slug, Model.Reviews.Reviews)" />
+                </div>
+            </div>
+        </section>
+
+        @if (Model.Related.Count > 0)
+        {
+            <div class="mt-5">
+                <div class="section-header">
+                    <div>
+                        <p class="section-eyebrow">Có thể bạn cũng thích</p>
+                        <h2 class="section-title">Sản phẩm liên quan</h2>
+                    </div>
+                </div>
+                <div class="row g-3 g-md-4">
+                    @foreach (var related in Model.Related.Take(4))
+                    {
+                        <div class="col-6 col-lg-3"><partial name="_ProductCard" model="related" /></div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<div class="mobile-buy-bar d-lg-none" aria-label="Mua nhanh">
+    <div class="min-w-0">
+        <div class="small text-muted-fs text-truncate">@p.Name</div>
+        <strong class="text-wood" data-mobile-price>@Format.Money(selected?.Price ?? p.Price)</strong>
+    </div>
+    <button type="button" class="btn btn-primary" data-add-to-cart><i class="bi bi-bag-plus me-1" aria-hidden="true"></i>Thêm vào giỏ</button>
+</div>
+
+<div class="modal fade" id="productQrModal" tabindex="-1" aria-labelledby="productQrTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h6" id="productQrTitle">Mã QR sản phẩm</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img class="qr-image" src="@QrLinks.ProductImage(p.Id)" width="220" height="220" alt="Mã QR mở trang @p.Name" loading="lazy" />
+                <p class="small text-muted-fs mt-2 mb-3">Quét bằng camera điện thoại để mở trang sản phẩm này hoặc gửi cho người thân.</p>
+                <a class="btn btn-outline-primary btn-sm" href="@(QrLinks.ProductImage(p.Id, "png"))?download=true" download><i class="bi bi-download me-1" aria-hidden="true"></i>Tải ảnh PNG</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="productData">@Html.Raw(clientData)</script>
+
+@section Scripts {
+    <script src="~/js/product-detail.js" asp-append-version="true"></script>
+}

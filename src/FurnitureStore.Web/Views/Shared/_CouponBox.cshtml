@@ -1,0 +1,71 @@
+@model FurnitureStore.Web.ViewModels.Sales.CouponBoxModel
+@{
+    var cart = Model.Cart;
+    var applied = !string.IsNullOrEmpty(cart.CouponCode);
+}
+<div class="coupon-box mb-3" data-coupon-box>
+    @if (!applied)
+    {
+        <form method="post" action="/cart/coupon" asp-antiforgery="true" class="input-group" data-coupon-form>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <label for="couponCode" class="visually-hidden">Mã giảm giá</label>
+            <input id="couponCode" name="code" class="form-control text-uppercase" placeholder="Nhập mã giảm giá" maxlength="50"
+                   autocomplete="off" spellcheck="false" required />
+            <button class="btn btn-outline-primary" type="submit">Áp dụng</button>
+        </form>
+    }
+    else
+    {
+        <div class="coupon-applied" data-coupon-applied="@cart.CouponCode">
+            <div>
+                <strong><i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i><span class="coupon-code-text">@cart.CouponCode</span></strong>
+                <div class="small @(cart.DiscountAmount > 0 ? "text-success" : "text-danger")">@cart.CouponMessage</div>
+            </div>
+            <form method="post" action="/cart/coupon/remove" asp-antiforgery="true" data-coupon-form>
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <button type="submit" class="btn btn-link btn-sm text-danger p-0">Bỏ mã</button>
+            </form>
+        </div>
+    }
+
+    @if (Model.Offers.Count > 0)
+    {
+        <div class="coupon-offers mt-3">
+            <h3 class="coupon-offers-title"><i class="bi bi-gift me-1" aria-hidden="true"></i>Ưu đãi dành cho bạn</h3>
+            <ul class="list-unstyled mb-0">
+                @foreach (var offer in Model.Offers)
+                {
+                    <li class="coupon-offer @(offer.IsEligible ? "" : "is-unavailable") @(offer.IsApplied ? "is-applied" : "")" data-coupon-offer="@offer.Code">
+                        <div class="coupon-offer-body">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="coupon-code-text coupon-offer-code">@offer.Code</span>
+                                <span class="fw-semibold small">@offer.Benefit</span>
+                            </div>
+                            <div class="small text-muted-fs">@offer.Conditions</div>
+                            @if (!offer.IsEligible && offer.Reason is not null)
+                            {
+                                <div class="small coupon-offer-reason">@offer.Reason</div>
+                            }
+                            else if (offer.EstimatedDiscount > 0 && !offer.IsApplied)
+                            {
+                                <div class="small text-success">Tiết kiệm @Format.Money(offer.EstimatedDiscount) cho đơn này</div>
+                            }
+                        </div>
+                        @if (offer.IsApplied)
+                        {
+                            <span class="badge text-bg-success">Đang dùng</span>
+                        }
+                        else if (offer.IsEligible)
+                        {
+                            <form method="post" action="/cart/coupon" asp-antiforgery="true" data-coupon-form>
+                                <input type="hidden" name="code" value="@offer.Code" />
+                                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                                <button type="submit" class="btn btn-sm btn-outline-primary" aria-label="Áp dụng mã @offer.Code">Áp dụng</button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>

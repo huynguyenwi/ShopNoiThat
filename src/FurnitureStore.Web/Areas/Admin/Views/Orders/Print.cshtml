@@ -1,0 +1,94 @@
+@model OrderSlipViewModel
+@using FurnitureStore.Application.Qr
+@using FurnitureStore.Domain.Enums
+@{
+    Layout = "_PrintLayout";
+    var o = Model.Order;
+    ViewData["Title"] = "Phiếu giao hàng " + o.OrderCode;
+    ViewData["BackUrl"] = $"/admin/orders/details/{o.Id}";
+    ViewData["ToolbarNote"] = "Khổ A4 · dán phiếu lên kiện hàng";
+    var address = o.ShippingAddress;
+    var toCollect = o.PaymentMethod == PaymentMethod.COD && o.PaymentStatus != PaymentStatus.Paid ? o.TotalAmount : 0;
+}
+
+<div class="slip" data-order-slip="@o.OrderCode">
+    <div class="slip-header">
+        <div>
+            <div class="slip-store">@Model.StoreName</div>
+            <div class="small">@Model.StoreAddress</div>
+            @if (!string.IsNullOrWhiteSpace(Model.StoreHotline))
+            {
+                <div class="small">Hotline: @Model.StoreHotline</div>
+            }
+        </div>
+        <div class="slip-qr">
+            <img src="@QrLinks.OrderImage(o.OrderCode)" width="120" height="120" alt="Mã QR đơn hàng @o.OrderCode" />
+            <div class="slip-code">@o.OrderCode</div>
+        </div>
+    </div>
+
+    <h1 class="slip-title">PHIẾU GIAO HÀNG</h1>
+
+    <div class="row g-3">
+        <div class="col-sm-7">
+            <div class="slip-box">
+                <h2>Người nhận</h2>
+                <div class="fw-semibold">@(address?.RecipientName ?? o.CustomerName)</div>
+                <div>@(address?.Phone ?? o.CustomerPhone)</div>
+                <div>@(address?.FullAddress ?? "")</div>
+                @if (!string.IsNullOrWhiteSpace(o.CustomerNote))
+                {
+                    <div class="mt-1"><strong>Ghi chú:</strong> @o.CustomerNote</div>
+                }
+            </div>
+        </div>
+        <div class="col-sm-5">
+            <div class="slip-box">
+                <h2>Đơn hàng</h2>
+                <div>Ngày đặt: @Format.DateTimeText(o.PlacedAt)</div>
+                <div>Trạng thái: @Labels.Of(o.Status)</div>
+                <div>Thanh toán: @Labels.Of(o.PaymentMethod) · @Labels.Of(o.PaymentStatus)</div>
+                <div>Số sản phẩm: @o.TotalQuantity</div>
+            </div>
+        </div>
+    </div>
+
+    <table class="slip-table">
+        <thead>
+            <tr><th>#</th><th>Sản phẩm</th><th class="text-center">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < o.Items.Count; i++)
+            {
+                var item = o.Items[i];
+                <tr>
+                    <td>@(i + 1)</td>
+                    <td>@item.ProductName<div class="small text-muted">@item.VariantName · SKU @item.Sku</div></td>
+                    <td class="text-center">@item.Quantity</td>
+                    <td class="text-end text-nowrap">@Format.Money(item.UnitPrice)</td>
+                    <td class="text-end text-nowrap">@Format.Money(item.LineTotal)</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr><td colspan="4" class="text-end">Tạm tính</td><td class="text-end text-nowrap">@Format.Money(o.Subtotal)</td></tr>
+            @if (o.DiscountAmount > 0)
+            {
+                <tr><td colspan="4" class="text-end">Giảm giá@(o.CouponCode is null ? "" : $" ({o.CouponCode})")</td><td class="text-end text-nowrap">-@Format.Money(o.DiscountAmount)</td></tr>
+            }
+            <tr><td colspan="4" class="text-end">Giao hàng &amp; lắp đặt</td><td class="text-end text-nowrap">@(o.ShippingFee == 0 ? "Miễn phí" : Format.Money(o.ShippingFee))</td></tr>
+            <tr><td colspan="4" class="text-end fw-bold">Tổng cộng</td><td class="text-end text-nowrap fw-bold">@Format.Money(o.TotalAmount)</td></tr>
+        </tfoot>
+    </table>
+
+    <div class="slip-cod mb-3" data-collect="@((long)toCollect)">
+        @(toCollect > 0 ? $"Thu hộ (COD): {Format.Money(toCollect)}" : "Đã thanh toán — không thu tiền khi giao")
+    </div>
+
+    <div class="row g-3">
+        <div class="col-6"><div class="slip-sign">Người giao hàng<br />(ký, ghi rõ họ tên)</div></div>
+        <div class="col-6"><div class="slip-sign">Người nhận hàng<br />(ký, ghi rõ họ tên)</div></div>
+    </div>
+
+    <p class="small text-muted mt-3 mb-0">Quét mã QR để mở đơn hàng này (nhân viên cửa hàng hoặc khách đặt hàng cần đăng nhập).</p>
+</div>

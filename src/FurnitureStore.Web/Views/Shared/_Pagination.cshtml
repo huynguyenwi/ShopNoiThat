@@ -1,0 +1,38 @@
+@model (int Page, int TotalPages, Func<int, string> UrlFor)
+@if (Model.TotalPages > 1)
+{
+    var start = Math.Max(1, Model.Page - 2);
+    var end = Math.Min(Model.TotalPages, Model.Page + 2);
+    <nav aria-label="Phân trang" class="mt-4">
+        <ul class="pagination justify-content-center flex-wrap">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="@(Model.Page > 1 ? Model.UrlFor(Model.Page - 1) : "#")" aria-label="Trang trước" data-page-link>&laquo;</a>
+            </li>
+            @if (start > 1)
+            {
+                <li class="page-item"><a class="page-link" href="@Model.UrlFor(1)" data-page-link>1</a></li>
+                @if (start > 2)
+                {
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                }
+            }
+            @for (var i = start; i <= end; i++)
+            {
+                <li class="page-item @(i == Model.Page ? "active" : "")">
+                    <a class="page-link" href="@Model.UrlFor(i)" aria-current="@(i == Model.Page ? "page" : null)" data-page-link>@i</a>
+                </li>
+            }
+            @if (end < Model.TotalPages)
+            {
+                @if (end < Model.TotalPages - 1)
+                {
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                }
+                <li class="page-item"><a class="page-link" href="@Model.UrlFor(Model.TotalPages)" data-page-link>@Model.TotalPages</a></li>
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="@(Model.Page < Model.TotalPages ? Model.UrlFor(Model.Page + 1) : "#")" aria-label="Trang sau" data-page-link>&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+}

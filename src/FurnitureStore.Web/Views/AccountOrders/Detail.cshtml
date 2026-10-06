@@ -1,0 +1,155 @@
+@model FurnitureStore.Application.Sales.OrderDetailDto
+@using FurnitureStore.Domain.Enums
+@using FurnitureStore.Application.Qr
+@{
+    ViewData["Title"] = $"Đơn hàng {Model.OrderCode}";
+    var steps = new[] { OrderStatus.Pending, OrderStatus.Confirmed, OrderStatus.Processing, OrderStatus.Shipping, OrderStatus.Delivered };
+    var currentIndex = Array.IndexOf(steps, Model.Status);
+    var isClosed = Model.Status is OrderStatus.Cancelled or OrderStatus.Refunded;
+    var orderQr = new QrCardModel("Mã QR đơn hàng", QrLinks.OrderImage(Model.OrderCode), $"Mã QR đơn hàng {Model.OrderCode}",
+        QrLinks.OrderImage(Model.OrderCode, "png") + "?download=true",
+        "Quét để mở nhanh đơn hàng này trên điện thoại (cần đăng nhập). Có thể xuất trình khi nhận hàng.", Admin: false);
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <partial name="_StatusMessage" model="@(TempData[AccountController.StatusMessageKey] as string)" />
+                <a href="/account/orders" class="text-decoration-none d-inline-block mb-3"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Đơn hàng của tôi</a>
+
+                <div class="panel mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <h1 class="h4 mb-1">Đơn hàng @Model.OrderCode</h1>
+                            <div class="small text-muted-fs">Đặt lúc @Format.DateTimeText(Model.PlacedAt)</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge fs-6 @Labels.BadgeClass(Model.Status)">@Labels.Of(Model.Status)</span>
+                            <div class="small mt-1"><span class="badge @Labels.BadgeClass(Model.PaymentStatus)">@Labels.Of(Model.PaymentStatus)</span></div>
+                        </div>
+                    </div>
+
+                    @if (isClosed)
+                    {
+                        <div class="alert alert-secondary mb-0">
+                            <i class="bi @Labels.Icon(Model.Status) me-1" aria-hidden="true"></i>
+                            @Labels.Of(Model.Status) @(Model.CancelledAt.HasValue ? "lúc " + Format.DateTimeText(Model.CancelledAt.Value) : "")
+                            @if (!string.IsNullOrEmpty(Model.CancelReason))
+                            {
+                                <span> - Lý do: @Model.CancelReason</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <ol class="order-steps" aria-label="Tiến trình đơn hàng">
+                            @for (var i = 0; i < steps.Length; i++)
+                            {
+                                <li class="@(i < currentIndex ? "done" : i == currentIndex ? "current" : "")">
+                                    <span class="order-step-icon"><i class="bi @Labels.Icon(steps[i])" aria-hidden="true"></i></span>
+                                    <span class="order-step-label">@Labels.Of(steps[i])</span>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </div>
+
+                @if (Model.PaymentInstructions is { } pay && Model.PaymentStatus != PaymentStatus.Paid && !isClosed)
+                {
+                    <div class="bank-box mb-4">
+                        <h2 class="h6 mb-2"><i class="bi bi-bank me-2" aria-hidden="true"></i>Chuyển khoản để hoàn tất đơn hàng</h2>
+                        <div class="small">@pay.BankName · STK <strong>@pay.AccountNumber</strong> · @pay.AccountName · Số tiền <strong>@Format.Money(pay.Amount)</strong> · Nội dung <strong>@pay.TransferNote</strong></div>
+                    </div>
+                }
+
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <div class="panel h-100">
+                            <h2 class="h6 mb-3">Sản phẩm</h2>
+                            <ul class="summary-items">
+                                @foreach (var item in Model.Items)
+                                {
+                                    <li>
+                                        <span class="summary-item-image">
+                                            @if (item.ImageUrl is not null)
+                                            {
+                                                <img src="@item.ImageUrl" alt="" width="64" height="48" />
+                                            }
+                                        </span>
+                                        <span class="flex-grow-1 min-w-0">
+                                            @if (item.ProductSlug is not null)
+                                            {
+                                                <a class="d-block fw-semibold text-truncate" href="/products/@item.ProductSlug">@item.ProductName</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="d-block fw-semibold text-truncate">@item.ProductName</span>
+                                            }
+                                            <span class="d-block small text-muted-fs">@item.VariantName · @Format.Money(item.UnitPrice) × @item.Quantity</span>
+                                        </span>
+                                        <span class="fw-semibold text-nowrap">@Format.Money(item.LineTotal)</span>
+                                    </li>
+                                }
+                            </ul>
+                            <dl class="summary-lines mb-0">
+                                <div><dt>Tạm tính</dt><dd>@Format.Money(Model.Subtotal)</dd></div>
+                                <div><dt>Giảm giá @(Model.CouponCode is null ? "" : $"({Model.CouponCode})")</dt><dd class="text-success">-@Format.Money(Model.DiscountAmount)</dd></div>
+                                <div><dt>Giao hàng &amp; lắp đặt</dt><dd>@(Model.ShippingFee == 0 ? "Miễn phí" : Format.Money(Model.ShippingFee))</dd></div>
+                                <div class="summary-total"><dt>Tổng cộng</dt><dd>@Format.Money(Model.TotalAmount)</dd></div>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="panel mb-4">
+                            <h2 class="h6 mb-2">Giao đến</h2>
+                            @if (Model.ShippingAddress is { } address)
+                            {
+                                <p class="mb-0"><strong>@address.RecipientName</strong> · @address.Phone<br /><span class="text-muted-fs small">@address.FullAddress</span></p>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.CustomerNote))
+                            {
+                                <p class="small text-muted-fs mt-2 mb-0"><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>@Model.CustomerNote</p>
+                            }
+                        </div>
+                        <div class="panel mb-4">
+                            <h2 class="h6 mb-2">Thanh toán</h2>
+                            <p class="mb-0 small">@Labels.Of(Model.PaymentMethod)<br /><span class="badge @Labels.BadgeClass(Model.PaymentStatus)">@Labels.Of(Model.PaymentStatus)</span></p>
+                        </div>
+                        <partial name="_QrCard" model="orderQr" />
+                        <div class="panel">
+                            <h2 class="h6 mb-3">Lịch sử</h2>
+                            <ul class="timeline">
+                                @foreach (var entry in Model.History.Reverse())
+                                {
+                                    <li>
+                                        <strong>@Labels.Of(entry.ToStatus)</strong>
+                                        <span class="d-block small text-muted-fs">@Format.DateTimeText(entry.ChangedAt)</span>
+                                        @if (!string.IsNullOrEmpty(entry.Note))
+                                        {
+                                            <span class="d-block small">@entry.Note</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model.CanBeCancelledByCustomer)
+                {
+                    <div class="panel mt-4">
+                        <h2 class="h6">Hủy đơn hàng</h2>
+                        <p class="small text-muted-fs">Bạn có thể hủy khi đơn chưa được đưa vào sản xuất / đóng gói.</p>
+                        <form method="post" action="/account/orders/@Model.OrderCode/cancel" asp-antiforgery="true" class="d-flex flex-wrap gap-2" data-confirm="Bạn chắc chắn muốn hủy đơn hàng @Model.OrderCode?">
+                            <label for="cancelReason" class="visually-hidden">Lý do hủy</label>
+                            <input id="cancelReason" name="reason" class="form-control" style="max-width: 420px" maxlength="500" placeholder="Lý do hủy (không bắt buộc)" />
+                            <button type="submit" class="btn btn-outline-danger">Hủy đơn hàng</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

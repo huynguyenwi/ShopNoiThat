@@ -1,0 +1,87 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.AI.AiConversationListItemDto>
+@using FurnitureStore.Application.AI
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Hội thoại AI";
+    var query = (AdminAiConversationQuery)ViewData["Query"]!;
+    var aiEnabled = ViewData["AiEnabled"] is true;
+    Func<int, string> pageUrl = p => $"/admin/ai?page={p}"
+        + (query.Type.HasValue ? $"&type={query.Type}" : "")
+        + (query.ErrorsOnly ? "&errorsOnly=true" : "")
+        + (string.IsNullOrEmpty(query.Search) ? "" : $"&search={Uri.EscapeDataString(query.Search)}");
+}
+
+<div class="alert @(aiEnabled ? "alert-success" : "alert-warning") d-flex gap-2 align-items-start">
+    <i class="bi @(aiEnabled ? "bi-check-circle" : "bi-info-circle") mt-1" aria-hidden="true"></i>
+    <div>
+        @if (aiEnabled)
+        {
+            <span>Trợ lý đang dùng mô hình AI đã cấu hình. Mọi sản phẩm và giá trong câu trả lời đều được kiểm tra lại với dữ liệu thật.</span>
+        }
+        else
+        {
+            <span>Chưa cấu hình API key cho AI: trợ lý đang chạy ở <strong>chế độ tự động</strong> (tìm sản phẩm theo quy tắc). Đặt khóa bằng <code>dotnet user-secrets set "AI:ApiKey" "..."</code> hoặc biến môi trường <code>AI__ApiKey</code> rồi khởi động lại.</span>
+        }
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small" for="search">Tìm trong tiêu đề / nội dung</label>
+                <input id="search" name="search" value="@query.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small" for="type">Loại</label>
+                <select id="type" name="type" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var t in Enum.GetValues<AIConversationType>())
+                    {
+                        <option value="@t" selected="@(query.Type == t)">@AiLabels.Of(t)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="errorsOnly" name="errorsOnly" value="true" checked="@query.ErrorsOnly" />
+                    <label class="form-check-label small" for="errorsOnly">Chỉ có lỗi AI</label>
+                </div>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead><tr><th>Cuộc trò chuyện</th><th>Khách</th><th>Loại</th><th class="text-end">Tin nhắn</th><th class="text-end">Tokens</th><th>Cập nhật</th></tr></thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted-fs py-4">Chưa có hội thoại AI.</td></tr>
+                }
+                @foreach (var c in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <a href="/admin/ai/@c.Id">@(c.Title.Length > 80 ? c.Title[..80] + "…" : c.Title)</a>
+                            @if (c.HasErrors)
+                            {
+                                <span class="badge text-bg-danger ms-1">Lỗi AI</span>
+                            }
+                            @if (c.ProductName is not null)
+                            {
+                                <div class="small text-muted-fs">@c.ProductName</div>
+                            }
+                        </td>
+                        <td class="small">@(c.IsGuest ? "Khách vãng lai" : c.UserName ?? "Tài khoản")</td>
+                        <td class="small"><i class="bi @AiLabels.Icon(c.Type) me-1" aria-hidden="true"></i>@AiLabels.Of(c.Type)</td>
+                        <td class="text-end">@c.MessageCount</td>
+                        <td class="text-end small">@Format.Number(c.TotalTokens)</td>
+                        <td class="small">@Format.DateTimeText(c.LastMessageAt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" /></div>
+</div>

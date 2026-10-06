@@ -1,0 +1,65 @@
+@model IReadOnlyList<FurnitureStore.Application.Catalog.Admin.AdminCategoryDto>
+@{
+    ViewData["Title"] = "Danh mục";
+}
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Cây danh mục <span class="text-muted-fs fw-normal">(@Model.Count)</span></h2>
+        <a class="btn btn-primary btn-sm" asp-action="Create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm danh mục</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Tên</th>
+                    <th scope="col">Slug</th>
+                    <th scope="col" class="text-center">Thứ tự</th>
+                    <th scope="col" class="text-center">Sản phẩm</th>
+                    <th scope="col">Hiển thị</th>
+                    <th scope="col" class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    var isRoot = c.ParentId is null;
+                    <tr class="@(isRoot ? "table-light" : "")">
+                        <td class="@(isRoot ? "fw-semibold" : "ps-5")">
+                            @if (!string.IsNullOrEmpty(c.IconCssClass))
+                            {
+                                <i class="bi @c.IconCssClass me-2" aria-hidden="true"></i>
+                            }
+                            @c.Name
+                            @if (isRoot)
+                            {
+                                <span class="small text-muted-fs fw-normal">(@c.ChildCount danh mục con)</span>
+                            }
+                        </td>
+                        <td><code>@c.Slug</code></td>
+                        <td class="text-center">@c.DisplayOrder</td>
+                        <td class="text-center">@c.ProductCount</td>
+                        <td>
+                            <span class="badge @(c.IsActive ? "text-bg-success" : "text-bg-secondary")">@(c.IsActive ? "Hiện" : "Ẩn")</span>
+                            @if (c.ShowOnHomePage)
+                            {
+                                <span class="badge text-bg-light">Trang chủ</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            @if (isRoot)
+                            {
+                                <a class="btn btn-light btn-sm" asp-action="Create" asp-route-parentId="@c.Id" title="Thêm danh mục con" aria-label="Thêm danh mục con của @c.Name"><i class="bi bi-node-plus" aria-hidden="true"></i></a>
+                            }
+                            <a class="btn btn-light btn-sm" href="/products?category=@c.Slug" target="_blank" rel="noopener" title="Xem trên web" aria-label="Xem @c.Name trên web"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                            <a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@c.Id" title="Sửa" aria-label="Sửa @c.Name"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                            <form method="post" asp-action="Delete" asp-route-id="@c.Id" class="d-inline" data-confirm="Xóa danh mục &quot;@c.Name&quot;?">
+                                <button type="submit" class="btn btn-light btn-sm text-danger" title="Xóa" aria-label="Xóa @c.Name"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

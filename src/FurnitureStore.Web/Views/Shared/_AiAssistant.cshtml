@@ -1,0 +1,70 @@
+@* Floating AI assistant (behaviour: wwwroot/js/ai-assistant.js). Answers are rendered with textContent only. *@
+@inject FurnitureStore.Application.AI.IAssistantService Assistant
+@{
+    var aiEnabled = Assistant.AiEnabled;
+}
+<div class="ai-widget" id="aiWidget" data-ai-enabled="@(aiEnabled ? "true" : "false")" data-signed-in="@(User.Identity?.IsAuthenticated == true ? "true" : "false")">
+    <button type="button" class="ai-launcher" id="aiLauncher" aria-controls="aiPanel" aria-expanded="false">
+        <i class="bi bi-stars" aria-hidden="true"></i>
+        <span class="ai-launcher-label">Trợ lý AI</span>
+    </button>
+
+    <section class="chat-panel ai-panel" id="aiPanel" role="dialog" aria-labelledby="aiTitle" hidden>
+        <header class="chat-panel-header ai-panel-header">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+                <span class="chat-avatar ai-avatar" aria-hidden="true"><i class="bi bi-stars"></i></span>
+                <div class="min-w-0">
+                    <div class="fw-semibold text-truncate" id="aiTitle">Trợ lý AI Nhà Mộc</div>
+                    <div class="chat-status">
+                        @(aiEnabled ? "Tư vấn bằng AI từ dữ liệu sản phẩm thật" : "Trợ lý tự động · hỏi đáp nhanh & tìm sản phẩm")
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-sm text-white" id="aiNew" title="Cuộc trò chuyện mới" aria-label="Bắt đầu cuộc trò chuyện mới"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                <button type="button" class="btn-close btn-close-white" id="aiClose" aria-label="Thu nhỏ trợ lý AI"></button>
+            </div>
+        </header>
+
+        <div class="chat-body">
+            <div class="chat-messages ai-messages" id="aiMessages" role="log" aria-live="polite" aria-label="Hội thoại với trợ lý AI">
+                <div class="chat-msg from-other ai-welcome">
+                    @if (aiEnabled)
+                    {
+                        <div class="chat-bubble">Chào bạn! Mình có thể gợi ý sản phẩm theo phòng, ngân sách, kích thước, hoặc tư vấn phối màu và phong cách. Bạn đang cần gì?</div>
+                        <div class="ai-suggestions">
+                            <button type="button" class="ai-chip" data-ai-say="Tôi cần bộ bàn ăn cho gia đình 6 người, khoảng 10 triệu">Bàn ăn 6 người ~10 triệu</button>
+                            <button type="button" class="ai-chip" data-ai-say="Phòng khách 20m2, thích phong cách hiện đại, ngân sách 30 triệu">Phòng khách 20m² hiện đại</button>
+                            <button type="button" class="ai-chip" data-ai-say="Tôi thích bàn gỗ màu nâu, dài khoảng 1m8">Bàn gỗ nâu dài 1m8</button>
+                            <button type="button" class="ai-chip" data-ai-say="Chính sách giao hàng và bảo hành thế nào?">Giao hàng & bảo hành</button>
+                        </div>
+                    }
+                    else
+                    {
+                        @* No AI model configured: built-in answers (LocalAssistant) for everyday questions, product search from the catalog. *@
+                        <div class="chat-bubble">Chào bạn! Mình trả lời nhanh các câu hỏi thường gặp (giao hàng, bảo hành, đổi trả, mã giảm giá, đơn hàng, chất liệu, kích thước...) và tìm sản phẩm theo phòng, ngân sách. Bạn cần gì?</div>
+                        <div class="ai-suggestions">
+                            <button type="button" class="ai-chip" data-ai-say="Tôi cần bộ bàn ăn cho gia đình 6 người, khoảng 10 triệu">Bàn ăn 6 người ~10 triệu</button>
+                            <button type="button" class="ai-chip" data-ai-say="Chính sách giao hàng và bảo hành thế nào?">Giao hàng & bảo hành</button>
+                            <button type="button" class="ai-chip" data-ai-say="Có mã giảm giá không?">Mã giảm giá</button>
+                            <button type="button" class="ai-chip" data-ai-say="Gỗ sồi và gỗ óc chó khác gì?">Gỗ sồi hay óc chó?</button>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="chat-typing" id="aiThinking" hidden><span></span><span></span><span></span> <em>Trợ lý đang trả lời...</em></div>
+        </div>
+
+        <div class="ai-disclaimer">
+            Giá và tồn kho lấy trực tiếp từ hệ thống. <a href="/tu-van">Công cụ tư vấn chi tiết</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <span> · <a href="/account/ai-history">Lịch sử</a></span>
+            }
+        </div>
+        <form class="chat-compose" id="aiCompose" novalidate>
+            <textarea id="aiInput" rows="1" maxlength="1000" placeholder="Ví dụ: sofa xám cho phòng 15m², dưới 15 triệu" aria-label="Câu hỏi cho trợ lý AI"></textarea>
+            <button type="submit" class="btn btn-primary chat-send" id="aiSend" aria-label="Gửi câu hỏi"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+        </form>
+    </section>
+</div>

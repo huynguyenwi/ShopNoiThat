@@ -1,0 +1,45 @@
+@model IReadOnlyList<FurnitureStore.Application.AI.AiConversationListItemDto>
+@{
+    ViewData["Title"] = "Lịch sử tư vấn AI";
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                    <h1 class="h4 mb-0">Lịch sử tư vấn AI</h1>
+                    <a class="btn btn-outline-primary btn-sm" href="/tu-van"><i class="bi bi-stars me-1" aria-hidden="true"></i>Tư vấn mới</a>
+                </div>
+                @if (Model.Count == 0)
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-stars" aria-hidden="true"></i>
+                        <h2 class="h5 mt-3">Bạn chưa trò chuyện với trợ lý AI</h2>
+                        <p class="text-muted-fs">Hỏi trợ lý về sản phẩm, màu sắc hay phong cách - lịch sử sẽ được lưu tại đây.</p>
+                        <button type="button" class="btn btn-primary" data-ai-open="">Mở trợ lý AI</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var c in Model)
+                        {
+                            <a class="list-group-item list-group-item-action d-flex gap-3 align-items-start py-3" href="/account/ai-history/@c.Id">
+                                <i class="bi @AiLabels.Icon(c.Type) fs-4 text-wood" aria-hidden="true"></i>
+                                <div class="min-w-0 flex-grow-1">
+                                    <div class="d-flex justify-content-between gap-2">
+                                        <strong class="text-truncate">@c.Title</strong>
+                                        <span class="small text-muted-fs flex-shrink-0">@Format.DateTimeText(c.LastMessageAt)</span>
+                                    </div>
+                                    <div class="small text-muted-fs">@AiLabels.Of(c.Type)@(c.ProductName is null ? "" : " · " + c.ProductName) · @c.MessageCount tin nhắn</div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

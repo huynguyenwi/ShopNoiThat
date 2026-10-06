@@ -1,0 +1,15 @@
+@model FurnitureStore.Application.Quotes.PriceBreakdown
+<table class="table table-sm quote-breakdown mb-0">
+    <tbody>
+        <tr><th class="fw-normal">Vật liệu@(Model.MaterialAreaM2 > 0 ? $" ({Model.MaterialAreaM2:0.##} m²)".Replace('.', ',') : "")</th><td class="text-end">@Format.Money(Model.MaterialCost)</td></tr>
+        <tr><th class="fw-normal">Công gia công</th><td class="text-end">@Format.Money(Model.LaborCost)</td></tr>
+        <tr><th class="fw-normal">Hoàn thiện (chà nhám, lắp ráp)</th><td class="text-end">@Format.Money(Model.FinishingCost)</td></tr>
+        <tr><th class="fw-normal">Sơn phủ</th><td class="text-end">@Format.Money(Model.PaintCost)</td></tr>
+        <tr><th class="fw-normal">Phụ kiện</th><td class="text-end">@Format.Money(Model.AccessoryCost)</td></tr>
+        <tr class="fw-semibold"><th>Chi phí trực tiếp</th><td class="text-end">@Format.Money(Model.DirectCost)</td></tr>
+        <tr><th class="fw-normal">Chi phí chung (@Model.OverheadPercent.ToString("0.#")%)</th><td class="text-end">@Format.Money(Model.OverheadCost)</td></tr>
+        <tr><th class="fw-normal">Lợi nhuận xưởng (@Model.ProfitPercent.ToString("0.#")%)</th><td class="text-end">@Format.Money(Model.ProfitAmount)</td></tr>
+        <tr class="fw-semibold"><th>Giá 1 sản phẩm</th><td class="text-end">@Format.Money(Model.UnitPrice)</td></tr>
+        <tr class="fw-semibold"><th>Tổng (@Model.Quantity sản phẩm)</th><td class="text-end">@Format.Money(Model.Total)</td></tr>
+    </tbody>
+</table>

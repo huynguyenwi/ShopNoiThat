@@ -1,0 +1,75 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Admin.AuditLogDto>
+@using FurnitureStore.Application.Admin
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Nhật ký hoạt động";
+    var q = ViewData["Query"] as AuditLogQuery ?? new AuditLogQuery();
+    Func<int, string> pageUrl = p => $"/admin/audit-logs?page={p}"
+        + (string.IsNullOrEmpty(q.Search) ? "" : "&search=" + Uri.EscapeDataString(q.Search))
+        + (q.Action.HasValue ? $"&action={q.Action}" : "")
+        + (string.IsNullOrEmpty(q.EntityName) ? "" : "&entityName=" + Uri.EscapeDataString(q.EntityName))
+        + (q.From.HasValue ? $"&from={q.From:yyyy-MM-dd}" : "") + (q.To.HasValue ? $"&to={q.To:yyyy-MM-dd}" : "");
+}
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small" for="search">Người dùng / mô tả / mã</label>
+                <input id="search" name="search" value="@q.Search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="action">Hành động</label>
+                <select id="action" name="action" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var a in Enum.GetValues<AuditAction>())
+                    {
+                        <option value="@a" selected="@(q.Action == a)">@a</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="entityName">Đối tượng</label>
+                <input id="entityName" name="entityName" value="@q.EntityName" class="form-control form-control-sm" placeholder="Product, Order..." />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="from">Từ</label>
+                <input id="from" name="from" type="date" value="@q.From?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="to">Đến</label>
+                <input id="to" name="to" type="date" value="@q.To?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-1 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hành động</th><th>Đối tượng</th><th>Mô tả</th><th>IP</th></tr></thead>
+            <tbody>
+                @foreach (var log in Model.Items)
+                {
+                    <tr>
+                        <td class="small text-nowrap">@Format.DateTimeText(log.CreatedAt)</td>
+                        <td class="small">@log.UserName</td>
+                        <td><span class="badge text-bg-light">@log.Action</span></td>
+                        <td class="small">@log.EntityName @(log.EntityId is null ? "" : $"#{(log.EntityId.Length > 12 ? log.EntityId[..12] + "…" : log.EntityId)}")</td>
+                        <td class="small">
+                            @log.Description
+                            @if (log.OldValues is not null || log.NewValues is not null)
+                            {
+                                <details class="mt-1">
+                                    <summary class="text-muted-fs">Chi tiết</summary>
+                                    @if (log.OldValues is not null) { <div><strong>Trước:</strong> <code class="text-break">@log.OldValues</code></div> }
+                                    @if (log.NewValues is not null) { <div><strong>Sau:</strong> <code class="text-break">@log.NewValues</code></div> }
+                                </details>
+                            }
+                        </td>
+                        <td class="small text-muted-fs">@log.IpAddress</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" /></div>
+</div>

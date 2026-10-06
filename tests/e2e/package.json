@@ -1,0 +1,24 @@
+{
+  "name": "furniturestore-e2e",
+  "private": true,
+  "description": "Browser end-to-end checks (Edge / Chrome headless via puppeteer-core). See README section 17.",
+  "scripts": {
+    "dod": "node dod-e2e.js",
+    "coupon": "node coupon-e2e.js",
+    "qr": "node qr-e2e.js",
+    "forms": "node forms-resubmit.js",
+    "chat": "node chat-e2e.js",
+    "ai": "node ai-e2e.js",
+    "local-ai": "node local-ai-e2e.js",
+    "quote": "node quote-e2e.js",
+    "account": "node account-forms.js",
+    "audit": "node audit.js",
+    "load": "node load.js"
+  },
+  "dependencies": {
+    "axe-core": "^4.13.0",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^23.11.1"
+  }
+}

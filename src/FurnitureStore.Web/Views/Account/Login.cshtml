@@ -1,0 +1,64 @@
+@model FurnitureStore.Web.ViewModels.Account.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<section class="auth-section">
+    <div class="container">
+        <div class="auth-card">
+            <div class="auth-aside d-none d-lg-flex">
+                <div>
+                    <p class="section-eyebrow" style="color: var(--fs-sand)">Chào mừng trở lại</p>
+                    <h2 class="text-white">Không gian đẹp bắt đầu từ những lựa chọn nhỏ.</h2>
+                    <ul class="auth-benefits">
+                        <li><i class="bi bi-heart" aria-hidden="true"></i>Lưu sản phẩm yêu thích</li>
+                        <li><i class="bi bi-truck" aria-hidden="true"></i>Theo dõi đơn hàng dễ dàng</li>
+                        <li><i class="bi bi-stars" aria-hidden="true"></i>Nhận tư vấn nội thất bằng AI</li>
+                    </ul>
+                </div>
+                <img src="~/images/hero-living-room.svg" alt="" width="360" height="292" />
+            </div>
+
+            <div class="auth-form">
+                <h1 class="h3 mb-1">Đăng nhập</h1>
+                <p class="text-muted-fs mb-4">Chưa có tài khoản? <a asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký ngay</a></p>
+
+                <partial name="_StatusMessage" model="@(TempData[AccountController.StatusMessageKey] as string)" />
+
+                <form asp-action="Login" method="post" novalidate>
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" autocomplete="username" autofocus placeholder="ban@email.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label asp-for="Password" class="form-label"></label>
+                            <a class="small" asp-action="ForgotPassword">Quên mật khẩu?</a>
+                        </div>
+                        <div class="input-group">
+                            <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                            <button class="btn btn-outline-secondary password-toggle" type="button" data-toggle-password="Password" aria-label="Hiện mật khẩu"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">Đăng nhập</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

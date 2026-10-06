@@ -1,0 +1,91 @@
+@model FurnitureStore.Web.Controllers.ContactPageViewModel
+@{
+    ViewData["Title"] = "Liên hệ";
+    ViewData["MetaDescription"] = $"Liên hệ {Model.Store.Name}: showroom {Model.Store.Address}, hotline {Model.Store.Hotline}. Tư vấn nội thất và báo giá đồ gỗ theo yêu cầu.";
+    var s = Model.Store;
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small mb-2"><li class="breadcrumb-item"><a href="/">Trang chủ</a></li><li class="breadcrumb-item active" aria-current="page">Liên hệ</li></ol>
+        </nav>
+        <h1 class="page-title">Liên hệ với @s.Name</h1>
+        <p class="text-muted-fs mb-0">@(s.About ?? "Chúng tôi luôn sẵn sàng tư vấn và nhận đóng nội thất theo yêu cầu.")</p>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="panel mb-4">
+                    <h2 class="h5 mb-3">Thông tin cửa hàng</h2>
+                    <ul class="list-unstyled contact-list mb-0">
+                        <li><i class="bi bi-shop" aria-hidden="true"></i><div><strong>Showroom</strong><br />@s.Address</div></li>
+                        @if (!string.IsNullOrEmpty(s.WorkshopAddress))
+                        {
+                            <li><i class="bi bi-hammer" aria-hidden="true"></i><div><strong>Xưởng sản xuất</strong><br />@s.WorkshopAddress</div></li>
+                        }
+                        <li><i class="bi bi-telephone" aria-hidden="true"></i><div><strong>Hotline</strong><br /><a href="tel:@s.HotlineDigits">@s.Hotline</a></div></li>
+                        <li><i class="bi bi-envelope" aria-hidden="true"></i><div><strong>Email</strong><br /><a href="mailto:@s.Email">@s.Email</a></div></li>
+                        @if (!string.IsNullOrEmpty(s.OpeningHours))
+                        {
+                            <li><i class="bi bi-clock" aria-hidden="true"></i><div><strong>Giờ mở cửa</strong><br />@s.OpeningHours</div></li>
+                        }
+                    </ul>
+                    <div class="d-flex gap-2 mt-3">
+                        @if (!string.IsNullOrEmpty(s.FacebookUrl)) { <a class="social-link" href="@s.FacebookUrl" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a> }
+                        @if (!string.IsNullOrEmpty(s.TikTokUrl)) { <a class="social-link" href="@s.TikTokUrl" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a> }
+                        @if (!string.IsNullOrEmpty(s.ZaloUrl)) { <a class="social-link" href="@s.ZaloUrl" target="_blank" rel="noopener noreferrer" aria-label="Zalo"><i class="bi bi-chat-dots" aria-hidden="true"></i></a> }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(s.GoogleMapsEmbedUrl))
+                {
+                    <iframe class="store-map rounded-4" src="@s.GoogleMapsEmbedUrl" title="Bản đồ đường đến @s.Name" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                }
+            </div>
+            <div class="col-lg-7">
+                <div class="panel" id="contact-form">
+                    <h2 class="h5 mb-1">Gửi tin nhắn cho chúng tôi</h2>
+                    <p class="text-muted-fs small mb-3">Tư vấn sản phẩm, đặt đóng theo kích thước, bảo hành... Chúng tôi phản hồi trong giờ làm việc.</p>
+                    <partial name="_StatusMessage" model="@(TempData[ContactController.MessageKey] as string)" />
+                    <form method="post" asp-action="Index" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+                        <div class="visually-hidden" aria-hidden="true">
+                            <label for="website">Website</label>
+                            <input id="website" name="website" tabindex="-1" autocomplete="off" />
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Command.FullName" class="form-label">Họ và tên *</label>
+                                <input asp-for="Command.FullName" class="form-control" autocomplete="name" maxlength="150" />
+                                <span asp-validation-for="Command.FullName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Command.Phone" class="form-label">Số điện thoại *</label>
+                                <input asp-for="Command.Phone" class="form-control" type="tel" autocomplete="tel" />
+                                <span asp-validation-for="Command.Phone" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Command.Email" class="form-label">Email *</label>
+                                <input asp-for="Command.Email" class="form-control" type="email" autocomplete="email" />
+                                <span asp-validation-for="Command.Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Command.Subject" class="form-label">Chủ đề</label>
+                                <input asp-for="Command.Subject" class="form-control" maxlength="200" />
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Command.Message" class="form-label">Nội dung *</label>
+                                <textarea asp-for="Command.Message" class="form-control" rows="6" maxlength="4000"></textarea>
+                                <span asp-validation-for="Command.Message" class="text-danger small"></span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-send me-1" aria-hidden="true"></i>Gửi tin nhắn</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,158 @@
+@model FurnitureStore.Application.Sales.OrderDetailDto
+@using FurnitureStore.Domain.Entities
+@using FurnitureStore.Domain.Enums
+@using FurnitureStore.Application.Qr
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    ViewData["Title"] = $"Đơn hàng {Model.OrderCode}";
+    var next = OrderStatusTransitions.NextStatuses(Model.Status);
+    var orderQr = new QrCardModel("Mã QR đơn hàng", QrLinks.OrderImage(Model.OrderCode), $"Mã QR đơn hàng {Model.OrderCode}",
+        QrLinks.OrderImage(Model.OrderCode, "png") + "?download=true",
+        "Quét để mở đơn này: quản trị viên vào trang quản lý đơn, khách đặt hàng vào trang đơn của mình (cần đăng nhập).",
+        Admin: true, TargetUrl: QrLinks.OrderTarget(SiteOptions.Value.BaseUrl, Model.OrderCode),
+        PrintUrl: $"/admin/orders/print/{Model.Id}", PrintLabel: "In phiếu giao hàng");
+}
+
+<a href="/admin/orders" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Danh sách đơn hàng</a>
+
+<div class="row g-3">
+    <div class="col-xl-8">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header">
+                <h2>@Model.OrderCode <span class="badge @Labels.BadgeClass(Model.Status) ms-2">@Labels.Of(Model.Status)</span></h2>
+                <span class="small text-muted-fs">Đặt lúc @Format.DateTimeText(Model.PlacedAt)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>Sản phẩm</th><th>SKU</th><th class="text-end">Đơn giá</th><th class="text-center">SL</th><th class="text-end">Thành tiền</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        @if (item.ImageUrl is not null)
+                                        {
+                                            <img class="admin-thumb" src="@item.ImageUrl" alt="" width="48" height="48" />
+                                        }
+                                        <div>
+                                            <div class="fw-semibold">@item.ProductName</div>
+                                            <div class="small text-muted-fs">@item.VariantName</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="small">@item.Sku</td>
+                                <td class="text-end">@Format.Money(item.UnitPrice)</td>
+                                <td class="text-center">@item.Quantity</td>
+                                <td class="text-end fw-semibold">@Format.Money(item.LineTotal)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="4" class="text-end">Tạm tính</td><td class="text-end">@Format.Money(Model.Subtotal)</td></tr>
+                        <tr><td colspan="4" class="text-end">Giảm giá @if (Model.CouponCode is not null) { <a href="/admin/coupons?search=@Uri.EscapeDataString(Model.CouponCode)" class="coupon-code-text">(@Model.CouponCode)</a> }</td><td class="text-end text-success">-@Format.Money(Model.DiscountAmount)</td></tr>
+                        <tr><td colspan="4" class="text-end">Phí giao hàng</td><td class="text-end">@Format.Money(Model.ShippingFee)</td></tr>
+                        <tr><td colspan="4" class="text-end fw-bold">Tổng cộng</td><td class="text-end fw-bold fs-6">@Format.Money(Model.TotalAmount)</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Lịch sử trạng thái</h2></div>
+            <div class="admin-card-body">
+                <ul class="timeline mb-0">
+                    @foreach (var h in Model.History.Reverse())
+                    {
+                        <li>
+                            <strong>@(h.FromStatus is null ? "" : Labels.Of(h.FromStatus.Value) + " → ")@Labels.Of(h.ToStatus)</strong>
+                            <span class="d-block small text-muted-fs">@Format.DateTimeText(h.ChangedAt) · @h.ChangedBy</span>
+                            @if (!string.IsNullOrEmpty(h.Note))
+                            {
+                                <span class="d-block small">@h.Note</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Cập nhật trạng thái</h2></div>
+            <div class="admin-card-body">
+                @if (next.Count == 0)
+                {
+                    <p class="text-muted-fs mb-0">Đơn hàng đã kết thúc (@Labels.Of(Model.Status)).</p>
+                }
+                else
+                {
+                    <form method="post" asp-action="Status" asp-route-id="@Model.Id">
+                        <input type="hidden" name="version" value="@Model.Version" />
+                        <label class="form-label small" for="status">Chuyển sang</label>
+                        <select id="status" name="status" class="form-select mb-2">
+                            @foreach (var s in next)
+                            {
+                                <option value="@s">@Labels.Of(s)</option>
+                            }
+                        </select>
+                        <label class="form-label small" for="note">Ghi chú (bắt buộc khi hủy)</label>
+                        <textarea id="note" name="note" class="form-control mb-2" rows="2" maxlength="500"></textarea>
+                        <button type="submit" class="btn btn-primary w-100">Cập nhật</button>
+                    </form>
+                    <p class="small text-muted-fs mt-2 mb-0">Hủy / hoàn tiền sẽ tự động hoàn lại tồn kho. Khách hàng được thông báo qua email.</p>
+                }
+            </div>
+        </div>
+
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Thanh toán</h2></div>
+            <div class="admin-card-body">
+                <p class="mb-2">@Labels.Of(Model.PaymentMethod) <span class="badge @Labels.BadgeClass(Model.PaymentStatus)">@Labels.Of(Model.PaymentStatus)</span></p>
+                @foreach (var p in Model.Payments)
+                {
+                    <div class="small text-muted-fs">#@p.Id · @Labels.Of(p.Status) · @Format.Money(p.Amount) @(p.TransactionCode is null ? "" : $"· {p.TransactionCode}") @(p.PaidAt is null ? "" : $"· {Format.DateTimeText(p.PaidAt.Value)}")</div>
+                }
+                @if (Model.PaymentMethod == PaymentMethod.BankTransfer && Model.PaymentStatus != PaymentStatus.Paid && Model.Status is not (OrderStatus.Cancelled or OrderStatus.Refunded))
+                {
+                    <form method="post" asp-action="ConfirmPayment" asp-route-id="@Model.Id" class="mt-3" data-confirm="Xác nhận đã nhận @Format.Money(Model.TotalAmount) cho đơn @Model.OrderCode?">
+                        <label class="form-label small" for="reference">Mã giao dịch ngân hàng</label>
+                        <input id="reference" name="reference" class="form-control form-control-sm mb-2" maxlength="100" placeholder="VD: FT2609..." />
+                        <button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Xác nhận đã nhận tiền</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Khách hàng &amp; giao hàng</h2></div>
+            <div class="admin-card-body small">
+                <p class="mb-1"><strong>@Model.CustomerName</strong></p>
+                <p class="mb-1"><i class="bi bi-telephone me-1" aria-hidden="true"></i><a href="tel:@Model.CustomerPhone">@Model.CustomerPhone</a></p>
+                <p class="mb-2"><i class="bi bi-envelope me-1" aria-hidden="true"></i>@Model.CustomerEmail</p>
+                @if (Model.ShippingAddress is { } a)
+                {
+                    <p class="mb-2"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>@a.FullAddress</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerNote))
+                {
+                    <p class="mb-2 p-2 bg-cream rounded"><i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>@Model.CustomerNote</p>
+                }
+                <a href="/admin/customers/details/@Model.UserId">Xem hồ sơ khách hàng</a>
+            </div>
+        </div>
+
+        <partial name="_QrCard" model="orderQr" />
+
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Ghi chú nội bộ</h2></div>
+            <div class="admin-card-body">
+                <form method="post" asp-action="Note" asp-route-id="@Model.Id">
+                    <textarea name="adminNote" class="form-control mb-2" rows="3" maxlength="1000" aria-label="Ghi chú nội bộ">@Model.AdminNote</textarea>
+                    <button type="submit" class="btn btn-light btn-sm">Lưu ghi chú</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

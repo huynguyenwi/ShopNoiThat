@@ -1,0 +1,62 @@
+@model FurnitureStore.Web.ViewModels.Catalog.ProductListViewModel
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    ViewData["Title"] = Model.Heading;
+    ViewData["MetaDescription"] = Model.Category?.Description
+        ?? $"{Model.Heading} tại {SiteOptions.Value.SiteName}: nội thất gỗ đẹp, nhiều màu sắc, kích thước; giao hàng và lắp đặt tận nơi.";
+    var baseUrl = SiteOptions.Value.BaseUrl.TrimEnd('/');
+    // Canonical: only the category (and page) matter for indexing; other filter combinations are not indexed.
+    ViewData["Canonical"] = baseUrl + (Model.Category is not null ? $"/products?category={Model.Category.Slug}" : "/products")
+        + (Model.Result.Page > 1 ? (Model.Category is not null ? "&" : "?") + $"page={Model.Result.Page}" : "");
+    if (!string.IsNullOrWhiteSpace(Model.Request.Q) || Model.Request.Color.Count + Model.Request.Material.Count + Model.Request.Size.Count + Model.Request.Style.Count > 0)
+    {
+        ViewData["Robots"] = "noindex,follow";
+    }
+}
+
+<section class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small mb-2">
+                <li class="breadcrumb-item"><a href="/">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/products">Sản phẩm</a></li>
+                @if (Model.Category is not null)
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@Model.Category.Name</li>
+                }
+            </ol>
+        </nav>
+        <h1 class="page-title">@Model.Heading</h1>
+        @if (!string.IsNullOrEmpty(Model.Category?.Description))
+        {
+            <p class="text-muted-fs mb-0">@Model.Category.Description</p>
+        }
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3">
+                <div class="offcanvas-lg offcanvas-start" tabindex="-1" id="filterPanel" aria-labelledby="filterPanelLabel">
+                    <div class="offcanvas-header">
+                        <h2 class="offcanvas-title h5" id="filterPanelLabel">Bộ lọc</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#filterPanel" aria-label="Đóng"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                        <partial name="_ProductFilters" model="Model" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-9">
+                <div id="productResults" aria-live="polite">
+                    <partial name="_ProductResults" model="Model" />
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/product-list.js" asp-append-version="true"></script>
+}

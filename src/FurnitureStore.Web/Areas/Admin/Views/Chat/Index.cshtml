@@ -1,0 +1,52 @@
+@model int?
+@{
+    ViewData["Title"] = "Chat với khách hàng";
+}
+
+<div class="admin-chat @(Model.HasValue ? "show-thread" : "")" id="adminChat" data-selected="@Model" data-is-admin="@(User.IsInRole(AppRoles.Admin) ? "true" : "false")">
+    <aside class="admin-chat-list" aria-label="Danh sách cuộc trò chuyện">
+        <div class="admin-chat-toolbar">
+            <label class="visually-hidden" for="chatSearch">Tìm cuộc trò chuyện</label>
+            <input type="search" id="chatSearch" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, email, nội dung..." maxlength="100" />
+            <div class="admin-chat-filters" role="group" aria-label="Lọc">
+                <button type="button" class="btn btn-sm btn-light active" data-chat-filter="all" aria-pressed="true">Tất cả</button>
+                <button type="button" class="btn btn-sm btn-light" data-chat-filter="unread" aria-pressed="false">Chưa trả lời</button>
+                <button type="button" class="btn btn-sm btn-light" data-chat-filter="open" aria-pressed="false">Đang mở</button>
+                <button type="button" class="btn btn-sm btn-light" data-chat-filter="closed" aria-pressed="false">Đã kết thúc</button>
+            </div>
+        </div>
+        <div class="admin-chat-conversations" id="chatConversationList" role="list"></div>
+        <p class="text-center text-muted small py-4 mb-0" id="chatListEmpty" hidden>Chưa có cuộc trò chuyện nào.</p>
+        <button type="button" class="btn btn-link btn-sm w-100" id="chatListMore" hidden>Xem thêm</button>
+    </aside>
+
+    <section class="admin-chat-thread" aria-label="Nội dung cuộc trò chuyện">
+        <div class="admin-chat-empty" id="chatEmpty">
+            <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+            <p class="mb-0">Chọn một cuộc trò chuyện để xem và trả lời.</p>
+        </div>
+
+        <div class="admin-chat-thread-inner" id="chatThreadInner" hidden>
+            <header class="admin-chat-thread-header">
+                <button type="button" class="btn btn-light btn-sm d-lg-none" id="chatBack" aria-label="Quay lại danh sách"><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
+                <div class="min-w-0 flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <strong class="text-truncate" id="threadName"></strong>
+                        <span class="badge" id="threadStatus"></span>
+                        <span class="badge text-bg-light" id="threadGuest" hidden>Khách vãng lai</span>
+                    </div>
+                    <div class="small text-muted admin-chat-contact" id="threadContact"></div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="threadToggleStatus"></button>
+            </header>
+            <div class="chat-messages admin-chat-messages" id="threadMessages" role="log" aria-live="polite">
+                <button type="button" class="btn btn-link btn-sm w-100 chat-older" id="threadOlder" hidden>Xem tin nhắn cũ hơn</button>
+            </div>
+            <div class="chat-typing" id="threadTyping" hidden><span></span><span></span><span></span> <em id="threadTypingName"></em></div>
+            <form class="chat-compose" id="threadCompose" novalidate>
+                <textarea id="threadInput" rows="1" maxlength="2000" placeholder="Nhập câu trả lời... (Enter để gửi, Shift+Enter xuống dòng)" aria-label="Nội dung trả lời"></textarea>
+                <button type="submit" class="btn btn-primary chat-send" id="threadSend" aria-label="Gửi"><i class="bi bi-send-fill" aria-hidden="true"></i></button>
+            </form>
+        </div>
+    </section>
+</div>

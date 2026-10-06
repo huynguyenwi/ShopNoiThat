@@ -1,0 +1,91 @@
+@model FurnitureStore.Web.ViewModels.Account.ProfileViewModel
+@{
+    ViewData["Title"] = "Hồ sơ cá nhân";
+    ViewData["Robots"] = "noindex,nofollow";
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Tài khoản</li>
+            </ol>
+        </nav>
+        <div class="row g-4">
+            <div class="col-lg-3">
+                <partial name="_AccountNav" />
+            </div>
+            <div class="col-lg-9">
+                <partial name="_StatusMessage" model="@(TempData[AccountController.StatusMessageKey] as string)" />
+
+                <div class="panel mb-4">
+                    <h1 class="h4 mb-4">Hồ sơ cá nhân</h1>
+
+                    <form asp-action="Avatar" method="post" enctype="multipart/form-data" class="d-flex flex-wrap align-items-center gap-3 mb-4 pb-4 border-bottom">
+                        @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                        {
+                            <img id="avatarPreview" class="account-avatar account-avatar-lg" src="@Model.AvatarUrl" alt="Ảnh đại diện" width="88" height="88" />
+                        }
+                        else
+                        {
+                            <span id="avatarPlaceholder" class="account-avatar account-avatar-lg account-avatar-placeholder" aria-hidden="true">@(Model.FullName.FirstOrDefault())</span>
+                            <img id="avatarPreview" class="account-avatar account-avatar-lg d-none" alt="Ảnh đại diện" width="88" height="88" />
+                        }
+                        <div>
+                            <label for="avatar" class="form-label mb-1 fw-semibold">Ảnh đại diện</label>
+                            <div class="d-flex gap-2">
+                                <input id="avatar" name="avatar" type="file" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.webp" required />
+                                <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">Tải lên</button>
+                            </div>
+                            <div class="form-text">JPG, PNG hoặc WEBP, tối đa 5 MB.</div>
+                        </div>
+                    </form>
+
+                    <form asp-action="Profile" method="post" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="FullName" class="form-label"></label>
+                                <input asp-for="FullName" class="form-control" autocomplete="name" />
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" class="form-control" readonly disabled />
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label"></label>
+                                <input asp-for="PhoneNumber" class="form-control" type="tel" autocomplete="tel" placeholder="0912345678" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="Gender" class="form-label"></label>
+                                <select asp-for="Gender" class="form-select">
+                                    <option value="">Không chọn</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                                <span asp-validation-for="Gender" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="DateOfBirth" class="form-label"></label>
+                                <input asp-for="DateOfBirth" class="form-control" type="date" asp-format="{0:yyyy-MM-dd}" />
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <span class="small text-muted-fs">Thành viên từ @Model.MemberSince.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/profile.js" asp-append-version="true"></script>
+}

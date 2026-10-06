@@ -1,0 +1,69 @@
+@model FurnitureStore.Web.Areas.Admin.Models.CategoryFormViewModel
+@{
+    var isEdit = Model.Id.HasValue;
+    ViewData["Title"] = isEdit ? $"Sửa danh mục: {Model.Command.Name}" : "Thêm danh mục";
+}
+<a asp-action="Index" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Danh mục</a>
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" novalidate style="max-width: 760px">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="admin-card">
+        <div class="admin-card-body row g-3">
+            <div class="col-md-7">
+                <label asp-for="Command.Name" class="form-label">Tên danh mục *</label>
+                <input asp-for="Command.Name" class="form-control" required maxlength="150" />
+                <span asp-validation-for="Command.Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="Command.Slug" class="form-label">Slug</label>
+                <input asp-for="Command.Slug" class="form-control" maxlength="170" placeholder="Tự tạo từ tên" />
+                <span asp-validation-for="Command.Slug" class="text-danger small"></span>
+            </div>
+            <div class="col-md-7">
+                <label asp-for="Command.ParentId" class="form-label">Danh mục cha</label>
+                <select asp-for="Command.ParentId" class="form-select">
+                    <option value="">— Danh mục gốc (phòng) —</option>
+                    @foreach (var parent in Model.Parents)
+                    {
+                        <option value="@parent.Id">@parent.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="Command.ParentId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="Command.IconCssClass" class="form-label">Icon (Bootstrap Icons)</label>
+                <input asp-for="Command.IconCssClass" class="form-control" placeholder="bi-lamp" maxlength="60" />
+                <span asp-validation-for="Command.IconCssClass" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Command.Description" class="form-label">Mô tả</label>
+                <textarea asp-for="Command.Description" class="form-control" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Command.DisplayOrder" class="form-label">Thứ tự hiển thị</label>
+                <input asp-for="Command.DisplayOrder" class="form-control" type="number" min="0" max="10000" />
+            </div>
+            <div class="col-md-8 d-flex align-items-end gap-4">
+                <div class="form-check form-switch">
+                    <input asp-for="Command.IsActive" class="form-check-input" role="switch" />
+                    <label asp-for="Command.IsActive" class="form-check-label">Hiển thị</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input asp-for="Command.ShowOnHomePage" class="form-check-input" role="switch" />
+                    <label asp-for="Command.ShowOnHomePage" class="form-check-label">Hiện ở trang chủ</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Command.MetaTitle" class="form-label">Meta title</label>
+                <input asp-for="Command.MetaTitle" class="form-control" maxlength="200" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Command.MetaDescription" class="form-label">Meta description</label>
+                <input asp-for="Command.MetaDescription" class="form-control" maxlength="500" />
+            </div>
+        </div>
+        <div class="admin-card-body border-top d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu</button>
+        </div>
+    </div>
+</form>

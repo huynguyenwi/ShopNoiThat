@@ -1,0 +1,245 @@
+@model FurnitureStore.Web.ViewModels.HomeViewModel
+@using System.Text.Encodings.Web
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    var site = SiteOptions.Value;
+    var store = Model.Store;
+    var page = Model.Page;
+    ViewData["Canonical"] = site.BaseUrl.TrimEnd('/') + "/";
+    var homeUrl = site.BaseUrl.TrimEnd('/');
+    // JavaScriptEncoder.Default escapes < > & so the JSON cannot break out of the <script> element.
+    var ldOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.Default, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    var storeLd = JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "FurnitureStore",
+        ["name"] = store.Name,
+        ["description"] = store.About ?? store.Tagline,
+        ["url"] = homeUrl + "/",
+        ["image"] = homeUrl + "/images/og-default.png",
+        ["telephone"] = store.Hotline,
+        ["email"] = store.Email,
+        ["address"] = new Dictionary<string, string> { ["@type"] = "PostalAddress", ["streetAddress"] = store.Address, ["addressCountry"] = "VN" },
+        ["sameAs"] = new[] { store.FacebookUrl, store.TikTokUrl, store.ZaloUrl }.Where(u => !string.IsNullOrEmpty(u)).ToArray()
+    }, ldOptions);
+    var siteLd = JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "WebSite",
+        ["name"] = site.SiteName,
+        ["url"] = homeUrl + "/",
+        ["potentialAction"] = new Dictionary<string, string>
+        {
+            ["@type"] = "SearchAction",
+            ["target"] = homeUrl + "/products?q={search_term_string}",
+            ["query-input"] = "required name=search_term_string"
+        }
+    }, ldOptions);
+    var roomStyles = new Dictionary<string, string>
+    {
+        ["phong-khach"] = "room-living",
+        ["phong-ngu"] = "room-bedroom",
+        ["phong-an"] = "room-dining",
+        ["phong-lam-viec"] = "room-office"
+    };
+}
+
+@section Head {
+    <script type="application/ld+json">@Html.Raw(storeLd)</script>
+    <script type="application/ld+json">@Html.Raw(siteLd)</script>
+}
+
+<section class="hero">
+    <div class="container py-5">
+        <div class="row align-items-center g-5 py-lg-4">
+            <div class="col-lg-6">
+                <span class="hero-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i>Nội thất gỗ từ xưởng</span>
+                <h1 class="hero-title mt-3 mb-3">Không gian đẹp - <em>Nội thất chất lượng</em></h1>
+                <p class="hero-lead mb-4">
+                    Sofa, bàn ăn, giường, tủ và kệ được hoàn thiện thủ công từ gỗ tự nhiên.
+                    Chọn mẫu, màu sắc, kích thước phù hợp căn nhà của bạn - hoặc đặt đóng theo yêu cầu.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a class="btn btn-primary btn-lg" href="/products">Khám phá sản phẩm <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                    <a class="btn btn-outline-primary btn-lg" href="/contact"><i class="bi bi-telephone me-1" aria-hidden="true"></i>Nhận tư vấn</a>
+                </div>
+                <div class="hero-stats d-flex flex-wrap gap-4 gap-md-5 mt-5">
+                    <div>
+                        <div class="stat-value">24</div>
+                        <div class="stat-label">tháng bảo hành</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">100%</div>
+                        <div class="stat-label">sản xuất tại xưởng</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">7 ngày</div>
+                        <div class="stat-label">đổi trả nếu lỗi</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <img class="hero-illustration" src="~/images/hero-living-room.svg" width="580" height="471"
+                     alt="Minh họa phòng khách với sofa gỗ, đèn đứng và cây xanh" fetchpriority="high" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" aria-labelledby="rooms-title">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <p class="section-eyebrow">Mua sắm theo không gian</p>
+                <h2 id="rooms-title" class="section-title">Nội thất cho từng căn phòng</h2>
+            </div>
+            <a class="btn btn-outline-primary" href="/products">Xem tất cả</a>
+        </div>
+        <div class="row g-3 g-lg-4">
+            @foreach (var section in page.Rooms)
+            {
+                var room = section.Room;
+                <div class="col-6 col-lg-3">
+                    <a class="room-tile @(roomStyles.GetValueOrDefault(room.Slug, "room-living"))" href="/products?category=@room.Slug">
+                        <i class="bi bi-arrow-up-right room-arrow" aria-hidden="true"></i>
+                        <span class="room-icon"><i class="bi @(room.IconCssClass ?? "bi-house")" aria-hidden="true"></i></span>
+                        <span>
+                            <span class="room-name d-block">@room.Name</span>
+                            <span class="room-desc d-block">@string.Join(", ", room.Children.Take(3).Select(c => c.Name)) · @room.ProductCount sản phẩm</span>
+                        </span>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@await Html.PartialAsync("_ProductSection", ("featured-title", "Được chọn nhiều nhất", "Sản phẩm nổi bật", "/products?sort=bestselling", page.Featured, true))
+@await Html.PartialAsync("_ProductSection", ("new-title", "Vừa ra xưởng", "Sản phẩm mới", "/products?sort=newest", page.NewArrivals, false))
+@await Html.PartialAsync("_ProductSection", ("sale-title", "Ưu đãi có hạn", "Đang giảm giá", "/products?onSale=true", page.OnSale, true))
+@await Html.PartialAsync("_ProductSection", ("best-title", "Khách hàng tin chọn", "Bán chạy", "/products?sort=bestselling", page.BestSellers, false))
+
+@foreach (var (section, index) in page.Rooms.Select((s, i) => (s, i)))
+{
+    @await Html.PartialAsync("_ProductSection", ($"room-{section.Room.Slug}", "Nội thất", section.Room.Name, $"/products?category={section.Room.Slug}", section.Products, index % 2 == 0))
+}
+
+@if (Model.Reviews.Count > 0)
+{
+    <section class="section bg-cream" aria-labelledby="reviews-title">
+        <div class="container">
+            <div class="section-header">
+                <div>
+                    <p class="section-eyebrow">Khách hàng nói gì</p>
+                    <h2 id="reviews-title" class="section-title">Đánh giá từ khách hàng đã mua</h2>
+                </div>
+            </div>
+            <div class="row g-3 g-lg-4">
+                @foreach (var review in Model.Reviews)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <figure class="testimonial-card h-100 mb-0">
+                            <partial name="_Rating" model="((decimal)review.Rating, 0)" />
+                            <blockquote class="mt-2 mb-3">
+                                <p class="mb-0">“@(review.Comment.Length > 220 ? review.Comment[..220].TrimEnd() + "…" : review.Comment)”</p>
+                            </blockquote>
+                            <figcaption class="d-flex align-items-center gap-2">
+                                <span class="review-avatar" aria-hidden="true">@(review.ReviewerName.Length > 0 ? review.ReviewerName[..1].ToUpperInvariant() : "K")</span>
+                                <span class="min-w-0">
+                                    <strong class="d-block">@review.ReviewerName</strong>
+                                    <a class="small text-truncate d-block" href="/products/@review.ProductSlug#reviews">@review.ProductName</a>
+                                </span>
+                            </figcaption>
+                        </figure>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<section class="section" aria-labelledby="why-title">
+    <div class="container">
+        <div class="section-header">
+            <div>
+                <p class="section-eyebrow">Vì sao chọn Nhà Mộc</p>
+                <h2 id="why-title" class="section-title">Làm nội thất như làm cho chính ngôi nhà mình</h2>
+            </div>
+        </div>
+        <div class="row g-3 g-lg-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="feature-card">
+                    <span class="feature-icon"><i class="bi bi-tree" aria-hidden="true"></i></span>
+                    <h3>Gỗ tự nhiên chọn lọc</h3>
+                    <p>Óc chó, sồi, tần bì, cao su... được sấy và xử lý chống mối mọt trước khi gia công.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="feature-card">
+                    <span class="feature-icon"><i class="bi bi-rulers" aria-hidden="true"></i></span>
+                    <h3>Đóng theo kích thước</h3>
+                    <p>Tùy chỉnh kích thước, màu sơn và chất liệu cho vừa khít không gian của bạn.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="feature-card">
+                    <span class="feature-icon"><i class="bi bi-truck" aria-hidden="true"></i></span>
+                    <h3>Giao &amp; lắp đặt</h3>
+                    <p>Đội ngũ kỹ thuật giao hàng, lắp đặt tận nơi và hướng dẫn bảo quản.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="feature-card">
+                    <span class="feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+                    <h3>Bảo hành 24 tháng</h3>
+                    <p>Bảo hành khung, kết cấu và bề mặt hoàn thiện; hỗ trợ bảo dưỡng trọn đời.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0" aria-labelledby="store-title">
+    <div class="container">
+        <div class="store-card">
+            <div class="row g-0">
+                <div class="col-lg-6 p-4 p-lg-5">
+                    <p class="section-eyebrow" style="color: var(--fs-sand)">Showroom &amp; Xưởng sản xuất</p>
+                    <h2 id="store-title" class="section-title mb-4">Ghé thăm @store.Name</h2>
+                    <div class="store-info-item">
+                        <i class="bi bi-shop" aria-hidden="true"></i>
+                        <div><strong class="d-block text-white">Showroom</strong>@store.Address</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(store.WorkshopAddress))
+                    {
+                        <div class="store-info-item">
+                            <i class="bi bi-hammer" aria-hidden="true"></i>
+                            <div><strong class="d-block text-white">Xưởng sản xuất</strong>@store.WorkshopAddress</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(store.OpeningHours))
+                    {
+                        <div class="store-info-item">
+                            <i class="bi bi-clock" aria-hidden="true"></i>
+                            <div><strong class="d-block text-white">Giờ mở cửa</strong>@store.OpeningHours</div>
+                        </div>
+                    }
+                    <div class="store-info-item">
+                        <i class="bi bi-telephone" aria-hidden="true"></i>
+                        <div><strong class="d-block text-white">Hotline</strong><a href="tel:@store.HotlineDigits">@store.Hotline</a></div>
+                    </div>
+                    <a class="btn btn-wood mt-4" href="/contact">Liên hệ với chúng tôi <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                </div>
+                <div class="col-lg-6">
+                    @if (!string.IsNullOrEmpty(store.GoogleMapsEmbedUrl))
+                    {
+                        <iframe class="store-map" src="@store.GoogleMapsEmbedUrl" title="Bản đồ đường đến @store.Name"
+                                loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

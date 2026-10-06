@@ -1,0 +1,146 @@
+@model FurnitureStore.Web.Areas.Admin.Controllers.AdminQuoteDetailViewModel
+@using FurnitureStore.Domain.Enums
+@{
+    var q = Model.Quote;
+    var s = q.Spec;
+    ViewData["Title"] = "Báo giá " + q.Code;
+    var statuses = new[] { q.Status }.Concat(q.NextStatuses).ToList();
+    var final = q.FinalQuotedPrice ?? q.Breakdown.Total;
+}
+
+<a href="/admin/quotes" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Báo giá đặt đóng</a>
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header d-flex align-items-center gap-2">
+                <h2>@q.Code</h2>
+                <span class="badge @QuoteLabels.Badge(q.Status)">@QuoteLabels.Of(q.Status)</span>
+            </div>
+            <div class="admin-card-body">
+                <div class="row g-3 small">
+                    <div class="col-md-6">
+                        <div class="text-muted mb-1">Khách hàng</div>
+                        <div class="fw-semibold">@q.CustomerName</div>
+                        <div><a href="tel:@q.Phone">@q.Phone</a>@if (q.Email is not null) { <span> · <a href="mailto:@q.Email">@q.Email</a></span> }</div>
+                        @if (q.UserId is not null)
+                        {
+                            <a href="/admin/customers/details/@q.UserId">Hồ sơ khách hàng</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Khách vãng lai</span>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted mb-1">Gửi lúc</div>
+                        <div>@Format.DateTimeText(q.CreatedAt)</div>
+                        @if (q.QuotedAt is DateTime quotedAt)
+                        {
+                            <div class="text-muted mt-2 mb-1">Báo giá lúc</div>
+                            <div>@Format.DateTimeText(quotedAt) · @q.QuotedBy</div>
+                        }
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted mb-1">Yêu cầu của khách</div>
+                        <div class="contact-message">@q.RawRequest</div>
+                    </div>
+                    @if (q.CustomerNote is not null)
+                    {
+                        <div class="col-12"><div class="text-muted mb-1">Ghi chú của khách</div>@q.CustomerNote</div>
+                    }
+                    <div class="col-12">
+                        <div class="text-muted mb-1">Thông số tính giá</div>
+                        <div>@s.TypeName · @s.LengthMm x @s.WidthMm x @s.HeightMm mm · @(s.MaterialName ?? "chưa chọn chất liệu") · @s.FinishName · SL @s.Quantity @(s.ColorName is null ? "" : " · màu " + s.ColorName)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Giá dự kiến (hệ thống tính)</h2></div>
+            <div class="admin-card-body"><partial name="~/Views/Shared/_QuoteBreakdown.cshtml" model="q.Breakdown" /></div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(q.AiExplanation))
+        {
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Giải thích gửi khách</h2></div>
+                <div class="admin-card-body small">@q.AiExplanation</div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-5">
+        <form method="post" action="/admin/quotes/@q.Id/update" asp-antiforgery="true" class="admin-card mb-3">
+            <div class="admin-card-header"><h2>Xử lý báo giá</h2></div>
+            <div class="admin-card-body">
+                <input type="hidden" name="Version" value="@q.Version" />
+                <div class="mb-3">
+                    <label class="form-label" for="Status">Trạng thái</label>
+                    <select class="form-select" id="Status" name="Status">
+                        @foreach (var status in statuses)
+                        {
+                            <option value="@status" selected="@(status == q.Status)">@QuoteLabels.Of(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="FinalQuotedPrice">Giá chính thức báo khách (tổng, VNĐ)</label>
+                    <input class="form-control" id="FinalQuotedPrice" name="FinalQuotedPrice" type="number" min="0" step="10000" value="@final.ToString("0")" />
+                    <div class="form-text">Mặc định bằng tổng giá dự kiến @Format.Money(q.Breakdown.Total). Bắt buộc khi chuyển sang "Đã báo giá".</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="AdminNote">Ghi chú (gửi kèm email báo giá)</label>
+                    <textarea class="form-control" id="AdminNote" name="AdminNote" rows="3" maxlength="1000">@q.AdminNote</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" @(q.NextStatuses.Count == 0 ? "disabled" : null)>Lưu</button>
+                @if (q.NextStatuses.Count == 0)
+                {
+                    <div class="form-text">Báo giá đã kết thúc (@QuoteLabels.Of(q.Status)).</div>
+                }
+            </div>
+        </form>
+
+        @if (q.Status is not (QuoteStatus.Accepted or QuoteStatus.Cancelled))
+        {
+            <form method="post" action="/admin/quotes/@q.Id/recalculate" asp-antiforgery="true" class="admin-card">
+                <div class="admin-card-header"><h2>Tính lại theo thông số mới</h2></div>
+                <div class="admin-card-body row g-2">
+                    <input type="hidden" name="version" value="@q.Version" />
+                    <div class="col-12">
+                        <label class="form-label small" for="Kind">Loại</label>
+                        <select class="form-select form-select-sm" id="Kind" name="Kind">
+                            @foreach (var kind in Model.Kinds)
+                            {
+                                <option value="@kind.Slug" selected="@(kind.Slug == s.Kind)">@kind.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-4"><label class="form-label small" for="LengthMm">Dài</label><input class="form-control form-control-sm" id="LengthMm" name="LengthMm" type="number" value="@s.LengthMm" /></div>
+                    <div class="col-4"><label class="form-label small" for="WidthMm">Rộng</label><input class="form-control form-control-sm" id="WidthMm" name="WidthMm" type="number" value="@s.WidthMm" /></div>
+                    <div class="col-4"><label class="form-label small" for="HeightMm">Cao</label><input class="form-control form-control-sm" id="HeightMm" name="HeightMm" type="number" value="@s.HeightMm" /></div>
+                    <div class="col-7">
+                        <label class="form-label small" for="MaterialId">Chất liệu</label>
+                        <select class="form-select form-select-sm" id="MaterialId" name="MaterialId">
+                            @foreach (var m in Model.Options.Materials)
+                            {
+                                <option value="@m.Id" selected="@(m.Id == s.MaterialId)">@m.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small" for="Finish">Hoàn thiện</label>
+                        <select class="form-select form-select-sm" id="Finish" name="Finish">
+                            @foreach (var f in Enum.GetValues<FinishType>())
+                            {
+                                <option value="@f" selected="@(f == s.Finish)">@QuoteLabels.Of(f)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-4"><label class="form-label small" for="Quantity">Số lượng</label><input class="form-control form-control-sm" id="Quantity" name="Quantity" type="number" min="1" value="@s.Quantity" /></div>
+                    <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm w-100 mt-2"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Tính lại</button></div>
+                </div>
+            </form>
+        }
+    </div>
+</div>

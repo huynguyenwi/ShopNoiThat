@@ -1,0 +1,29 @@
+@inject IOptions<ApplicationSettings> SiteOptions
+@* Printable pages (QR labels, delivery slips): no back-office chrome, A4 print styles, a toolbar hidden when printing. *@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>@ViewData["Title"] | @SiteOptions.Value.SiteName</title>
+    <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/print.css" asp-append-version="true" />
+</head>
+<body class="print-body">
+    <div class="print-toolbar d-print-none">
+        <a href="@ViewData["BackUrl"]" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Quay lại</a>
+        <span class="small text-center">@ViewData["ToolbarNote"]</span>
+        <button type="button" class="btn btn-primary btn-sm" data-print><i class="bi bi-printer me-1" aria-hidden="true"></i>In</button>
+    </div>
+    <main class="print-page">
+        @RenderBody()
+    </main>
+    <script src="~/js/print.js" asp-append-version="true"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+@model FurnitureStore.Web.Areas.Admin.Models.AdminProductListViewModel
+@using FurnitureStore.Application.Catalog.Admin
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Sản phẩm";
+    var q = Model.Query;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Danh sách sản phẩm <span class="text-muted-fs fw-normal">(@Format.Number(Model.Result.TotalCount))</span></h2>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary btn-sm" href="/admin/products/qrlabels@(Context.Request.QueryString)" target="_blank" rel="noopener" title="In tem QR cho các sản phẩm đang lọc (tối đa 100)"><i class="bi bi-qr-code me-1" aria-hidden="true"></i>In tem QR</a>
+            <a class="btn btn-primary btn-sm" asp-action="Create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm sản phẩm</a>
+        </div>
+    </div>
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small" for="search">Tìm theo tên / SKU</label>
+                <input id="search" name="search" class="form-control form-control-sm" value="@q.Search" placeholder="VD: bàn ăn, BA-WALNUT" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small" for="categoryId">Danh mục</label>
+                <select id="categoryId" name="categoryId" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var c in Model.Lookups.Categories)
+                    {
+                        <option value="@c.Id" selected="@(q.CategoryId == c.Id)">@(c.ParentId.HasValue ? "— " : "")@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="status">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var s in Enum.GetValues<ProductStatus>())
+                    {
+                        <option value="@s" selected="@(q.Status == s)">@Labels.Of(s)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small" for="stock">Tồn kho</label>
+                <select id="stock" name="stock" class="form-select form-select-sm">
+                    <option value="All" selected="@(q.Stock == StockFilter.All)">Tất cả</option>
+                    <option value="InStock" selected="@(q.Stock == StockFilter.InStock)">Còn hàng</option>
+                    <option value="LowStock" selected="@(q.Stock == StockFilter.LowStock)">Sắp hết hàng</option>
+                    <option value="OutOfStock" selected="@(q.Stock == StockFilter.OutOfStock)">Có biến thể hết hàng</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-grid">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Sản phẩm</th>
+                    <th scope="col">Danh mục</th>
+                    <th scope="col" class="text-end">Giá</th>
+                    <th scope="col" class="text-center">Tồn kho</th>
+                    <th scope="col" class="text-center">Biến thể</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col" class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Result.Items.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted-fs py-5">Không có sản phẩm phù hợp.</td></tr>
+                }
+                @foreach (var p in Model.Result.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (!string.IsNullOrEmpty(p.ImageUrl))
+                                {
+                                    <img class="admin-thumb" src="@p.ImageUrl" alt="" width="48" height="48" loading="lazy" />
+                                }
+                                <div class="min-w-0">
+                                    <a class="fw-semibold text-decoration-none" asp-action="Edit" asp-route-id="@p.Id">@p.Name</a>
+                                    @if (p.IsFeatured)
+                                    {
+                                        <i class="bi bi-star-fill text-warning ms-1" role="img" title="Nổi bật" aria-label="Nổi bật"></i>
+                                    }
+                                    <div class="small text-muted-fs">@p.Sku · Đã bán @Format.Number(p.SoldCount)</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>@p.CategoryName</td>
+                        <td class="text-end text-nowrap">
+                            <div class="fw-semibold">@Format.Money(p.Price)</div>
+                            @if (p.OriginalPrice.HasValue)
+                            {
+                                <div class="small text-muted-fs text-decoration-line-through">@Format.Money(p.OriginalPrice.Value)</div>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <span class="fw-semibold @(p.StockQuantity == 0 ? "text-danger" : "")">@Format.Number(p.StockQuantity)</span>
+                            @if (p.LowStockVariantCount > 0)
+                            {
+                                <div><span class="badge text-bg-warning" title="Số biến thể sắp hết / hết hàng">@p.LowStockVariantCount sắp hết</span></div>
+                            }
+                        </td>
+                        <td class="text-center">@p.VariantCount</td>
+                        <td>
+                            <form method="post" asp-action="Status" asp-route-id="@p.Id" class="d-flex">
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <select name="status" class="form-select form-select-sm status-select" data-autosubmit aria-label="Trạng thái của @p.Name">
+                                    @foreach (var s in Enum.GetValues<ProductStatus>())
+                                    {
+                                        <option value="@s" selected="@(p.Status == s)">@Labels.Of(s)</option>
+                                    }
+                                </select>
+                            </form>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-light btn-sm" href="/products/@p.Slug" target="_blank" rel="noopener" title="Xem trên web" aria-label="Xem @p.Name trên web"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+                            <a class="btn btn-light btn-sm" asp-action="Edit" asp-route-id="@p.Id" title="Sửa" aria-label="Sửa @p.Name"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                            <form method="post" asp-action="Delete" asp-route-id="@p.Id" class="d-inline" data-confirm="Xóa sản phẩm &quot;@p.Name&quot;? Sản phẩm sẽ bị ẩn khỏi cửa hàng.">
+                                <button type="submit" class="btn btn-light btn-sm text-danger" title="Xóa" aria-label="Xóa @p.Name"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0">
+        @{ Func<int, string> pageUrl = Model.PageUrl; }
+        <partial name="_Pagination" model="(Model.Result.Page, Model.Result.TotalPages, pageUrl)" />
+    </div>
+</div>

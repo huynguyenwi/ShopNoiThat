@@ -1,0 +1,14 @@
+<Project>
+  <!-- Common settings applied to every project in the solution. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <Authors>FurnitureStore Team</Authors>
+    <Company>FurnitureStore</Company>
+    <!-- CS1591: missing XML doc comments on public members. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

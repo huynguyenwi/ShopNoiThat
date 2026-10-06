@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain layer: entities, enums, value objects, constants. No external dependencies. -->
+  <PropertyGroup>
+    <RootNamespace>FurnitureStore.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

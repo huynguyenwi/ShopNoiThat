@@ -1,0 +1,78 @@
+@inject IOptions<ApplicationSettings> SiteOptions
+@inject IStoreInfoService StoreInfo
+@{
+    var site = SiteOptions.Value;
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
+}
+<footer class="site-footer mt-auto">
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <a class="brand mb-3" href="/">
+                    <img src="~/images/logo-mark.svg" width="40" height="40" alt="" />
+                    <span>
+                        <span class="brand-name">Nhà Mộc</span>
+                        <span class="brand-sub">Furniture</span>
+                    </span>
+                </a>
+                <p class="text-muted-fs mt-3 mb-4">@(store.Tagline ?? site.Tagline). Nội thất gỗ sản xuất trực tiếp tại xưởng, thiết kế theo yêu cầu cho mọi không gian sống.</p>
+                <div class="d-flex gap-2">
+                    @if (!string.IsNullOrEmpty(store.FacebookUrl))
+                    {
+                        <a class="social-link" href="@store.FacebookUrl" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>
+                    }
+                    @if (!string.IsNullOrEmpty(store.TikTokUrl))
+                    {
+                        <a class="social-link" href="@store.TikTokUrl" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>
+                    }
+                    @if (!string.IsNullOrEmpty(store.ZaloUrl))
+                    {
+                        <a class="social-link" href="@store.ZaloUrl" target="_blank" rel="noopener noreferrer" aria-label="Zalo"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>
+                    }
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <h2>Mua sắm</h2>
+                <ul class="list-unstyled footer-links mb-0">
+                    <li><a href="/products?category=phong-khach">Phòng khách</a></li>
+                    <li><a href="/products?category=phong-ngu">Phòng ngủ</a></li>
+                    <li><a href="/products?category=phong-an">Phòng ăn</a></li>
+                    <li><a href="/products?category=phong-lam-viec">Phòng làm việc</a></li>
+                </ul>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <h2>Hỗ trợ</h2>
+                <ul class="list-unstyled footer-links mb-0">
+                    <li><a href="/contact">Liên hệ</a></li>
+                    <li><a href="/bao-gia">Báo giá đặt đóng</a></li>
+                    <li><a href="/tu-van">Tư vấn nội thất AI</a></li>
+                    <li><a href="/account/orders">Tra cứu đơn hàng</a></li>
+                    <li><a href="/cart">Giỏ hàng</a></li>
+                    <li><a href="/wishlist">Yêu thích</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-4">
+                <h2>Showroom &amp; Xưởng</h2>
+                <ul class="list-unstyled footer-links mb-0">
+                    <li><i class="bi bi-shop me-2" aria-hidden="true"></i>@store.Address</li>
+                    @if (!string.IsNullOrEmpty(store.WorkshopAddress))
+                    {
+                        <li><i class="bi bi-hammer me-2" aria-hidden="true"></i>Xưởng: @store.WorkshopAddress</li>
+                    }
+                    <li><i class="bi bi-telephone me-2" aria-hidden="true"></i><a href="tel:@store.HotlineDigits">@store.Hotline</a></li>
+                    <li><i class="bi bi-envelope me-2" aria-hidden="true"></i><a href="mailto:@store.Email">@store.Email</a></li>
+                    <li><i class="bi bi-clock me-2" aria-hidden="true"></i>@store.OpeningHours</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="container d-flex flex-column flex-md-row justify-content-between gap-2 py-3">
+            <span>&copy; @DateTime.UtcNow.Year @store.Name. Bảo lưu mọi quyền.</span>
+            <span>Hình ảnh minh họa dùng placeholder cho bản MVP.</span>
+        </div>
+    </div>
+</footer>

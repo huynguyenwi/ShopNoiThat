@@ -1,0 +1,18 @@
+@model FurnitureStore.Application.AI.AiConversationDto
+@{
+    ViewData["Title"] = Model.Conversation.Title;
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <a href="/account/ai-history" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Lịch sử tư vấn AI</a>
+                <h1 class="h5 mb-1">@Model.Conversation.Title</h1>
+                <p class="small text-muted-fs mb-4">@AiLabels.Of(Model.Conversation.Type) · @Format.DateTimeText(Model.Conversation.CreatedAt)</p>
+                <partial name="_AiMessages" model="Model.Messages" />
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,41 @@
+## .NET build output
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.swp
+
+## Publish output
+publish/
+artifacts/
+
+## Secrets - never commit
+*.pfx
+*.key
+.env
+.env.*
+appsettings.*.local.json
+secrets.json
+
+## Runtime uploads (user generated content) and development email pickup folder
+src/FurnitureStore.Web/wwwroot/uploads/
+src/FurnitureStore.Web/App_Data/
+
+## OS files
+Thumbs.db
+.DS_Store
+
+## Browser end-to-end suites (tests/e2e)
+tests/e2e/node_modules/
+tests/e2e/output/

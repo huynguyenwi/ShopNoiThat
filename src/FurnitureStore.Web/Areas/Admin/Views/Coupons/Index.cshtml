@@ -1,0 +1,85 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Sales.CouponListItemDto>
+@using FurnitureStore.Application.Sales
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Mã giảm giá";
+    var query = ViewData["Query"] as CouponQuery ?? new CouponQuery();
+    Func<int, string> pageUrl = p => $"/admin/coupons?page={p}" + (query.Status.HasValue ? $"&status={query.Status}" : "")
+        + (string.IsNullOrEmpty(query.Search) ? "" : $"&search={Uri.EscapeDataString(query.Search)}");
+    var currentUrl = pageUrl(Model.Page);
+}
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <p class="text-muted-fs small mb-0">Mã <strong>công khai</strong> hiện trong mục "Ưu đãi dành cho bạn" ở giỏ hàng và trang thanh toán; mã riêng tư khách phải tự nhập.</p>
+    <a class="btn btn-primary btn-sm" href="/admin/coupons/create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Tạo mã giảm giá</a>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small" for="search">Tìm theo mã hoặc tên</label>
+                <input id="search" name="search" value="@query.Search" class="form-control form-control-sm" maxlength="100" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="status">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var s in Enum.GetValues<CouponStatus>())
+                    {
+                        <option value="@s" selected="@(query.Status == s)">@CouponText.StatusName(s)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0 align-middle">
+            <thead>
+                <tr><th>Mã / chương trình</th><th>Ưu đãi</th><th>Điều kiện</th><th>Thời gian</th><th class="text-center">Đã dùng</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted-fs py-4">Chưa có mã giảm giá phù hợp.</td></tr>
+                }
+                @foreach (var c in Model.Items)
+                {
+                    <tr class="@(c.IsActive ? "" : "text-muted")" data-coupon-row="@c.Code">
+                        <td>
+                            <a href="/admin/coupons/@c.Id" class="fw-semibold coupon-code-text">@c.Code</a>
+                            <div class="small">@c.Name</div>
+                            <span class="badge @(c.IsPublic ? "text-bg-light border" : "text-bg-light")">@(c.IsPublic ? "Công khai" : "Riêng tư")</span>
+                        </td>
+                        <td class="small">@c.Benefit</td>
+                        <td class="small">
+                            @(c.MinOrderAmount > 0 ? "Đơn từ " + Format.Money(c.MinOrderAmount) : "Mọi đơn hàng")
+                            @if (c.UsageLimitPerUser is int perUser)
+                            {
+                                <div class="text-muted-fs">Mỗi khách @perUser lần</div>
+                            }
+                        </td>
+                        <td class="small text-nowrap">
+                            @(c.StartsAt is DateTime s ? Format.DateTimeText(s) : "Ngay")
+                            <div class="text-muted-fs">→ @(c.EndsAt is DateTime e ? Format.DateTimeText(e) : "Không giới hạn")</div>
+                        </td>
+                        <td class="text-center text-nowrap">@c.UsedCount<span class="text-muted-fs"> / @(c.UsageLimit?.ToString() ?? "∞")</span></td>
+                        <td><span class="badge @CouponBadge.For(c.Status)">@CouponText.StatusName(c.Status)</span></td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-light btn-sm" href="/admin/coupons/@c.Id/edit" title="Sửa" aria-label="Sửa mã @c.Code"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                            <form method="post" action="/admin/coupons/@c.Id/active" class="d-inline" asp-antiforgery="true">
+                                <input type="hidden" name="active" value="@(c.IsActive ? "false" : "true")" />
+                                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                <button type="submit" class="btn btn-light btn-sm" title="@(c.IsActive ? "Tắt mã" : "Bật mã")">
+                                    <i class="bi @(c.IsActive ? "bi-toggle-on text-success" : "bi-toggle-off")" aria-hidden="true"></i><span class="visually-hidden">@(c.IsActive ? "Tắt" : "Bật") mã @c.Code</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" /></div>
+</div>

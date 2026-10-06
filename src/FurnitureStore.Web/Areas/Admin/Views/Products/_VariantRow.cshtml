@@ -1,0 +1,111 @@
+@model (string Key, FurnitureStore.Application.Catalog.Admin.VariantUpsertModel Variant, FurnitureStore.Application.Catalog.Admin.CatalogLookupsDto Lookups, bool IsDefault)
+@{
+    var v = Model.Variant;
+    var k = Model.Key;
+    var p = $"Command.Variants[{k}]";
+}
+<tbody class="variant-row" data-variant-row data-key="@k">
+    <tr>
+        <td class="text-center align-middle">
+            <input type="hidden" name="Command.Variants.Index" value="@k" />
+            <input type="hidden" name="@(p).Id" value="@v.Id" />
+            <input class="form-check-input" type="radio" name="defaultVariantKey" value="@k" checked="@Model.IsDefault" title="Biến thể mặc định" aria-label="Biến thể mặc định" />
+        </td>
+        <td>
+            <input class="form-control form-control-sm" name="@(p).Sku" value="@v.Sku" required maxlength="60" placeholder="SKU" data-variant-sku aria-label="SKU" />
+            <input class="form-control form-control-sm mt-1" name="@(p).Name" value="@v.Name" maxlength="200" placeholder="Tên (tự tạo nếu trống)" aria-label="Tên biến thể" />
+        </td>
+        <td>
+            <select class="form-select form-select-sm" name="@(p).ColorId" data-variant-color aria-label="Màu">
+                <option value="">— Màu —</option>
+                @foreach (var o in Model.Lookups.Colors)
+                {
+                    <option value="@o.Id" data-code="@o.Slug" selected="@(v.ColorId == o.Id)">@o.Name</option>
+                }
+            </select>
+            <select class="form-select form-select-sm mt-1" name="@(p).MaterialId" aria-label="Chất liệu">
+                <option value="">— Chất liệu —</option>
+                @foreach (var o in Model.Lookups.Materials)
+                {
+                    <option value="@o.Id" selected="@(v.MaterialId == o.Id)">@o.Name</option>
+                }
+            </select>
+        </td>
+        <td>
+            <select class="form-select form-select-sm" name="@(p).SizeId" data-variant-size aria-label="Kích thước">
+                <option value="">— Kích thước —</option>
+                @foreach (var o in Model.Lookups.Sizes)
+                {
+                    <option value="@o.Id" data-code="@o.Slug" selected="@(v.SizeId == o.Id)">@o.Name</option>
+                }
+            </select>
+            <select class="form-select form-select-sm mt-1" name="@(p).StyleId" aria-label="Mẫu mã">
+                <option value="">— Mẫu mã —</option>
+                @foreach (var o in Model.Lookups.Styles)
+                {
+                    <option value="@o.Id" selected="@(v.StyleId == o.Id)">@o.Name</option>
+                }
+            </select>
+        </td>
+        <td>
+            <input class="form-control form-control-sm" type="number" name="@(p).Price" value="@(v.Price > 0 ? v.Price.ToString("0") : "")" min="1" step="1000" required placeholder="Giá bán" aria-label="Giá bán" />
+            <input class="form-control form-control-sm mt-1" type="number" name="@(p).OriginalPrice" value="@v.OriginalPrice?.ToString("0")" min="1" step="1000" placeholder="Giá cũ" aria-label="Giá cũ (gạch ngang)" />
+        </td>
+        <td>
+            <input class="form-control form-control-sm" type="number" name="@(p).StockQuantity" value="@v.StockQuantity" min="0" max="100000" required aria-label="Tồn kho" />
+            <input class="form-control form-control-sm mt-1" type="number" name="@(p).LowStockThreshold" value="@v.LowStockThreshold" min="0" max="1000" title="Ngưỡng cảnh báo sắp hết" aria-label="Ngưỡng sắp hết hàng" />
+        </td>
+        <td class="text-center align-middle">
+            <input class="form-check-input" type="checkbox" name="@(p).IsActive" value="true" checked="@v.IsActive" aria-label="Đang bán" />
+            <input type="hidden" name="@(p).IsActive" value="false" />
+        </td>
+        <td class="text-end align-middle text-nowrap">
+            <button type="button" class="btn btn-light btn-sm" data-toggle-variant-details title="Chi tiết" aria-label="Chi tiết biến thể"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-light btn-sm text-danger" data-remove-variant title="Xóa biến thể" aria-label="Xóa biến thể"><i class="bi bi-trash" aria-hidden="true"></i></button>
+        </td>
+    </tr>
+    <tr class="variant-details" hidden>
+        <td></td>
+        <td colspan="7">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Chất liệu phụ</label>
+                    <select class="form-select form-select-sm" name="@(p).SecondaryMaterialId">
+                        <option value="">Không có</option>
+                        @foreach (var o in Model.Lookups.Materials)
+                        {
+                            <option value="@o.Id" selected="@(v.SecondaryMaterialId == o.Id)">@o.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Bộ phận</label>
+                    <input class="form-control form-control-sm" name="@(p).SecondaryMaterialPart" value="@v.SecondaryMaterialPart" maxlength="60" placeholder="VD: Khung" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Màu phụ</label>
+                    <select class="form-select form-select-sm" name="@(p).SecondaryColorId">
+                        <option value="">Không có</option>
+                        @foreach (var o in Model.Lookups.Colors)
+                        {
+                            <option value="@o.Id" selected="@(v.SecondaryColorId == o.Id)">@o.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Bộ phận</label>
+                    <input class="form-control form-control-sm" name="@(p).SecondaryColorPart" value="@v.SecondaryColorPart" maxlength="60" placeholder="VD: Chân" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Khối lượng (kg)</label>
+                    <input class="form-control form-control-sm" type="number" step="0.1" min="0" name="@(p).WeightKg" value="@v.WeightKg?.ToString("0.##")" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small mb-1">Ảnh riêng cho biến thể</label>
+                    <input class="form-control form-control-sm" type="file" name="VariantImage_@k" accept=".jpg,.jpeg,.png,.webp" data-image-input data-preview-target="preview-@k" />
+                    <div class="image-previews" id="preview-@k"></div>
+                </div>
+            </div>
+        </td>
+    </tr>
+</tbody>

@@ -1,0 +1,93 @@
+@using Microsoft.AspNetCore.Antiforgery
+@inject IOptions<ApplicationSettings> SiteOptions
+@inject IAntiforgery Antiforgery
+@inject IOptions<SeoSettings> SeoOptions
+@{
+    var seo = SeoOptions.Value;
+    var site = SiteOptions.Value;
+    var pageTitle = ViewData["Title"] as string;
+    var fullTitle = string.IsNullOrWhiteSpace(pageTitle) ? $"{site.SiteName} - {site.Tagline}" : $"{pageTitle} | {site.SiteName}";
+    var description = ViewData["MetaDescription"] as string
+        ?? $"{site.SiteName}: cửa hàng và xưởng nội thất gỗ - sofa, bàn ăn, giường, tủ, kệ. Tư vấn nội thất bằng AI và báo giá đồ gỗ theo yêu cầu.";
+    var baseUrl = site.BaseUrl.TrimEnd('/');
+    var canonical = ViewData["Canonical"] as string ?? $"{baseUrl}{Context.Request.Path}";
+    // Social networks do not render SVG: pages without a raster image share the default card image.
+    var ogImage = ViewData["OgImage"] as string;
+    var ogIsDefault = string.IsNullOrEmpty(ogImage);
+    if (ogIsDefault) ogImage = baseUrl + seo.DefaultOgImage;
+    var ogType = ViewData["OgType"] as string ?? "website";
+    var robots = seo.RobotsFor(Context, ViewData["Robots"] as string);
+    var csrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@fullTitle</title>
+    <meta name="description" content="@description" />
+    <meta name="robots" content="@robots" />
+    <link rel="canonical" href="@canonical" />
+    <meta name="theme-color" content="#5b3a24" />
+    <meta name="csrf-token" content="@csrfToken" />
+    <meta name="user-signed-in" content="@(User.Identity?.IsAuthenticated == true ? "true" : "false")" />
+
+    <meta property="og:type" content="@ogType" />
+    <meta property="og:site_name" content="@site.SiteName" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:title" content="@fullTitle" />
+    <meta property="og:description" content="@description" />
+    <meta property="og:url" content="@canonical" />
+    <meta property="og:image" content="@ogImage" />
+    <meta name="twitter:image" content="@ogImage" />
+    @if (ogIsDefault)
+    {
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="@site.SiteName - nội thất gỗ từ xưởng" />
+    }
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@fullTitle" />
+    <meta name="twitter:description" content="@description" />
+
+    <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    <a class="visually-hidden-focusable skip-link" href="#main">Bỏ qua đến nội dung chính</a>
+
+    <partial name="_Header" />
+
+    <main id="main" role="main">
+        @RenderBody()
+    </main>
+
+    <partial name="_Footer" />
+
+    @{ var showChat = !FurnitureStore.Web.Services.ChatIdentity.IsStaff(User) && ViewData["HideChat"] is not true; }
+    @if (showChat)
+    {
+        <partial name="_AiAssistant" />
+        <partial name="_ChatWidget" />
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/cart.js" asp-append-version="true"></script>
+    @if (showChat)
+    {
+        <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+        <script src="~/js/chat-core.js" asp-append-version="true"></script>
+        <script src="~/js/chat-widget.js" asp-append-version="true"></script>
+    }
+    <script src="~/js/ai-assistant.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

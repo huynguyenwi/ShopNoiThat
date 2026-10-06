@@ -1,0 +1,52 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Engagement.ContactMessageDto>
+@using FurnitureStore.Domain.Enums
+@{
+    ViewData["Title"] = "Liên hệ";
+    var status = ViewData["Status"] as ContactMessageStatus?;
+    var search = ViewData["Search"] as string;
+    string StatusLabel(ContactMessageStatus s) => s switch { ContactMessageStatus.New => "Mới", ContactMessageStatus.Read => "Đã xem", ContactMessageStatus.Replied => "Đã phản hồi", _ => "Lưu trữ" };
+    Func<int, string> pageUrl = p => $"/admin/contacts?page={p}" + (status.HasValue ? $"&status={status}" : "") + (string.IsNullOrEmpty(search) ? "" : $"&search={Uri.EscapeDataString(search)}");
+}
+
+<div class="admin-card">
+    <div class="admin-card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small" for="search">Tìm kiếm</label>
+                <input id="search" name="search" value="@search" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small" for="status">Trạng thái</label>
+                <select id="status" name="status" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    @foreach (var s in Enum.GetValues<ContactMessageStatus>())
+                    {
+                        <option value="@s" selected="@(status == s)">@StatusLabel(s)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary btn-sm" type="submit">Lọc</button></div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table table-hover mb-0">
+            <thead><tr><th>Người gửi</th><th>Nội dung</th><th>Thời gian</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="4" class="text-center text-muted-fs py-4">Không có liên hệ.</td></tr>
+                }
+                @foreach (var m in Model.Items)
+                {
+                    <tr class="@(m.Status == ContactMessageStatus.New ? "fw-semibold" : "")">
+                        <td><a href="/admin/contacts/details/@m.Id">@m.FullName</a><div class="small text-muted-fs fw-normal">@m.Phone · @m.Email</div></td>
+                        <td class="small">@(m.Subject ?? "") <span class="text-muted-fs fw-normal">@(m.Message.Length > 90 ? m.Message[..90] + "…" : m.Message)</span></td>
+                        <td class="small fw-normal">@Format.DateTimeText(m.CreatedAt)</td>
+                        <td><span class="badge @(m.Status == ContactMessageStatus.New ? "text-bg-warning" : "text-bg-light")">@StatusLabel(m.Status)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="admin-card-body pt-0"><partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" /></div>
+</div>

@@ -1,0 +1,53 @@
+@model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Sales.OrderListItemDto>
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+    Func<int, string> pageUrl = page => page > 1 ? $"/account/orders?page={page}" : "/account/orders";
+}
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-3"><partial name="~/Views/Account/_AccountNav.cshtml" /></div>
+            <div class="col-lg-9">
+                <partial name="_StatusMessage" model="@(TempData[AccountController.StatusMessageKey] as string)" />
+                <div class="panel">
+                    <h1 class="h4 mb-4">Đơn hàng của tôi</h1>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-receipt" aria-hidden="true"></i>
+                            <h2 class="h5 mt-3">Bạn chưa có đơn hàng nào</h2>
+                            <a class="btn btn-primary mt-2" href="/products">Mua sắm ngay</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="order-list">
+                            @foreach (var order in Model.Items)
+                            {
+                                <a class="order-row" href="/account/orders/@order.OrderCode">
+                                    <span class="order-row-image">
+                                        @if (order.FirstItemImage is not null)
+                                        {
+                                            <img src="@order.FirstItemImage" alt="" width="72" height="54" loading="lazy" />
+                                        }
+                                    </span>
+                                    <span class="flex-grow-1 min-w-0">
+                                        <span class="d-block fw-semibold">@order.OrderCode</span>
+                                        <span class="d-block small text-muted-fs text-truncate">@order.FirstItemName @(order.ItemCount > 1 ? $"và {order.ItemCount - 1} sản phẩm khác" : "")</span>
+                                        <span class="d-block small text-muted-fs">@Format.DateTimeText(order.PlacedAt)</span>
+                                    </span>
+                                    <span class="text-end">
+                                        <span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span>
+                                        <span class="d-block fw-bold mt-1">@Format.Money(order.TotalAmount)</span>
+                                    </span>
+                                </a>
+                            }
+                        </div>
+                        <partial name="_Pagination" model="(Model.Page, Model.TotalPages, pageUrl)" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,110 @@
+@inject IOptions<ApplicationSettings> SiteOptions
+@inject IStoreInfoService StoreInfo
+@{
+    var site = SiteOptions.Value;
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
+    var searchQuery = Context.Request.Query["q"].ToString();
+}
+<div class="topbar d-none d-md-block">
+    <div class="container d-flex justify-content-between align-items-center py-2">
+        <div class="d-flex gap-4">
+            <span><i class="bi bi-telephone me-1" aria-hidden="true"></i>Hotline: <a href="tel:@store.HotlineDigits">@store.Hotline</a></span>
+            <span class="d-none d-lg-inline"><i class="bi bi-clock me-1" aria-hidden="true"></i>@store.OpeningHours</span>
+        </div>
+        <div class="d-flex gap-4">
+            <a href="/contact"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>Showroom &amp; Xưởng</a>
+            <a href="mailto:@store.Email"><i class="bi bi-envelope me-1" aria-hidden="true"></i>@store.Email</a>
+        </div>
+    </div>
+</div>
+
+<header class="site-header sticky-top">
+    <nav class="navbar navbar-expand-lg" aria-label="Điều hướng chính">
+        <div class="container">
+            <a class="brand navbar-brand me-lg-4" href="/" aria-label="@site.SiteName - Trang chủ">
+                <img src="~/images/logo-mark.svg" width="40" height="40" alt="" />
+                <span>
+                    <span class="brand-name">Nhà Mộc</span>
+                    <span class="brand-sub">Furniture</span>
+                </span>
+            </a>
+
+            <div class="d-flex align-items-center gap-1 d-lg-none ms-auto">
+                @await Component.InvokeAsync("CartBadge")
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Mở menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-lg-3">
+                    @await Component.InvokeAsync("CategoryMenu")
+                    <li class="nav-item"><a class="nav-link" href="/products">Sản phẩm</a></li>
+                    <li class="nav-item nav-item-wide"><a class="nav-link" href="/products?onSale=true">Khuyến mãi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/tu-van"><i class="bi bi-stars me-1 text-wood" aria-hidden="true"></i>Tư vấn AI</a></li>
+                    <li class="nav-item nav-item-wide"><a class="nav-link" href="/contact">Liên hệ</a></li>
+                </ul>
+
+                <form class="header-search me-lg-auto" role="search" action="/products" method="get" data-search-autocomplete>
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <label for="headerSearch" class="visually-hidden">Tìm kiếm sản phẩm</label>
+                    <input id="headerSearch" class="form-control" type="search" name="q" value="@searchQuery"
+                           placeholder="Tìm bàn ăn, sofa, giường..." autocomplete="off" maxlength="100"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggestions" />
+                    <div id="searchSuggestions" class="search-suggestions" role="listbox" hidden></div>
+                </form>
+
+                <div class="d-flex align-items-center gap-1 mt-2 mt-lg-0 ms-lg-3">
+                    <a class="header-action" href="/wishlist" aria-label="Sản phẩm yêu thích" title="Yêu thích"><i class="bi bi-heart" aria-hidden="true"></i></a>
+                    @await Component.InvokeAsync("CartBadge", new { cssClass = "d-none d-lg-inline-flex" })
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        var avatar = User.AvatarUrl();
+                        <div class="dropdown ms-2">
+                            <button class="btn btn-light btn-sm user-menu-toggle dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                @if (!string.IsNullOrEmpty(avatar))
+                                {
+                                    <img class="user-menu-avatar" src="@avatar" alt="" width="28" height="28" />
+                                }
+                                else
+                                {
+                                    <span class="user-menu-avatar account-avatar-placeholder" aria-hidden="true">@(User.DisplayName().FirstOrDefault())</span>
+                                }
+                                <span class="text-truncate" style="max-width: 140px">@User.DisplayName()</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @if (User.IsInRole(AppRoles.Admin))
+                                {
+                                    <li><a class="dropdown-item" href="/admin"><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Trang quản trị</a></li>
+                                    <li><a class="dropdown-item" href="/admin/chat"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>Chat với khách hàng</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                }
+                                else if (User.IsInRole(AppRoles.Staff))
+                                {
+                                    <li><a class="dropdown-item" href="/admin/chat"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>Chat với khách hàng</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                }
+                                <li><a class="dropdown-item" href="/account/profile"><i class="bi bi-person me-2" aria-hidden="true"></i>Hồ sơ cá nhân</a></li>
+                                <li><a class="dropdown-item" href="/account/orders"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="/account/addresses"><i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Sổ địa chỉ</a></li>
+                                <li><a class="dropdown-item" href="/wishlist"><i class="bi bi-heart me-2" aria-hidden="true"></i>Yêu thích</a></li>
+                                <li><a class="dropdown-item" href="/account/changepassword"><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>Đổi mật khẩu</a></li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li>
+                                    <form method="post" action="/account/logout" asp-antiforgery="true">
+                                        <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Đăng xuất</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-outline-primary btn-sm ms-2" href="/account/login"><i class="bi bi-person me-1" aria-hidden="true"></i>Đăng nhập</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>

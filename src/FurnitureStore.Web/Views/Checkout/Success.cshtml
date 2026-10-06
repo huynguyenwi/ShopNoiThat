@@ -1,0 +1,50 @@
+@model FurnitureStore.Application.Sales.OrderDetailDto
+@using FurnitureStore.Application.Qr
+@{
+    ViewData["Title"] = "Đặt hàng thành công";
+    var pay = Model.PaymentInstructions;
+}
+
+<section class="section">
+    <div class="container" style="max-width: 760px">
+        <div class="panel text-center p-4 p-md-5">
+            <span class="auth-icon" style="background:#e4f1e7;color:#3f7d4e"><i class="bi bi-bag-check" aria-hidden="true"></i></span>
+            <h1 class="h3">Cảm ơn bạn đã đặt hàng!</h1>
+            <p class="text-muted-fs mb-1">Mã đơn hàng</p>
+            <p class="fs-4 fw-bold text-wood mb-3" data-order-code>@Model.OrderCode</p>
+            <p class="text-muted-fs">Chúng tôi đã gửi email xác nhận tới <strong>@Model.CustomerEmail</strong> và sẽ gọi điện xác nhận trong giờ làm việc.</p>
+
+            @if (pay is not null)
+            {
+                <div class="bank-box text-start my-4">
+                    <h2 class="h6 mb-3"><i class="bi bi-bank me-2" aria-hidden="true"></i>Thông tin chuyển khoản</h2>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4">Ngân hàng</dt><dd class="col-sm-8">@pay.BankName (@pay.Branch)</dd>
+                        <dt class="col-sm-4">Số tài khoản</dt><dd class="col-sm-8 fw-bold">@pay.AccountNumber</dd>
+                        <dt class="col-sm-4">Chủ tài khoản</dt><dd class="col-sm-8">@pay.AccountName</dd>
+                        <dt class="col-sm-4">Số tiền</dt><dd class="col-sm-8 fw-bold text-wood">@Format.Money(pay.Amount)</dd>
+                        <dt class="col-sm-4">Nội dung</dt><dd class="col-sm-8 fw-bold">@pay.TransferNote</dd>
+                    </dl>
+                    <p class="small text-muted-fs mt-3 mb-0">Đơn hàng sẽ được xử lý ngay khi cửa hàng nhận được tiền. Vui lòng ghi đúng nội dung chuyển khoản.</p>
+                </div>
+            }
+            else
+            {
+                <p class="mb-4"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Bạn sẽ thanh toán <strong>@Format.Money(Model.TotalAmount)</strong> khi nhận hàng.</p>
+            }
+
+            <div class="order-qr mb-4" data-qr-card>
+                <img class="qr-image" src="@QrLinks.OrderImage(Model.OrderCode)" width="140" height="140" alt="Mã QR đơn hàng @Model.OrderCode" />
+                <p class="small text-muted-fs mt-2 mb-0">
+                    Mã QR của đơn hàng: quét để mở nhanh đơn này trên điện thoại (cần đăng nhập).
+                    <a href="@(QrLinks.OrderImage(Model.OrderCode, "png"))?download=true" download>Tải ảnh mã QR</a>
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a class="btn btn-primary" href="/account/orders/@Model.OrderCode">Xem chi tiết đơn hàng</a>
+                <a class="btn btn-outline-primary" href="/products">Tiếp tục mua sắm</a>
+            </div>
+        </div>
+    </div>
+</section>

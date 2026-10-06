@@ -1,0 +1,55 @@
+@model IReadOnlyList<FurnitureStore.Application.AI.AiKnowledgeDto>
+@{
+    ViewData["Title"] = "Nội dung chatbot";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="text-muted mb-0 small" style="max-width: 720px">
+        Chính sách và câu hỏi thường gặp mà trợ lý AI dùng để trả lời. Khi câu hỏi của khách chứa một trong các <strong>từ khóa</strong>,
+        nội dung tương ứng được đưa vào câu trả lời. Giá sản phẩm không lấy từ đây mà luôn lấy từ catalog.
+        Khi chưa cấu hình AI, trợ lý tự động trả lời thẳng bằng nội dung này (giao hàng, bảo hành, đổi trả, thanh toán, đặt đóng, bảo quản)
+        và các câu hỏi thêm mới ở đây.
+    </p>
+    <a class="btn btn-primary btn-sm" href="/admin/ai-knowledge/create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm nội dung</a>
+</div>
+
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="table admin-table mb-0">
+            <thead><tr><th>Tiêu đề</th><th>Nhóm</th><th>Từ khóa</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted-fs py-4">Chưa có nội dung.</td></tr>
+                }
+                @foreach (var k in Model)
+                {
+                    <tr>
+                        <td>
+                            <a href="/admin/ai-knowledge/@k.Id/edit" class="fw-semibold">@k.Title</a>
+                            <div class="small text-muted-fs">@(k.Content.Length > 140 ? k.Content[..140] + "…" : k.Content)</div>
+                        </td>
+                        <td class="small">@k.Category</td>
+                        <td class="small">@k.Keywords</td>
+                        <td>
+                            @if (k.IsActive)
+                            {
+                                <span class="badge text-bg-success">Đang dùng</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">Tắt</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-light btn-sm" href="/admin/ai-knowledge/@k.Id/edit" aria-label="Sửa"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                            <form method="post" action="/admin/ai-knowledge/@k.Id/delete" class="d-inline" asp-antiforgery="true" data-confirm="Xóa nội dung &quot;@k.Title&quot;?">
+                                <button type="submit" class="btn btn-light btn-sm text-danger" aria-label="Xóa"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

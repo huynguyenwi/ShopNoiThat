@@ -1,0 +1,10 @@
+@model string?
+@if (!string.IsNullOrEmpty(Model))
+{
+    var isError = Model.StartsWith("Lỗi", StringComparison.OrdinalIgnoreCase);
+    <div class="alert @(isError ? "alert-danger" : "alert-success") alert-dismissible fade show d-flex align-items-start gap-2" role="@(isError ? "alert" : "status")">
+        <i class="bi @(isError ? "bi-exclamation-triangle" : "bi-check-circle") mt-1" aria-hidden="true"></i>
+        <div>@Model</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}

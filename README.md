@@ -1,0 +1,593 @@
+# Nhà Mộc Furniture — Website bán đồ nội thất
+
+Website thương mại điện tử bán nội thất (bàn, ghế, tủ, giường, sofa, kệ...) xây dựng bằng **ASP.NET Core 8 MVC**,
+**SQL Server**, **Entity Framework Core 8**, **ASP.NET Core Identity**, **Bootstrap 5.3**, có kiến trúc sẵn sàng tích hợp AI
+(OpenAI hoặc API tương thích).
+
+> Đã hoàn thành cả 11 phase (xem [Tiến độ](#12-tiến-độ)). Bản Release đã được kiểm tra trên database tạo từ file SQL,
+> chạy ở môi trường Production: 626 test tự động + 11 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
+
+---
+
+## 1. Yêu cầu hệ thống
+
+| Thành phần | Phiên bản | Ghi chú |
+|---|---|---|
+| .NET SDK | **8.0.x** (đã kiểm tra với 8.0.417) | `global.json` ghim SDK 8; máy có SDK 9/10 vẫn dùng SDK 8 để build |
+| SQL Server | LocalDB 2019+ / Express / Developer / SQL Server 2019+ | Mặc định dùng **LocalDB** đi kèm Visual Studio |
+| dotnet-ef | 8.0.31 | Khai báo trong `.config/dotnet-tools.json`, cài bằng `dotnet tool restore` |
+| Trình duyệt | Chrome / Edge / Firefox bản mới | |
+
+Kiểm tra nhanh:
+
+```powershell
+dotnet --list-sdks           # phải có 8.0.x
+sqllocaldb info              # phải có MSSQLLocalDB
+```
+
+## 2. Cấu trúc solution
+
+```
+FurnitureStore.sln
+├── src/
+│   ├── FurnitureStore.Domain          # Entities, Enums, Constants, domain rules (không phụ thuộc gì)
+│   ├── FurnitureStore.Application     # DTOs, Interfaces, Services, Validators, Settings, business logic
+│   ├── FurnitureStore.Infrastructure  # EF Core DbContext, Configurations, Migrations, Repositories,
+│   │                                  # Identity, Seed, (AI / Payment / File storage ở các phase sau)
+│   └── FurnitureStore.Web             # MVC Controllers, Views, ViewModels, Areas/Admin, API, wwwroot
+└── tests/
+    └── FurnitureStore.Tests           # Unit tests + Integration tests (SQLite in-memory & SQL Server LocalDB)
+```
+
+Hướng phụ thuộc: `Web → Infrastructure → Application → Domain`. Domain không tham chiếu Identity:
+entity chỉ lưu `UserId`, khóa ngoại tới `AspNetUsers` được cấu hình ở tầng Infrastructure.
+
+Các quyết định kỹ thuật chính:
+
+- **Repository + Unit of Work**: `IRepository<T>`/`IUnitOfWork` khai báo ở Application, cài đặt bằng EF Core ở Infrastructure.
+  Unit of Work chuyển lỗi xung đột dữ liệu (concurrency, trùng SKU/slug/email) thành `ConflictException` (HTTP 409).
+- **Audit tự động**: `AuditableEntityInterceptor` điền `CreatedAt/By`, `UpdatedAt/By`, chuyển xóa `Product` thành
+  **soft delete**, và sinh lại token `Version` (optimistic concurrency) cho `Product`, `ProductVariant`, `Order`, `Coupon`, `QuoteRequest`.
+- **Giá và tồn kho nằm ở variant (SKU)**. `Product.BasePrice/DiscountPrice/StockQuantity` là giá trị "giá từ"/tổng tồn
+  được đồng bộ từ variant để lọc và sắp xếp nhanh.
+- **Enum lưu dạng chuỗi** (`Pending`, `COD`...) để dữ liệu dễ đọc; mọi thời gian lưu **UTC**.
+- **API trả JSON chuẩn**: `{ "success": bool, "message": "...", "data": ..., "errors": [] }`, kể cả khi lỗi 404/401/403/500.
+
+## 3. Cơ sở dữ liệu
+
+44 bảng, gồm các bảng Identity (`AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`...) và:
+
+| Nhóm | Bảng |
+|---|---|
+| Catalog | `Categories` (cây 2 cấp: phòng → nhóm sản phẩm), `Products`, `ProductImages`, `ProductVariants`, `ProductColors`, `ProductMaterials`, `ProductSizes`, `ProductStyles`, `ProductVariantColors`, `ProductVariantMaterials`, `ProductVariantSizes`, `ProductPriceHistory`, `PriceRules` |
+| Bán hàng | `Carts`, `CartItems`, `Orders`, `OrderItems`, `OrderAddresses`, `OrderStatusHistories`, `Payments`, `Coupons`, `CouponUsages` |
+| Khách hàng | `CustomerAddresses`, `Wishlists`, `WishlistItems`, `Reviews`, `ReviewImages` |
+| Giao tiếp | `ChatConversations`, `ChatMessages`, `ContactMessages`, `Notifications` |
+| AI | `AIConversations`, `AIMessages`, `AIKnowledgeEntries`, `QuoteRequests` |
+| Hệ thống | `AuditLogs`, `StoreInformation` |
+
+Mô hình variant: một sản phẩm có nhiều variant; mỗi variant có SKU, giá, giá cũ, tồn kho, ảnh riêng và nhiều
+màu / chất liệu / kích thước qua bảng nối. Mỗi chiều có đúng một giá trị `IsPrimary` (dùng cho bộ chọn trên trang sản phẩm);
+các giá trị phụ mô tả bộ phận, ví dụ bàn nâng hạ: *màu chính "Nâu óc chó" + màu "Đen" cho phần "Khung nâng hạ"*.
+
+## 4. Connection string
+
+Mặc định trong `src/FurnitureStore.Web/appsettings.json`:
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=FurnitureStoreDb;Trusted_Connection=True;TrustServerCertificate=True"
+}
+```
+
+Dùng SQL Server khác (không sửa file trong repo) — đặt bằng user-secrets hoặc biến môi trường:
+
+```powershell
+# SQL Server instance mặc định, Windows Authentication
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=FurnitureStoreDb;Trusted_Connection=True;TrustServerCertificate=True" --project src/FurnitureStore.Web
+
+# SQL Authentication
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost,1433;Database=FurnitureStoreDb;User Id=furniture_app;Password=<mật khẩu>;TrustServerCertificate=True" --project src/FurnitureStore.Web
+```
+
+## 5. Migration
+
+Chạy các lệnh sau tại thư mục gốc solution:
+
+```powershell
+dotnet tool restore                      # cài dotnet-ef 8.0.31 (local tool)
+
+# Tạo / cập nhật database theo migration mới nhất
+dotnet ef database update --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web
+
+# Tạo migration mới sau khi đổi entity/configuration
+dotnet ef migrations add <TenMigration> --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web --output-dir Persistence/Migrations
+
+# Kiểm tra model có thay đổi chưa tạo migration
+dotnet ef migrations has-pending-model-changes --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web
+```
+
+Migration hiện có: `InitialCreate`, `AddProductSearchText` (cột tìm kiếm không dấu cho sản phẩm), `AddCouponIsPublic` (mã giảm giá công khai).
+
+## 6. Tạo database & seed dữ liệu
+
+Có hai cách, chọn **một**:
+
+### Cách A — Chạy file SQL có sẵn (không cần `dotnet ef`)
+
+Thư mục [database/](database/) chứa script đã sinh sẵn:
+
+| File | Nội dung |
+|---|---|
+| `FurnitureStoreDb_full.sql` | Tạo database `FurnitureStoreDb` (nếu chưa có) + toàn bộ schema + dữ liệu mẫu. **Chỉ cần chạy file này.** |
+| `01_schema.sql` | Chỉ schema (script migration idempotent, chạy lại nhiều lần không lỗi) |
+| `02_seed_data.sql` | Roles, catalog demo (23 danh mục, 37 sản phẩm, 110 variant), thông tin cửa hàng, 3 mã giảm giá, 6 mục nội dung chatbot AI, 59 tham số bảng giá đặt đóng. Chỉ chèn vào bảng còn trống |
+
+```powershell
+# SSMS: mở FurnitureStoreDb_full.sql rồi Execute (F5). Hoặc dùng sqlcmd (-f 65001 để giữ tiếng Việt):
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -i database\FurnitureStoreDb_full.sql
+sqlcmd -S localhost -E -f 65001 -i database\FurnitureStoreDb_full.sql          # SQL Server thường
+```
+
+Script **không** chứa tài khoản người dùng (không phát tán password hash). Tài khoản admin được ứng dụng
+tạo ở lần chạy đầu tiên từ `Seed:AdminPassword` (mục 7). Khi chạy ở Development, ứng dụng còn tạo thêm
+dữ liệu hoạt động demo (đơn hàng, đánh giá...) như mô tả bên dưới.
+
+**Nâng cấp database đã tạo từ trước** (ví dụ khi bản mới có thêm migration `AddCouponIsPublic`): chạy lại
+`01_schema.sql` — script chỉ áp các migration còn thiếu, dữ liệu hiện có được giữ nguyên, chạy lại nhiều lần không lỗi.
+Ở Development, ứng dụng cũng tự áp migration khi khởi động.
+
+```powershell
+sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -d FurnitureStoreDb -i database\01_schema.sql
+```
+
+Sinh lại các file này sau khi thêm migration / đổi dữ liệu seed:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File database\generate-sql.ps1
+```
+
+### Cách B — Để ứng dụng tự tạo
+
+Ở môi trường **Development** (`appsettings.Development.json`), khi chạy ứng dụng sẽ tự động:
+
+1. Áp các migration còn thiếu (`Database:ApplyMigrationsOnStartup = true`).
+2. Tạo roles `ADMIN`, `USER`, `STAFF`, `CUSTOMER`.
+3. Tạo tài khoản admin và tài khoản khách demo **nếu đã cấu hình mật khẩu** (xem mục 7).
+4. Tạo thông tin cửa hàng từ `ApplicationSettings:Store`.
+5. Seed catalog demo khi chưa có sản phẩm (`Database:SeedDemoData = true`):
+   **23 danh mục, 37 sản phẩm, 110 variant**, 15 màu, 16 chất liệu, 8 phong cách, 28 kích thước;
+   có sẵn sản phẩm khuyến mãi, sắp hết hàng và hết hàng để test.
+6. Seed mã giảm giá: `CHAOBAN10` (10%, tối đa 2 triệu, đơn từ 5 triệu, 1 lần/khách), `GIAM500K` (đơn từ 10 triệu), `HETHAN` (đã hết hạn, để test).
+7. Seed hoạt động demo (một lần, nhận biết qua tài khoản `khach01@furniture.local`): 12 khách hàng demo
+   (không có mật khẩu, không đăng nhập được), ~90 đơn hàng trong 120 ngày với đủ trạng thái, ~70 đánh giá
+   đã mua hàng và 3 tin nhắn liên hệ — để dashboard, biểu đồ và trang quản trị có dữ liệu.
+
+Ở Production cả hai cờ mặc định là `false`: chạy `dotnet ef database update` thủ công (hoặc trong pipeline deploy).
+
+Ảnh sản phẩm demo là **ảnh minh họa SVG tự vẽ** (`/images/placeholder/{loại}.svg?color=...`), không dùng ảnh có bản quyền.
+Ảnh do admin / khách tải lên được lưu ở `wwwroot/uploads/` (đã loại khỏi git), kiểm tra đuôi file, dung lượng (≤ 5MB) và chữ ký nhị phân.
+
+## 7. Tài khoản admin & tài khoản demo
+
+Mật khẩu **không** nằm trong repo. Đặt bằng user-secrets (máy dev) trước lần chạy đầu tiên:
+
+```powershell
+dotnet user-secrets set "Seed:AdminPassword" "<mật khẩu admin>" --project src/FurnitureStore.Web
+dotnet user-secrets set "Seed:DemoUserPassword" "<mật khẩu khách demo>" --project src/FurnitureStore.Web
+```
+
+| Tài khoản | Email | Role |
+|---|---|---|
+| Admin | `admin@furniture.local` | ADMIN |
+| Khách demo | `khachhang@furniture.local` | USER |
+
+Chính sách mật khẩu: tối thiểu 8 ký tự, có chữ hoa, chữ thường và chữ số. Sai mật khẩu 5 lần sẽ khóa 15 phút.
+Nếu chưa đặt mật khẩu, ứng dụng vẫn chạy và ghi cảnh báo vào log (không bao giờ ghi mật khẩu ra log).
+Tài khoản đã tồn tại sẽ không bị đổi mật khẩu khi khởi động lại.
+
+### Email
+
+Mặc định `Email:Mode = Pickup`: email (chào mừng, quên mật khẩu, xác nhận đơn hàng, đổi trạng thái đơn) được ghi
+thành file `.html` trong `src/FurnitureStore.Web/App_Data/emails/` để xem khi phát triển. Muốn gửi thật, đặt
+`Email:Mode = Smtp` và cấu hình `Email:Smtp:*` (mật khẩu SMTP đặt bằng user-secrets `Email:Smtp:Password`).
+
+## 8. Chạy ứng dụng
+
+```powershell
+dotnet restore
+dotnet build
+dotnet run --project src/FurnitureStore.Web --launch-profile https
+```
+
+- Website: <https://localhost:7160> (HTTP <http://localhost:5243> tự chuyển sang HTTPS)
+- Health check (gồm kết nối database): <https://localhost:7160/health>
+
+Lần đầu có thể cần tin cậy chứng chỉ HTTPS dev: `dotnet dev-certs https --trust`.
+
+### Chạy bằng Visual Studio 2022 (17.8 trở lên)
+
+1. Mở `FurnitureStore.sln`, chờ Visual Studio tự restore NuGet (cần internet lần đầu).
+2. Chuột phải **FurnitureStore.Web** → **Set as Startup Project**. Chỉ project này chạy được (web, trang quản trị, API, chat,
+   trợ lý AI đều nằm trong nó); Domain / Application / Infrastructure là thư viện, Tests chạy trong **Test Explorer** —
+   **không cần** "Multiple startup projects".
+3. Trên thanh công cụ chọn profile **https** (web chạy ở https://localhost:7160).
+4. Chuột phải **FurnitureStore.Web** → **Manage User Secrets**, dán mật khẩu tài khoản (và connection string nếu database
+   không nằm trên LocalDB):
+   ```json
+   {
+     "Seed": { "AdminPassword": "<mật khẩu admin>", "DemoUserPassword": "<mật khẩu khách demo>" },
+     "ConnectionStrings": { "DefaultConnection": "Server=.\\SQLEXPRESS;Database=FurnitureStoreDb;Trusted_Connection=True;TrustServerCertificate=True" }
+   }
+   ```
+5. **Ctrl + F5** (chạy không debug) hoặc **F5** (debug). Lần đầu bấm **Yes** khi được hỏi tin cậy chứng chỉ HTTPS.
+
+Chạy test:
+
+```powershell
+dotnet test
+# Bỏ qua test cần SQL Server LocalDB (ví dụ trên CI Linux):
+$env:SKIP_SQLSERVER_TESTS = "1"; dotnet test
+```
+
+## 9. Cấu hình AI
+
+Trợ lý AI có **hai chế độ**:
+
+| Chế độ | Khi nào | Hoạt động |
+|---|---|---|
+| **AI** | Đã đặt `AI:ApiKey` và `AI:Enabled = true` | Hệ thống tìm sản phẩm thật trong database theo nhu cầu của khách, gửi danh sách đó cho mô hình AI (OpenAI hoặc API tương thích) để chọn và giải thích. |
+| **Tự động** | Chưa có API key, hoặc dịch vụ AI lỗi / quá tải | Chạy hoàn toàn trên server, không cần dịch vụ ngoài: trả lời các câu hỏi thường gặp từ dữ liệu thật của cửa hàng (xem bảng dưới) và tìm sản phẩm theo tiếng Việt (ngân sách "10 triệu", "12tr5", "5 - 8 triệu"; kích thước "1m8", "180x90x75"; "6 người", "20m2"; phòng, loại sản phẩm, màu, chất liệu, phong cách - có hoặc không dấu). |
+
+**Câu hỏi chế độ Tự động trả lời được** (`LocalAssistant`, nhận câu có dấu hoặc không dấu, khớp theo cụm từ nguyên vẹn):
+
+| Nhóm | Ví dụ | Dữ liệu dùng để trả lời |
+|---|---|---|
+| Cửa hàng | "mấy giờ mở cửa", "showroom ở đâu", "số hotline", "có zalo không" | Thông tin cửa hàng (`/admin/store`) |
+| Chính sách | "phí ship bao nhiêu", "bảo hành bao lâu", "đổi trả thế nào", "có trả góp không", "nhận đóng theo yêu cầu không" | Nội dung chatbot (`/admin/ai-knowledge`), cấu hình `Shipping` |
+| Mua hàng | "cách đặt hàng", "đơn hàng của tôi đến đâu rồi", "hủy đơn thế nào", "có mã giảm giá không", "quên mật khẩu" | **Đơn hàng của chính khách** (khi đã đăng nhập), mã giảm giá công khai đang chạy |
+| Kiến thức | "gỗ sồi và óc chó khác gì", "MDF có tốt không", "phong cách Japandi là gì", "bàn ăn 6 người cần kích thước bao nhiêu", "bảo quản sofa da" | Kiến thức nội thất có sẵn (15 chất liệu đang bán, 8 phong cách, cỡ chuẩn các món) |
+| Trang sản phẩm | "giá bao nhiêu", "còn màu nào khác", "kích thước thế nào", "còn hàng không", "mẫu nào rẻ hơn", "bảo hành bao lâu" | Dữ liệu của sản phẩm đang xem; "rẻ hơn" liệt kê mẫu cùng loại giá thấp hơn |
+| Trò chuyện | "chào shop", "cảm ơn", "bạn là ai", "bạn giúp được gì" | - |
+
+Câu không hiểu được trả lời thẳng là chưa hiểu, kèm gợi ý và lối gặp nhân viên (không lặp lại kết quả tìm kiếm cũ).
+Câu hỏi **đơn hàng** và **mã giảm giá** luôn trả lời từ database kể cả khi có AI, vì mô hình không có dữ liệu này và không được tự đặt ra mã.
+Muốn trợ lý hiểu thêm câu hỏi riêng của cửa hàng: thêm mục mới ở `/admin/ai-knowledge` với các từ khóa của câu hỏi.
+
+Section `AI` trong `appsettings.json` (không chứa API key):
+
+```json
+"AI": {
+  "Enabled": true,
+  "Provider": "OpenAI",
+  "BaseUrl": "https://api.openai.com/v1/",
+  "Model": "gpt-4o-mini",
+  "ApiKey": "",
+  "MaxOutputTokens": 800,
+  "Temperature": 0.3,
+  "TimeoutSeconds": 60,
+  "RequestsPerMinute": 10,
+  "JsonMode": true,
+  "TokenLimitParameter": "max_tokens",
+  "SendTemperature": true
+}
+```
+
+API key đặt bằng user-secrets hoặc biến môi trường - **không commit vào repo**:
+
+```powershell
+dotnet user-secrets set "AI:ApiKey" "<api key>" --project src/FurnitureStore.Web
+# hoặc trên server: AI__ApiKey=<api key>
+```
+
+Dùng API tương thích OpenAI khác: đổi `BaseUrl` + `Model`, ví dụ Groq `https://api.groq.com/openai/v1/`, OpenRouter
+`https://openrouter.ai/api/v1/`, Ollama chạy local `http://localhost:11434/v1/` (với Ollama đặt ApiKey bất kỳ, ví dụ `ollama`).
+Nếu nhà cung cấp không hỗ trợ `response_format` đặt `JsonMode = false`; model mới của OpenAI chỉ nhận
+`max_completion_tokens` thì đặt `TokenLimitParameter = "max_completion_tokens"`; model không cho đổi temperature thì `SendTemperature = false`.
+
+**Bảo đảm AI không bịa:**
+- AI chỉ được chọn sản phẩm trong danh sách hệ thống gửi. Server bỏ mọi id sản phẩm không có trong danh sách, tên / giá / ảnh / link trên thẻ sản phẩm luôn lấy từ database.
+- `PriceGuard` quét câu trả lời: số tiền không trùng giá thật (hoặc số khách / chính sách đã nêu) bị thay bằng "(giá chính xác xem ở thẻ sản phẩm)".
+- Màu và phong cách AI đề xuất phải thuộc bảng màu / phong cách cửa hàng đang bán.
+- Giá đồ đặt đóng theo yêu cầu do `PriceCalculatorService` tính (Phase 9), AI chỉ giải thích.
+- Giới hạn `AI:RequestsPerMinute` lần/phút cho mỗi tài khoản (hoặc mỗi IP với khách vãng lai); câu hỏi tối đa 1.000 ký tự.
+- API key không bao giờ được ghi log; log chỉ ghi mã lỗi / số token / thời gian phản hồi.
+
+**Nội dung chatbot** (chính sách giao hàng, bảo hành, đổi trả, thanh toán, đặt đóng theo yêu cầu, bảo quản) được seed sẵn và
+admin sửa tại `/admin/ai-knowledge`; mục nào có **từ khóa** xuất hiện trong câu hỏi thì được đưa vào câu trả lời.
+Admin xem mọi hội thoại AI, token đã dùng và các lần AI lỗi tại `/admin/ai`; khách xem lịch sử của mình tại `/account/ai-history`.
+
+## 10. Biến môi trường
+
+ASP.NET Core đọc biến môi trường với `__` thay cho `:`.
+
+| Biến | Ý nghĩa |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | `Development` / `Staging` / `Production` |
+| `ConnectionStrings__DefaultConnection` | Connection string SQL Server |
+| `Seed__AdminPassword` | Mật khẩu tài khoản admin được seed |
+| `Seed__DemoUserPassword` | Mật khẩu tài khoản khách demo |
+| `AI__ApiKey` | API key của nhà cung cấp AI |
+| `AI__RequestsPerMinute` | Giới hạn số câu hỏi AI mỗi phút cho mỗi người dùng / IP |
+| `AI__BaseUrl`, `AI__Model` | Đổi sang API AI tương thích khác |
+| `Database__ApplyMigrationsOnStartup` | `true` để tự áp migration khi khởi động |
+| `Database__SeedDemoData` | `true` để seed catalog demo khi DB trống và dữ liệu hoạt động demo |
+| `Email__Mode` | `Pickup` (ghi file) hoặc `Smtp` |
+| `Email__Smtp__Password` | Mật khẩu SMTP |
+| `RateLimiting__AuthenticationPermitsPerMinute` | Số lần đăng nhập / đăng ký / quên mật khẩu tối đa mỗi phút mỗi IP (mặc định 10) |
+| `RateLimiting__FormPermitsPerMinute` | Số lần gửi form liên hệ / đánh giá mỗi phút mỗi IP (mặc định 5) |
+| `RateLimiting__ApiPermitsPerMinute` | Giới hạn chung cho mọi `/api/*` mỗi phút mỗi IP (mặc định 300) |
+| `ApplicationSettings__BaseUrl` | Địa chỉ public của website (dùng cho canonical, sitemap, Open Graph, link trong email) |
+| `Seo__AllowIndexing` | `false` trên máy staging/test: robots.txt chặn toàn bộ và mọi trang `noindex` |
+| `DataProtection__KeysPath` | Thư mục lưu khóa mã hóa cookie (mặc định `App_Data/keys`); dùng chung khi chạy nhiều server |
+| `ReverseProxy__KnownProxies__0` | IP của reverse proxy tin cậy (nginx, load balancer) để lấy IP thật từ `X-Forwarded-For` |
+| `SKIP_SQLSERVER_TESTS` | `1` để bỏ qua test cần SQL Server LocalDB |
+
+Các section cấu hình khác: `ApplicationSettings` (tên site, BaseUrl, thông tin cửa hàng), `Payment` (phương thức thanh toán,
+thông tin chuyển khoản), `Storage` (thư mục upload, dung lượng và định dạng ảnh cho phép). Cấu hình sai (ví dụ `BaseUrl`
+không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với thông báo rõ ràng.
+
+## 11. Xử lý sự cố
+
+| Triệu chứng | Nguyên nhân / cách xử lý |
+|---|---|
+| `Login failed for user '...'` khi dùng `Server=localhost` | Tài khoản Windows chưa có login trong instance SQL Server đó. Dùng LocalDB (mặc định), cấp quyền cho tài khoản Windows, hoặc dùng SQL Authentication (mục 4). |
+| `A network-related or instance-specific error` với LocalDB | Chạy `sqllocaldb start MSSQLLocalDB`; nếu chưa có: `sqllocaldb create MSSQLLocalDB`. |
+| Log báo *"Account admin@furniture.local was not created..."* | Chưa đặt `Seed:AdminPassword` (mục 7). Đặt rồi khởi động lại. |
+| Log báo *"Database has N pending migration(s)"* và không seed | Đang tắt `ApplyMigrationsOnStartup` (ví dụ môi trường Production). Chạy `dotnet ef database update`. |
+| `dotnet ef` không nhận lệnh | Chạy `dotnet tool restore` ở thư mục gốc solution. |
+| Build dùng nhầm SDK 9/10 | Kiểm tra `global.json`; cần cài .NET SDK 8.0.x. |
+| Trình duyệt cảnh báo chứng chỉ HTTPS | `dotnet dev-certs https --trust`. |
+| Muốn làm lại database từ đầu | `dotnet ef database drop --force --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web` rồi chạy lại ứng dụng. |
+| Font chữ hiển thị khác thiết kế khi offline | Font Be Vietnam Pro / Playfair Display tải từ Google Fonts; khi offline trình duyệt dùng font hệ thống. Bootstrap và icon đã nằm sẵn trong `wwwroot/lib`. |
+
+## 12. Tiến độ
+
+| Phase | Nội dung | Trạng thái |
+|---|---|---|
+| 1 | Solution, cấu trúc project, DI, cấu hình, xử lý lỗi toàn cục, layout & trang chủ | ✅ Hoàn thành |
+| 2 | Entities, DbContext, cấu hình, migration `InitialCreate`, seed, repository / unit of work | ✅ Hoàn thành |
+| 3 | Đăng ký, đăng nhập, quên mật khẩu, phân quyền ADMIN / USER | ✅ Hoàn thành |
+| 4 | Sản phẩm, danh mục, variant, CRUD Admin, danh sách & chi tiết sản phẩm | ✅ Hoàn thành |
+| 5 | Giỏ hàng, checkout, đơn hàng, thanh toán (COD, chuyển khoản giả lập) | ✅ Hoàn thành |
+| 6 | Admin dashboard, thống kê, quản lý đơn hàng & khách hàng, đánh giá, liên hệ | ✅ Hoàn thành |
+| 7 | Chat realtime khách hàng - cửa hàng (SignalR) | ✅ Hoàn thành |
+| 8 | Chatbot AI, gợi ý sản phẩm, tư vấn màu và phong cách | ✅ Hoàn thành |
+| 9 | Báo giá nội thất theo yêu cầu (PriceCalculatorService, QuoteRequest) | ✅ Hoàn thành |
+| 10 | SEO, responsive, bảo mật, logging, hiệu năng | ✅ Hoàn thành |
+| 11 | Kiểm thử tổng thể, sửa lỗi, build Release | ✅ Hoàn thành |
+
+## 13. Chức năng & đường dẫn chính
+
+| Khu vực | Đường dẫn |
+|---|---|
+| Trang chủ | `/` |
+| Sản phẩm (tìm kiếm, lọc, sắp xếp) | `/products?q=ban+go&category=phong-an&color=...&minPrice=...&sort=price-asc` |
+| Chi tiết sản phẩm, chọn màu / chất liệu / kích thước, đánh giá | `/products/{slug}` |
+| Giỏ hàng / thanh toán | `/cart`, `/checkout` |
+| Tài khoản | `/account/login`, `/account/register`, `/account/forgot-password`, `/account/profile` |
+| Đơn hàng, địa chỉ, yêu thích của tôi | `/account/orders`, `/account/addresses`, `/wishlist` |
+| Liên hệ & thông tin cửa hàng | `/contact` |
+| Chat với cửa hàng | Nút chat góc phải mọi trang (khách vãng lai nhập tên + SĐT/email; đã đăng nhập thì dùng hồ sơ) |
+| Trả lời chat (ADMIN, STAFF) | `/admin/chat` |
+| Trợ lý AI | Nút "Trợ lý AI" góc phải mọi trang; "AI tư vấn sản phẩm này" trên trang sản phẩm |
+| Công cụ tư vấn AI (gợi ý theo phòng, phối màu, chọn phong cách) | `/tu-van` |
+| Lịch sử tư vấn AI | `/account/ai-history` |
+| Báo giá đồ đặt đóng | `/bao-gia` · khách theo dõi / đồng ý báo giá tại `/account/quotes` |
+| Quản trị báo giá, bảng giá | `/admin/quotes`, `/admin/price-rules` |
+| Mã giảm giá (ADMIN) | `/admin/coupons` — danh sách, `/admin/coupons/create`, `/admin/coupons/{id}` (thống kê), `/admin/coupons/{id}/edit` |
+| Mã QR | Quét: `/q/p/{id}` (sản phẩm), `/q/o/{mã đơn}` (đơn hàng) · Ảnh: `/qr/products/{id}.svg\|.png`, `/qr/orders/{mã đơn}.svg\|.png` · In: `/admin/products/qrlabels`, `/admin/orders/print/{id}` |
+| Áp mã giảm giá (khách) | Ô nhập mã + "Ưu đãi dành cho bạn" ở `/cart` và `/checkout` · API `POST` / `DELETE /api/cart/coupon` |
+| Quản trị AI | `/admin/ai` (hội thoại), `/admin/ai-knowledge` (nội dung chatbot) |
+| Quản trị (ADMIN) | `/admin` — dashboard, `/admin/orders`, `/admin/customers`, `/admin/products`, `/admin/categories`, `/admin/attributes/colors`, `/admin/reviews`, `/admin/contacts`, `/admin/store`, `/admin/audit-logs`, `/admin/notifications` |
+| API báo giá | `POST /api/ai/price-estimate` (tính giá, không lưu), `POST /api/quotes` (gửi yêu cầu), `GET /api/quotes`, `GET /api/quotes/{code}`, `POST /api/quotes/{code}/accept`, `/reject`, `/cancel` |
+| API AI | `POST /api/ai/chat`, `/api/ai/recommend`, `/api/ai/color-recommend`, `/api/ai/style-recommend`, `GET /api/ai/conversations`, `/api/ai/status` |
+| API chat | `/api/chat`, `/api/chat/conversations`, `/api/chat/start`, `/api/chat/messages`, `/api/admin/chat/conversations` · SignalR hub `/hubs/chat` |
+| API | `/api/products`, `/api/products/{id}`, `/api/products/search?q=`, `/api/categories`, `/api/cart`, `/api/orders`, `/api/wishlist`, `/api/account/me`, `/api/admin/products` |
+
+API trả về dạng chuẩn `{ "success": true|false, "message": "...", "data": ..., "errors": [] }`.
+Mọi request POST/PUT/DELETE phải có anti-forgery token (form field hoặc header `X-CSRF-TOKEN`, lấy từ thẻ `<meta name="csrf-token">`).
+Trang và API quản trị được kiểm tra quyền ở backend (policy `AdminOnly`), không chỉ ẩn nút trên giao diện.
+
+## 14. Chat realtime (SignalR)
+
+- Hub `/hubs/chat`; thư viện client `wwwroot/lib/microsoft-signalr` (8.0.7, MIT). Tự fallback sang long polling khi không có WebSocket; khi mất kết nối vẫn gửi được qua REST `/api/chat/messages`.
+- Khách vãng lai được nhận diện bằng cookie ngẫu nhiên `.NhaMoc.Chat` (HttpOnly, Secure). Khi đăng nhập / đăng ký, cuộc trò chuyện đang có tự chuyển sang tài khoản.
+- Nhân viên chat: gán role `STAFF` cho tài khoản (trang `/admin/customers` → chi tiết → vai trò). STAFF chỉ vào được `/admin/chat`; các trang quản trị khác vẫn chỉ dành cho ADMIN (kiểm tra ở server).
+- Bảo mật: nội dung chỉ lưu và hiển thị dạng văn bản thuần (không render HTML); tối đa 2.000 ký tự; khách tối đa 15 tin/phút; hub từ chối kết nối từ origin khác (chống cross-site WebSocket hijacking); phương thức dành cho nhân viên yêu cầu policy `BackOffice`.
+- Khi có tin nhắn mới: admin nhận thông báo (chuông) + badge ở menu "Chat khách hàng"; khách đã đăng nhập nhận thông báo khi cửa hàng trả lời.
+- Nhiều server: SignalR mặc định giữ kết nối trong bộ nhớ của từng server. Khi chạy nhiều instance cần bật sticky session hoặc thêm backplane (Redis / Azure SignalR Service).
+
+## 15. Báo giá nội thất đặt đóng
+
+Khách mô tả món cần đóng (ví dụ *"Tôi muốn bàn gỗ óc chó dài 2m2 rộng 1m cao 75cm"*) tại `/bao-gia` hoặc hỏi trong khung Trợ lý AI.
+Hệ thống:
+
+1. **Phân tích yêu cầu** - loại sản phẩm, kích thước, chất liệu, màu, phong cách, kiểu sơn, số lượng (bộ phân tích tiếng Việt; khi có AI key thì AI chỉ bổ sung các thông tin còn thiếu, số liệu khách viết luôn được ưu tiên). Thông tin thiếu được tạm tính theo kích thước phổ biến và **ghi rõ là giả định**.
+2. **Tính giá bằng `PriceCalculatorService`** từ bảng `PriceRules` (AI không bao giờ quyết định giá):
+
+   ```
+   diện tích bao ngoài = 2 × (D·R + D·C + R·C)                    (m²)
+   diện tích vật liệu = diện tích bao ngoài × hệ số vật liệu[loại]
+   vật liệu    = diện tích vật liệu × đơn giá /m²[chất liệu]
+   gia công    = công cơ bản[loại] + diện tích vật liệu × công /m²[loại]
+   hoàn thiện  = diện tích vật liệu × đơn giá hoàn thiện /m²
+   sơn         = diện tích vật liệu × đơn giá sơn /m²[kiểu sơn]
+   phụ kiện    = phụ kiện[loại]
+   chi phí chung = trực tiếp × %chi phí chung;  lợi nhuận = (trực tiếp + chung) × %lợi nhuận
+   giá 1 sản phẩm = làm tròn lên 10.000đ;  tổng = giá × số lượng
+   ```
+
+   Mỗi tham số chọn dòng **cụ thể nhất** (loại sản phẩm / chất liệu / kiểu sơn), rồi độ ưu tiên cao nhất, trong thời gian hiệu lực.
+   Ví dụ với bảng giá mặc định: bàn ăn gỗ óc chó 1800 × 900 × 750 mm, sơn PU = **17.800.000đ**.
+3. **Giải thích** - văn bản mẫu, hoặc AI viết (mọi con số AI viết ra được kiểm tra với bảng chi phí, số lạ bị thay thế). Kèm phương án chất liệu khác cùng nhóm và mẫu có sẵn cùng loại để so sánh.
+4. **Gửi yêu cầu** (`QuoteRequest`, mã `BG{yyMMdd}-XXXXX`) - giá luôn được **tính lại ở server**, không nhận giá từ trình duyệt. Admin nhận thông báo; khách nhận email.
+5. **Admin** (`/admin/quotes`): xem chi tiết chi phí, tính lại khi đổi thông số, nhập **giá chính thức** và chuyển trạng thái
+   Mới → Đang xem xét → Đã báo giá → Khách đồng ý / từ chối (có kiểm tra xung đột khi 2 người cùng sửa). Khách đăng nhập
+   xem và bấm **Đồng ý / Từ chối** tại `/account/quotes`.
+6. **Bảng giá** (`/admin/price-rules`): thêm / sửa / tắt / xóa tham số, đặt thời gian hiệu lực - thay đổi áp dụng ngay cho lần tính tiếp theo; mọi thay đổi ghi nhật ký.
+
+## 16. SEO, bảo mật, hiệu năng
+
+**SEO**
+- URL thân thiện `/products/{slug}`; `<title>`, meta description, canonical, Open Graph và Twitter card trên mọi trang.
+  Ảnh chia sẻ mặc định `images/og-default.png` (1200 × 630); sản phẩm có ảnh JPG / PNG / WebP thì dùng ảnh sản phẩm.
+- `/sitemap.xml` sinh từ database (trang chủ, danh mục, mọi sản phẩm đang bán kèm `lastmod`, các trang tư vấn / báo giá / liên hệ), cache và tự làm mới khi admin sửa catalog.
+- `/robots.txt` chặn `/admin`, `/account`, `/cart`, `/checkout`, `/wishlist`, `/api`, `/hubs` và trỏ tới sitemap. Các trang riêng tư có `noindex,nofollow`.
+- Dữ liệu có cấu trúc JSON-LD: `FurnitureStore` + `WebSite` (ô tìm kiếm) ở trang chủ, `Product` + `BreadcrumbList` ở trang sản phẩm.
+
+**Bảo mật** (ngoài các mục đã có: băm mật khẩu Identity, phân quyền role ở server, anti-forgery cho mọi POST, FluentValidation, EF Core tham số hóa, Razor mã hóa HTML, kiểm tra chữ ký file upload)
+- **Content-Security-Policy** chặt: `script-src 'self'` (không có script nội tuyến hay script bên thứ ba; mọi JS nằm trong `wwwroot/js`), chỉ cho phép Google Fonts, bản đồ Google Maps và WebSocket tới chính website; `object-src 'none'`, `frame-ancestors 'self'`.
+- Header: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, HSTS (production); ẩn header `Server`.
+- Cookie đăng nhập / giỏ hàng / chat / AI: `HttpOnly`, `Secure`, `SameSite=Lax`. Khóa Data Protection được lưu bền (và mã hóa DPAPI trên Windows) để người dùng không bị đăng xuất khi khởi động lại.
+- Giới hạn tần suất: đăng nhập / đăng ký (10/phút), form liên hệ / đánh giá / báo giá (5/phút), AI (`AI:RequestsPerMinute`), toàn bộ API (300/phút). Chạy sau nginx / load balancer: khai báo `ReverseProxy:KnownProxies`.
+- Log: access log chỉ ghi method, đường dẫn (không có query string), mã trạng thái, thời gian. Có test tự động đảm bảo log **không bao giờ** chứa mật khẩu, API key hay token.
+- Thông báo lỗi luôn bằng tiếng Việt và không lộ chi tiết kỹ thuật: mọi lỗi API (kể cả 400 thiếu token, 415, JSON sai định dạng) trả về
+  `{ success, message, data, errors }`; trang mở quá lâu / đăng nhập ở tab khác làm token CSRF hết hạn thì hiện
+  "Phiên làm việc đã hết hạn. Vui lòng tải lại trang rồi thử lại."; giá trị sai kiểu trong form (chữ trong ô số, ô số để trống)
+  không bao giờ bị lưu thành 0 mà form hiện lại với ô lỗi được tô đỏ.
+
+**Hiệu năng**
+- Nén Brotli / Gzip cho HTML, JSON, CSS, JS, SVG, XML (trang chủ ~24KB khi truyền).
+- Cache trình duyệt: file có `?v=` 1 năm (`immutable`), thư viện và ảnh 7 ngày, ảnh upload 30 ngày.
+- Dữ liệu catalog dùng chung (menu, bộ lọc, trang chủ, sitemap) cache trong bộ nhớ, tự xóa khi admin thay đổi. Truy vấn nhiều collection dùng split query (test sẽ báo lỗi nếu có truy vấn gây "cartesian explosion").
+- Đo trên máy dev (LocalDB, 10 kết nối song song): trang chủ ~620 req/s (p95 31 ms), danh sách sản phẩm ~860–1000 req/s (p95 12–17 ms), chi tiết sản phẩm ~560 req/s (p95 21 ms).
+
+**Responsive & khả năng truy cập**: kiểm tra tự động bằng trình duyệt thật ở 360 / 390 / 1366 px trên 33 trang (khách, tài khoản, admin): không tràn ngang, không lỗi console / vi phạm CSP, không còn lỗi axe-core mức nghiêm trọng (tương phản màu, nhãn form, ARIA).
+
+### Checklist triển khai production
+
+1. `ASPNETCORE_ENVIRONMENT=Production`, `ApplicationSettings__BaseUrl=https://ten-mien-cua-ban`.
+2. `ConnectionStrings__DefaultConnection` tới SQL Server; tạo database bằng `database/FurnitureStoreDb_full.sql` hoặc `dotnet ef database update`.
+3. `Seed__AdminPassword` (mật khẩu mạnh) cho lần chạy đầu; đổi mật khẩu sau khi đăng nhập.
+4. Email thật: `Email__Mode=Smtp` + `Email__Smtp__*`.
+5. (Tuỳ chọn) `AI__ApiKey`.
+6. `DataProtection__KeysPath` trỏ tới thư mục bền vững, có quyền ghi (dùng chung nếu nhiều server).
+7. Chạy sau nginx / load balancer: `ReverseProxy__KnownProxies__0=<IP proxy>`; nhiều server cần sticky session hoặc backplane cho SignalR (mục 14).
+8. Máy staging: `Seo__AllowIndexing=false`.
+9. Chứng chỉ HTTPS hợp lệ (HSTS được bật ở production).
+
+## 17. Kiểm thử
+
+### Test tự động (xUnit)
+
+```powershell
+dotnet test                      # 626 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
+dotnet test -c Release           # cùng bộ test trên bản build Release
+```
+
+Nhóm test chính: domain rules, tính giá báo giá, parser tiếng Việt của AI, giỏ hàng / checkout / tồn kho, quản lý và áp dụng mã giảm giá, luồng trạng thái đơn,
+phân quyền từng trang và API admin, anti-forgery, CSP / header bảo mật / cache / nén, sitemap & SEO, log không chứa bí mật,
+thông báo lỗi tiếng Việt, chat realtime (SignalR client thật), khởi động database.
+
+### Kiểm thử trình duyệt (`tests/e2e`)
+
+Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và Microsoft Edge (hoặc đặt `BROWSER_PATH` tới Chrome).
+
+| Bộ | Kiểm tra |
+|---|---|
+| `dod-e2e.js` | Definition of Done: chặn truy cập admin, đăng ký / đăng xuất / đăng nhập, chọn variant, giỏ hàng, coupon, checkout COD, trừ tồn kho, email xác nhận, admin xử lý đơn đến "Đã giao", đánh giá sau khi mua, wishlist, admin tạo danh mục + sản phẩm 2 variant + ảnh, sửa giá, xóa, CSRF (43 bước) |
+| `coupon-e2e.js` | Mã giảm giá: admin tạo mã (mã ngẫu nhiên, xem trước), khách thấy ưu đãi và áp bằng một cú nhấp ở giỏ hàng, bỏ / nhập sai / nhập đúng mã ở trang thanh toán không tải lại trang (giữ địa chỉ đang nhập), đặt hàng, thống kê lượt dùng, không xóa được mã đã dùng, tắt mã, hủy đơn trả lại lượt (23 bước) |
+| `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
+| `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
+| `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
+| `ai-e2e.js` | Trợ lý AI (widget, trang tư vấn, gợi ý màu / phong cách), bố cục mobile |
+| `local-ai-e2e.js` | Trợ lý không có AI: chip "Giao hàng & bảo hành", giờ mở cửa, hotline (gõ không dấu), mã giảm giá, so sánh gỗ, kích thước bàn ăn, "cảm ơn", câu không hiểu, tìm sản phẩm; trang sản phẩm (giao hàng, mẫu rẻ hơn, màu); khách đã đăng nhập hỏi đơn hàng của mình; giao diện điện thoại (16 bước) |
+| `quote-e2e.js` | Báo giá đặt đóng: tính giá, phương án rẻ hơn, gửi yêu cầu, admin báo giá, khách đồng ý |
+| `account-forms.js` | Đăng ký (điều khoản), cập nhật hồ sơ, đổi mật khẩu, quên mật khẩu |
+| `audit.js` | 33 trang × (1366 / 390 / 360 px): lỗi console / vi phạm CSP, tràn ngang, lỗi axe-core nghiêm trọng |
+| `load.js` | Tải thử 300 request × 7 URL, 10 kết nối song song (chạy riêng: `node load.js`) |
+
+```powershell
+# 1. Chạy website (terminal khác):  dotnet run --project src/FurnitureStore.Web --launch-profile https
+# 2. Chạy toàn bộ (tự npm install lần đầu; mật khẩu admin đọc từ user-secrets Seed:AdminPassword hoặc biến ADMIN_PW):
+powershell -ExecutionPolicy Bypass -File tests\e2e\run-all.ps1
+# Chỉ vài bộ / website và database khác:
+powershell -ExecutionPolicy Bypass -File tests\e2e\run-all.ps1 -Suites dod-e2e.js,audit.js -BaseUrl https://localhost:7443 -Database FS_Test
+```
+
+> Trợ lý giới hạn `AI:RequestsPerMinute` (mặc định 10) câu hỏi / phút cho mỗi người: khi chạy E2E, khởi động website với
+> `$env:AI__RequestsPerMinute = "1000"` để các bộ `ai-e2e.js` / `local-ai-e2e.js` không bị báo "gửi quá nhiều yêu cầu".
+>
+> ⚠️ Các bộ kiểm thử **tạo dữ liệu thật** (tài khoản, đơn hàng, đánh giá, chat, báo giá, danh mục / sản phẩm thử) và dùng
+> `sqlcmd` để đối chiếu database. Chỉ chạy trên database dev / test, **không** chạy trên website đang bán hàng.
+> Ảnh chụp màn hình và `audit.json` nằm trong `tests/e2e/output/`.
+
+## 18. Build Release & triển khai
+
+```powershell
+dotnet publish src/FurnitureStore.Web -c Release -o publish
+```
+
+Thư mục `publish/` (~24 MB) chứa ứng dụng, `wwwroot` (CSS / JS / ảnh / thư viện) và `web.config` cho IIS. Gói **không** chứa
+`appsettings.Development.json`, ảnh khách upload (`wwwroot/uploads`), `App_Data` (email dev, khóa Data Protection) hay secret nào.
+Cấu hình production đặt bằng biến môi trường (mục 10 và [checklist](#checklist-triển-khai-production)).
+
+Quy trình đã kiểm tra:
+
+1. Tạo database bằng `database/FurnitureStoreDb_full.sql` (chạy lại nhiều lần vẫn an toàn).
+2. Chạy bản publish với `ASPNETCORE_ENVIRONMENT=Production` và `Seed__AdminPassword`: lần chạy đầu tạo tài khoản admin
+   (Production không tự migrate, không tạo dữ liệu demo khách hàng / đơn hàng).
+3. Đăng nhập `/admin`, đổi mật khẩu admin, cập nhật thông tin cửa hàng (`/admin/store`).
+
+Ví dụ chạy thử bản publish trên Windows:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Production"
+$env:ASPNETCORE_URLS = "https://localhost:7443"
+$env:ConnectionStrings__DefaultConnection = "Server=.;Database=FurnitureStoreDb;Trusted_Connection=True;TrustServerCertificate=True"
+$env:Seed__AdminPassword = "<mật khẩu mạnh>"
+.\publish\FurnitureStore.Web.exe
+```
+
+- **IIS**: cài *ASP.NET Core 8 Hosting Bundle*, tạo site trỏ tới thư mục `publish`, application pool *No Managed Code*;
+  cấp quyền ghi cho tài khoản app pool trên `wwwroot/uploads`, `App_Data` (hoặc thư mục đặt trong `DataProtection__KeysPath`,
+  `Email__PickupDirectory`). Biến môi trường đặt trong `web.config` (`<environmentVariables>`) hoặc cấu hình app pool.
+- **Cập nhật phiên bản**: dừng site, chép đè nội dung `publish/` mới lên thư mục cũ. **Không xóa** `wwwroot/uploads`
+  (ảnh sản phẩm / đánh giá / avatar) và `App_Data` (khóa Data Protection); nên sao lưu hai thư mục này cùng database.
+  Có migration mới thì chạy `database/01_schema.sql` mới (idempotent) trước khi khởi động lại.
+- **Linux**: `dotnet publish -c Release -r linux-x64 --self-contained false`, chạy bằng systemd sau nginx
+  (nginx chuyển tiếp `/hubs/` với header `Upgrade` / `Connection` cho WebSocket; khai báo `ReverseProxy__KnownProxies__0`).
+
+## 19. Mã giảm giá
+
+**Quản trị** (`/admin/coupons`, chỉ ADMIN; mọi thay đổi được ghi nhật ký hoạt động):
+
+- Danh sách tìm theo mã / tên, lọc theo trạng thái được tính tự động: *Đang chạy*, *Chưa bắt đầu*, *Hết hạn*, *Hết lượt*, *Đã tắt*.
+- Thêm / sửa: mã (3–30 ký tự, tự viết hoa; có nút tạo mã ngẫu nhiên), tên chương trình, mô tả cho khách,
+  giảm theo **%** (có thể đặt mức giảm tối đa) hoặc **số tiền cố định**, đơn tối thiểu, thời gian bắt đầu / kết thúc (giờ Việt Nam),
+  tổng số lượt, số lượt mỗi khách, bật / tắt, **công khai** (hiện cho khách) hay riêng tư (khách phải tự nhập).
+  Form có dòng *"Khách sẽ thấy: …"* xem trước ngay khi nhập.
+- Trang chi tiết: lượt đã dùng / tổng lượt, tổng tiền đã giảm, số đơn và doanh thu các đơn dùng mã, danh sách đơn (liên kết tới đơn hàng).
+- Ràng buộc để giữ đúng lịch sử: mã đã dùng cho đơn hàng thì **không đổi mã và không xóa được** (chỉ tắt);
+  tổng số lượt không được nhỏ hơn số lượt đã dùng. Đổi mã chưa dùng / xóa mã thì giỏ hàng đang giữ mã đó được cập nhật theo.
+
+**Khách hàng**:
+
+- Nhập mã ở giỏ hàng hoặc ở **trang thanh toán** (áp / bỏ mã không tải lại trang nên thông tin giao hàng đang nhập được giữ nguyên).
+- Mục **"Ưu đãi dành cho bạn"** liệt kê tối đa 5 mã công khai đang chạy: mã dùng được có nút *Áp dụng* và số tiền tiết kiệm;
+  mã chưa đủ điều kiện ghi rõ lý do (ví dụ *"Mua thêm 1.200.000₫ để dùng mã này"*, *"Bạn đã sử dụng hết lượt…"*).
+- Điều kiện được kiểm tra lại ở server khi đặt hàng; lượt dùng được trừ nguyên tử (hai người đặt cùng lúc không vượt tổng lượt)
+  và được trả lại khi đơn bị hủy. Mã giảm giá hiện trong email xác nhận, trang đơn hàng của khách và của admin.
+
+Dữ liệu mẫu: `CHAOBAN10` (10%, tối đa 2 triệu, đơn từ 5 triệu, mỗi khách 1 lần) và `GIAM500K` (đơn từ 10 triệu, 100 lượt) là mã công khai;
+`HETHAN` là mã riêng tư đã hết hạn dùng để kiểm thử.
+
+## 20. Mã QR sản phẩm & đơn hàng
+
+Mỗi sản phẩm và mỗi đơn hàng **tự có mã QR riêng**, sinh ngay khi cần (không lưu file, không cần thao tác thêm).
+Thư viện: `Net.Codecrete.QrCodeGenerator` (MIT, không phụ thuộc thư viện đồ họa), mức sửa lỗi M (15%) để tem in bị trầy vẫn quét được.
+
+| | Sản phẩm | Đơn hàng |
+|---|---|---|
+| Mã chứa | `{BaseUrl}/q/p/{id}` | `{BaseUrl}/q/o/{mã đơn}` |
+| Quét mở | Trang chi tiết sản phẩm hiện tại. Mã **không đổi** khi đổi tên / đường dẫn (slug) nên tem đã in vẫn dùng được. Sản phẩm nháp / ẩn: khách thấy 404, admin được đưa vào trang sửa | Admin → trang quản lý đơn; khách đặt đơn → trang đơn của mình; chưa đăng nhập → trang đăng nhập rồi quay lại; người khác → 404 |
+| Hiện ở | Nút *"Mã QR sản phẩm"* trên trang sản phẩm (tải PNG), thẻ QR trong trang sửa sản phẩm của admin, **tem in** | Trang đặt hàng thành công, trang đơn của khách, email xác nhận, thẻ QR trong trang đơn của admin, **phiếu giao hàng** |
+
+- **In tem QR** (admin): nút *"In tem QR"* ở danh sách sản phẩm in toàn bộ sản phẩm đang lọc (tối đa 100 tem, khổ A4, 3 tem mỗi hàng:
+  QR, tên, SKU, giá, cửa hàng); nút *"In tem QR"* trong trang sửa sản phẩm in một tem. Dán tại showroom để khách quét xem chi tiết.
+- **Phiếu giao hàng** (admin, trang đơn → *"In phiếu giao hàng"*): QR đơn hàng, người nhận, sản phẩm, tổng tiền, số tiền thu hộ COD, ô ký nhận.
+- **Bảo mật**: mã đơn chỉ chứa địa chỉ, không chứa thông tin khách. Khi chưa đăng nhập, hệ thống không tra cứu đơn nên không thể dò
+  mã nào tồn tại; ảnh QR đơn hàng được vẽ cho mọi mã đúng định dạng vì cùng lý do (và để email hiển thị được).
+- Địa chỉ trong mã lấy từ `ApplicationSettings:BaseUrl` — **phải là tên miền thật khi triển khai**. Muốn thử bằng điện thoại trong mạng LAN
+  khi phát triển: đặt `ApplicationSettings__BaseUrl=http://<IP máy>:5243` và chạy `dotnet run --urls http://0.0.0.0:5243`.

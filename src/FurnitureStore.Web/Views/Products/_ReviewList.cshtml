@@ -1,0 +1,47 @@
+@model FurnitureStore.Web.ViewModels.Catalog.ReviewListViewModel
+<div id="reviewList" data-review-list>
+    @if (Model.Reviews.Items.Count == 0)
+    {
+        <p class="text-muted-fs mb-0">Chưa có đánh giá nào cho sản phẩm này.</p>
+    }
+    else
+    {
+        @foreach (var r in Model.Reviews.Items)
+        {
+            <article class="review-item">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="review-avatar" aria-hidden="true">@(r.ReviewerName.Length > 0 ? r.ReviewerName[..1].ToUpperInvariant() : "K")</span>
+                    <strong>@r.ReviewerName</strong>
+                    @if (r.IsVerifiedPurchase)
+                    {
+                        <span class="badge text-bg-success-subtle text-success-emphasis"><i class="bi bi-patch-check me-1" aria-hidden="true"></i>Đã mua hàng</span>
+                    }
+                    <span class="small text-muted-fs ms-auto">@Format.DateText(r.CreatedAt)</span>
+                </div>
+                <div class="mt-1"><partial name="_Rating" model="((decimal)r.Rating, 0)" /></div>
+                @if (!string.IsNullOrEmpty(r.Title))
+                {
+                    <h3 class="h6 mt-2 mb-1">@r.Title</h3>
+                }
+                <p class="review-comment mb-2">@r.Comment</p>
+                @if (r.ImageUrls.Count > 0)
+                {
+                    <div class="review-images">
+                        @foreach (var url in r.ImageUrls)
+                        {
+                            <a href="@url" target="_blank" rel="noopener"><img src="@url" alt="Ảnh đánh giá của @r.ReviewerName" width="88" height="88" loading="lazy" /></a>
+                        }
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(r.AdminReply))
+                {
+                    <div class="review-reply">
+                        <div class="small fw-semibold mb-1"><i class="bi bi-reply me-1" aria-hidden="true"></i>Phản hồi từ cửa hàng</div>
+                        <div class="small">@r.AdminReply</div>
+                    </div>
+                }
+            </article>
+        }
+        <partial name="_Pagination" model="(Model.Reviews.Page, Model.Reviews.TotalPages, (Func<int, string>)Model.PageUrl)" />
+    }
+</div>

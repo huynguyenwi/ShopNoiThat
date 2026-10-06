@@ -1,0 +1,47 @@
+@model FurnitureStore.Web.ViewModels.Sales.CheckoutSummaryModel
+@{
+    var cart = Model.Cart;
+    var couponBox = new FurnitureStore.Web.ViewModels.Sales.CouponBoxModel(cart, Model.Offers, "/checkout");
+}
+@* Outside the checkout <form>: the coupon forms cannot be nested in it. checkout.js applies coupons through the API and
+   reloads this partial (GET /checkout/summary), so what the customer typed in the form is kept. *@
+<h2 class="h5 mb-3">Đơn hàng (@cart.TotalQuantity sản phẩm)</h2>
+<ul class="summary-items">
+    @foreach (var line in cart.Items)
+    {
+        <li>
+            <span class="summary-item-image">
+                @if (line.ImageUrl is not null)
+                {
+                    <img src="@line.ImageUrl" alt="" width="64" height="48" />
+                }
+                <span class="badge rounded-pill">@line.Quantity</span>
+            </span>
+            <span class="flex-grow-1 min-w-0">
+                <span class="d-block fw-semibold text-truncate">@line.ProductName</span>
+                <span class="d-block small text-muted-fs text-truncate">@line.VariantName</span>
+            </span>
+            <span class="fw-semibold text-nowrap">@Format.Money(line.LineTotal)</span>
+        </li>
+    }
+</ul>
+
+<partial name="_CouponBox" model="couponBox" />
+
+<dl class="summary-lines">
+    <div><dt>Tạm tính</dt><dd data-summary="subtotal">@Format.Money(cart.Subtotal)</dd></div>
+    @if (cart.DiscountAmount > 0)
+    {
+        <div><dt>Giảm giá (@cart.CouponCode)</dt><dd class="text-success" data-summary="discount">-@Format.Money(cart.DiscountAmount)</dd></div>
+    }
+    <div><dt>Giao hàng &amp; lắp đặt</dt><dd data-summary="shipping">@(cart.ShippingFee == 0 ? "Miễn phí" : Format.Money(cart.ShippingFee))</dd></div>
+    <div class="summary-total"><dt>Tổng thanh toán</dt><dd data-summary="total">@Format.Money(cart.Total)</dd></div>
+</dl>
+@foreach (var warning in cart.Warnings)
+{
+    <div class="alert alert-warning py-2 small">@warning</div>
+}
+<button type="submit" form="checkoutForm" class="btn btn-primary btn-lg w-100" disabled="@(!cart.CanCheckout)" data-submit-once>
+    <i class="bi bi-bag-check me-1" aria-hidden="true"></i>Đặt hàng
+</button>
+<p class="small text-muted-fs text-center mt-2 mb-0">Bằng việc đặt hàng, bạn đồng ý với điều khoản mua bán của cửa hàng.</p>

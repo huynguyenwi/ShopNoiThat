@@ -1,0 +1,275 @@
+@model FurnitureStore.Web.Areas.Admin.Models.ProductFormViewModel
+@using FurnitureStore.Application.Catalog.Admin
+@using FurnitureStore.Domain.Enums
+@using FurnitureStore.Application.Qr
+@inject IOptions<ApplicationSettings> SiteOptions
+@{
+    ViewData["Title"] = Model.IsEdit ? $"Sửa: {Model.Command.Name}" : "Thêm sản phẩm";
+    var c = Model.Command;
+    var action = Model.IsEdit ? "Edit" : "Create";
+    var defaultKey = Model.DefaultVariantKey;
+    var productQr = Model.Id is int qrId
+        ? new QrCardModel("Mã QR sản phẩm", QrLinks.ProductImage(qrId), $"Mã QR mở trang sản phẩm {c.Name}",
+            QrLinks.ProductImage(qrId, "png") + "?download=true",
+            "Quét để mở trang sản phẩm. Mã không đổi khi đổi tên hay đường dẫn sản phẩm, có thể in dán tại showroom.",
+            Admin: true, TargetUrl: QrLinks.ProductTarget(SiteOptions.Value.BaseUrl, qrId),
+            PrintUrl: $"/admin/products/qrlabels?id={qrId}", PrintLabel: "In tem QR")
+        : null;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <a asp-action="Index" class="text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Danh sách sản phẩm</a>
+    @if (Model.IsEdit)
+    {
+        <div class="d-flex gap-2 align-items-center small text-muted-fs">
+            @if (Model.UpdatedAt.HasValue)
+            {
+                <span>Cập nhật @Format.DateTimeText(Model.UpdatedAt.Value) bởi @Model.UpdatedBy</span>
+            }
+            <a class="btn btn-light btn-sm" href="/products/@Model.Slug" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Xem trên web</a>
+        </div>
+    }
+</div>
+
+<form asp-action="@action" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" id="productForm" novalidate data-product-form>
+    <input type="hidden" asp-for="Command.Version" />
+    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Thông tin chung</h2></div>
+                <div class="admin-card-body row g-3">
+                    <div class="col-md-8">
+                        <label asp-for="Command.Name" class="form-label">Tên sản phẩm *</label>
+                        <input asp-for="Command.Name" class="form-control" required maxlength="200" data-slug-source />
+                        <span asp-validation-for="Command.Name" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Command.Sku" class="form-label">Mã SKU *</label>
+                        <input asp-for="Command.Sku" class="form-control text-uppercase" required maxlength="50" placeholder="VD: BA-OC-180" data-product-sku />
+                        <span asp-validation-for="Command.Sku" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="Command.Slug" class="form-label">Slug (URL)</label>
+                        <div class="input-group">
+                            <span class="input-group-text small">/products/</span>
+                            <input asp-for="Command.Slug" class="form-control" maxlength="220" placeholder="tu-dong-tao-tu-ten" data-slug-target />
+                        </div>
+                        <span asp-validation-for="Command.Slug" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Command.FurnitureType" class="form-label">Loại nội thất</label>
+                        <select asp-for="Command.FurnitureType" class="form-select" asp-items="Labels.Options<FurnitureType>(Labels.Of, c.FurnitureType)"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Command.CategoryId" class="form-label">Danh mục *</label>
+                        <select asp-for="Command.CategoryId" class="form-select" required>
+                            <option value="">— Chọn danh mục —</option>
+                            @foreach (var cat in Model.Lookups.Categories)
+                            {
+                                <option value="@cat.Id" selected="@(c.CategoryId == cat.Id)">@(cat.ParentId.HasValue ? "— " : "")@cat.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Command.CategoryId" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Command.StyleId" class="form-label">Phong cách / mẫu mã</label>
+                        <select asp-for="Command.StyleId" class="form-select">
+                            <option value="">— Không chọn —</option>
+                            @foreach (var style in Model.Lookups.Styles)
+                            {
+                                <option value="@style.Id" selected="@(c.StyleId == style.Id)">@style.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Command.ShortDescription" class="form-label">Mô tả ngắn</label>
+                        <textarea asp-for="Command.ShortDescription" class="form-control" rows="2" maxlength="500"></textarea>
+                        <span asp-validation-for="Command.ShortDescription" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Command.Description" class="form-label">Mô tả chi tiết</label>
+                        <textarea asp-for="Command.Description" class="form-control" rows="6" maxlength="20000"></textarea>
+                        <div class="form-text">Mỗi dòng là một đoạn văn. Nội dung hiển thị dạng văn bản thuần (HTML sẽ không được thực thi).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header">
+                    <h2>Biến thể (màu / chất liệu / kích thước / mẫu mã)</h2>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-add-variant><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm biến thể</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table admin-table variant-table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-center" title="Mặc định">MĐ</th>
+                                <th scope="col">SKU / Tên</th>
+                                <th scope="col">Màu / Chất liệu</th>
+                                <th scope="col">Kích thước / Mẫu</th>
+                                <th scope="col">Giá / Giá cũ (₫)</th>
+                                <th scope="col">Tồn / Ngưỡng</th>
+                                <th scope="col" class="text-center">Bán</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        @for (var i = 0; i < c.Variants.Count; i++)
+                        {
+                            @await Html.PartialAsync("_VariantRow", (i.ToString(), c.Variants[i], Model.Lookups, i.ToString() == defaultKey))
+                        }
+                    </table>
+                </div>
+                <div class="admin-card-body small text-muted-fs">
+                    Mỗi biến thể là một SKU riêng có giá và tồn kho riêng. Chọn <strong>MĐ</strong> để đặt biến thể hiển thị mặc định.
+                    "Giá cũ" (nếu có) phải lớn hơn giá bán và sẽ hiển thị gạch ngang kèm % giảm giá.
+                </div>
+            </div>
+
+            @if (Model.IsEdit)
+            {
+                <div class="admin-card mb-3" id="images">
+                    <div class="admin-card-header"><h2>Hình ảnh hiện có</h2></div>
+                    <div class="admin-card-body">
+                        @if (Model.Images.Count == 0)
+                        {
+                            <p class="text-muted-fs mb-0">Chưa có ảnh.</p>
+                        }
+                        <div class="image-grid">
+                            @foreach (var image in Model.Images)
+                            {
+                                var variantName = image.VariantId.HasValue ? c.Variants.FirstOrDefault(v => v.Id == image.VariantId)?.Name : null;
+                                <div class="image-tile @(image.IsPrimary ? "is-primary" : "")">
+                                    <img src="@image.Url" alt="" loading="lazy" />
+                                    <div class="image-tile-meta">
+                                        @if (image.IsPrimary)
+                                        {
+                                            <span class="badge text-bg-success">Ảnh chính</span>
+                                        }
+                                        @if (variantName is not null)
+                                        {
+                                            <span class="badge text-bg-light text-truncate" title="@variantName">@variantName</span>
+                                        }
+                                    </div>
+                                    <div class="image-tile-actions">
+                                        @if (!image.IsPrimary)
+                                        {
+                                            <button type="submit" class="btn btn-light btn-sm" form="primary-@image.Id" title="Đặt làm ảnh chính" aria-label="Đặt làm ảnh chính"><i class="bi bi-star" aria-hidden="true"></i></button>
+                                        }
+                                        <button type="submit" class="btn btn-light btn-sm text-danger" form="delete-image-@image.Id" title="Xóa ảnh" aria-label="Xóa ảnh"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-xl-4">
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Xuất bản</h2></div>
+                <div class="admin-card-body">
+                    <label asp-for="Command.Status" class="form-label">Trạng thái</label>
+                    <select asp-for="Command.Status" class="form-select mb-3" asp-items="Labels.Options<ProductStatus>(Labels.Of, c.Status)"></select>
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="Command.IsFeatured" class="form-check-input" role="switch" />
+                        <label asp-for="Command.IsFeatured" class="form-check-label">Sản phẩm nổi bật (hiện ở trang chủ)</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>@(Model.IsEdit ? "Lưu thay đổi" : "Tạo sản phẩm")</button>
+                    </div>
+                </div>
+            </div>
+
+            @if (productQr is not null)
+            {
+                <partial name="_QrCard" model="productQr" />
+            }
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Thêm ảnh sản phẩm</h2></div>
+                <div class="admin-card-body">
+                    <input class="form-control" type="file" name="images" multiple accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh sản phẩm (JPG, PNG, WebP)" data-image-input data-preview-target="productImagePreview" />
+                    <div class="form-text">JPG, PNG, WEBP; tối đa 5 MB/ảnh, 10 ảnh mỗi lần. Ảnh đầu tiên sẽ là ảnh chính nếu sản phẩm chưa có ảnh.</div>
+                    <div class="image-previews" id="productImagePreview"></div>
+                </div>
+            </div>
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Thông số</h2></div>
+                <div class="admin-card-body row g-2">
+                    <div class="col-4">
+                        <label asp-for="Command.LengthMm" class="form-label small">Dài (mm)</label>
+                        <input asp-for="Command.LengthMm" class="form-control form-control-sm" type="number" min="1" max="10000" />
+                    </div>
+                    <div class="col-4">
+                        <label asp-for="Command.WidthMm" class="form-label small">Rộng (mm)</label>
+                        <input asp-for="Command.WidthMm" class="form-control form-control-sm" type="number" min="1" max="10000" />
+                    </div>
+                    <div class="col-4">
+                        <label asp-for="Command.HeightMm" class="form-label small">Cao (mm)</label>
+                        <input asp-for="Command.HeightMm" class="form-control form-control-sm" type="number" min="1" max="10000" />
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="Command.WeightKg" class="form-label small">Khối lượng (kg)</label>
+                        <input asp-for="Command.WeightKg" class="form-control form-control-sm" type="number" step="0.1" min="0" />
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="Command.WarrantyMonths" class="form-label small">Bảo hành (tháng)</label>
+                        <input asp-for="Command.WarrantyMonths" class="form-control form-control-sm" type="number" min="0" max="120" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Command.Origin" class="form-label small">Xuất xứ</label>
+                        <input asp-for="Command.Origin" class="form-control form-control-sm" maxlength="150" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Command.CareInstructions" class="form-label small">Hướng dẫn bảo quản</label>
+                        <textarea asp-for="Command.CareInstructions" class="form-control form-control-sm" rows="3" maxlength="1000"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>SEO</h2></div>
+                <div class="admin-card-body">
+                    <label asp-for="Command.MetaTitle" class="form-label small">Meta title</label>
+                    <input asp-for="Command.MetaTitle" class="form-control form-control-sm mb-2" maxlength="200" data-counter />
+                    <label asp-for="Command.MetaDescription" class="form-label small">Meta description</label>
+                    <textarea asp-for="Command.MetaDescription" class="form-control form-control-sm" rows="3" maxlength="500" data-counter></textarea>
+                    <div class="form-text">Để trống sẽ dùng tên và mô tả ngắn.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.IsEdit)
+{
+    @foreach (var image in Model.Images)
+    {
+        <form id="primary-@image.Id" method="post" asp-action="PrimaryImage" asp-route-id="@Model.Id" asp-route-imageId="@image.Id" class="d-none"></form>
+        <form id="delete-image-@image.Id" method="post" asp-action="DeleteImage" asp-route-id="@Model.Id" asp-route-imageId="@image.Id" class="d-none" data-confirm="Xóa ảnh này?"></form>
+    }
+
+    <div class="admin-card border-danger-subtle mt-2">
+        <div class="admin-card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <strong>Xóa sản phẩm</strong>
+                <div class="small text-muted-fs">Sản phẩm bị ẩn khỏi cửa hàng (xóa mềm); đơn hàng cũ vẫn giữ thông tin.</div>
+            </div>
+            <form method="post" asp-action="Delete" asp-route-id="@Model.Id" data-confirm="Xóa sản phẩm này?">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1" aria-hidden="true"></i>Xóa sản phẩm</button>
+            </form>
+        </div>
+    </div>
+}
+
+<template id="variantTemplate">
+    @await Html.PartialAsync("_VariantRow", ("__key__", new VariantUpsertModel { IsActive = true }, Model.Lookups, false))
+</template>
+
+@section Scripts {
+    <script src="~/js/admin-product-form.js" asp-append-version="true"></script>
+}
