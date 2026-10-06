@@ -30,7 +30,7 @@ public sealed partial class CartOwnerResolver(IHttpContextAccessor accessor, Tim
             Context.Response.Cookies.Append(CookieName, anonymousId, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = CookieSecurity.IsSecure(Context),
                 SameSite = SameSiteMode.Lax,
                 IsEssential = true,
                 Expires = timeProvider.GetUtcNow().AddDays(30)
@@ -50,7 +50,7 @@ public sealed partial class CartOwnerResolver(IHttpContextAccessor accessor, Tim
         }
     }
 
-    public void ClearAnonymousCookie() => Context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = true, SameSite = SameSiteMode.Lax });
+    public void ClearAnonymousCookie() => Context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = CookieSecurity.IsSecure(Context), SameSite = SameSiteMode.Lax });
 
     [GeneratedRegex("^[0-9a-f]{32}$")]
     private static partial Regex CartIdRegex();

@@ -13,7 +13,7 @@ param(
     [string]$BaseUrl = "https://localhost:7160",
     [string]$Database = "FurnitureStoreDb",
     [string]$EmailDirectory = (Join-Path $PSScriptRoot "..\..\src\FurnitureStore.Web\App_Data\emails"),
-    [string[]]$Suites = @("dod-e2e.js", "coupon-e2e.js", "qr-e2e.js", "dining-e2e.js", "forms-resubmit.js", "chat-e2e.js", "ai-e2e.js", "local-ai-e2e.js", "quote-e2e.js", "account-forms.js", "audit.js")
+    [string[]]$Suites = @("dod-e2e.js", "coupon-e2e.js", "qr-e2e.js", "dining-e2e.js", "forms-resubmit.js", "chat-e2e.js", "chat-offline-e2e.js", "ai-e2e.js", "local-ai-e2e.js", "quote-e2e.js", "account-forms.js", "audit.js")
 )
 
 $ErrorActionPreference = "Stop"

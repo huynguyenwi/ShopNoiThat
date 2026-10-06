@@ -28,7 +28,7 @@ public static partial class AiVisitor
             context.Response.Cookies.Append(CookieName, anonymousId, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = CookieSecurity.IsSecure(context),
                 SameSite = SameSiteMode.Lax,
                 IsEssential = true,
                 Expires = issueCookieWith.GetUtcNow().AddDays(30)
@@ -45,7 +45,7 @@ public static partial class AiVisitor
     }
 
     public static void Clear(HttpContext context) =>
-        context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = true, SameSite = SameSiteMode.Lax });
+        context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = CookieSecurity.IsSecure(context), SameSite = SameSiteMode.Lax });
 
     [GeneratedRegex("^[0-9a-f]{32}$")]
     private static partial Regex IdRegex();

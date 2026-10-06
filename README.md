@@ -7,7 +7,7 @@ vẫn bán các nhóm khác (sofa, giường, tủ, kệ...). Khách gửi **yê
 (OpenAI hoặc API tương thích).
 
 > Đã hoàn thành cả 11 phase (xem [Tiến độ](#12-tiến-độ)). Bản Release đã được kiểm tra trên database tạo từ file SQL,
-> chạy ở môi trường Production: 649 test tự động + 12 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
+> chạy ở môi trường Production: 657 test tự động + 13 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
 
 ---
 
@@ -213,7 +213,8 @@ Lần đầu có thể cần tin cậy chứng chỉ HTTPS dev: `dotnet dev-cert
 2. Chuột phải **FurnitureStore.Web** → **Set as Startup Project**. Chỉ project này chạy được (web, trang quản trị, API, chat,
    trợ lý AI đều nằm trong nó); Domain / Application / Infrastructure là thư viện, Tests chạy trong **Test Explorer** —
    **không cần** "Multiple startup projects".
-3. Trên thanh công cụ chọn profile **https** (web chạy ở https://localhost:7160).
+3. Trên thanh công cụ chọn profile **https** (đứng đầu danh sách nên thường được chọn sẵn; web chạy ở https://localhost:7160).
+   Profile **http** (http://localhost:5243) cũng chạy được ở môi trường Development; khi triển khai thật luôn dùng HTTPS.
 4. Chuột phải **FurnitureStore.Web** → **Manage User Secrets**, dán mật khẩu tài khoản (và connection string nếu database
    không nằm trên LocalDB):
    ```json
@@ -342,6 +343,8 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | Build dùng nhầm SDK 9/10 | Kiểm tra `global.json`; cần cài .NET SDK 8.0.x. |
 | Trình duyệt cảnh báo chứng chỉ HTTPS | `dotnet dev-certs https --trust`. |
 | Muốn làm lại database từ đầu | `dotnet ef database drop --force --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web` rồi chạy lại ứng dụng. |
+| Trang `/admin/chat` không hiện tin nhắn khách vừa gửi | Xem dòng trạng thái dưới bộ lọc: *"Mất kết nối trực tiếp"* nghĩa là realtime đang mất (server vừa khởi động lại, máy ngủ, mạng chặn WebSocket) — trang vẫn tự cập nhật mỗi 15 giây và tự kết nối lại. Khi thử, mở **khách và admin ở hai trình duyệt khác nhau** (hoặc một cửa sổ ẩn danh): cùng một trình duyệt dùng chung cookie đăng nhập, đăng nhập tài khoản khách sẽ đăng xuất admin. Khách gửi quá 15 tin/phút thì tin bị từ chối (khách thấy thông báo). |
+| Trang có form báo lỗi 500 khi chạy bằng `http://` | Đã sửa cho môi trường Development (cookie theo giao thức của request). Production bắt buộc HTTPS. |
 | Font chữ hiển thị khác thiết kế khi offline | Font Be Vietnam Pro / Playfair Display tải từ Google Fonts; khi offline trình duyệt dùng font hệ thống. Bootstrap và icon đã nằm sẵn trong `wwwroot/lib`. |
 
 ## 12. Tiến độ
@@ -397,10 +400,14 @@ Trang và API quản trị được kiểm tra quyền ở backend (policy `Admi
 ## 14. Chat realtime (SignalR)
 
 - Hub `/hubs/chat`; thư viện client `wwwroot/lib/microsoft-signalr` (8.0.7, MIT). Tự fallback sang long polling khi không có WebSocket; khi mất kết nối vẫn gửi được qua REST `/api/chat/messages`.
-- Khách vãng lai được nhận diện bằng cookie ngẫu nhiên `.NhaMoc.Chat` (HttpOnly, Secure). Khi đăng nhập / đăng ký, cuộc trò chuyện đang có tự chuyển sang tài khoản.
+- Khách vãng lai được nhận diện bằng cookie ngẫu nhiên `.NhaMoc.Chat` (HttpOnly, Secure; riêng Development chạy bằng HTTP thì không Secure). Khi đăng nhập / đăng ký, cuộc trò chuyện đang có tự chuyển sang tài khoản.
 - Nhân viên chat: gán role `STAFF` cho tài khoản (trang `/admin/customers` → chi tiết → vai trò). STAFF chỉ vào được `/admin/chat`; các trang quản trị khác vẫn chỉ dành cho ADMIN (kiểm tra ở server).
 - Bảo mật: nội dung chỉ lưu và hiển thị dạng văn bản thuần (không render HTML); tối đa 2.000 ký tự; khách tối đa 15 tin/phút; hub từ chối kết nối từ origin khác (chống cross-site WebSocket hijacking); phương thức dành cho nhân viên yêu cầu policy `BackOffice`.
 - Khi có tin nhắn mới: admin nhận thông báo (chuông) + badge ở menu "Chat khách hàng"; khách đã đăng nhập nhận thông báo khi cửa hàng trả lời.
+- **Mất kết nối realtime** (server khởi động lại, máy ngủ, mạng chập chờn, WebSocket bị chặn): trang admin và khung chat của khách
+  tự kết nối lại liên tục (2 → 30 giây/lần, thử ngay khi tab được mở lại), trong lúc chờ **tự cập nhật mỗi 15 giây** và tải bù các
+  tin bị lỡ khi kết nối lại. Trang `/admin/chat` hiện trạng thái *"Đang nhận tin nhắn trực tiếp"* hoặc
+  *"Mất kết nối trực tiếp - tự cập nhật mỗi 15 giây"*. (Trước đây, mất kết nối quá ~45 giây thì trang không nhận tin mới cho tới khi tải lại.)
 - Nhiều server: SignalR mặc định giữ kết nối trong bộ nhớ của từng server. Khi chạy nhiều instance cần bật sticky session hoặc thêm backplane (Redis / Azure SignalR Service).
 
 ## 15. Báo giá nội thất đặt đóng
@@ -477,7 +484,7 @@ Hệ thống:
 ### Test tự động (xUnit)
 
 ```powershell
-dotnet test                      # 649 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
+dotnet test                      # 657 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
 dotnet test -c Release           # cùng bộ test trên bản build Release
 ```
 
@@ -497,6 +504,7 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
 | `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
 | `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
+| `chat-offline-e2e.js` | Chat khi mất realtime: chặn kết nối SignalR của admin → trang báo mất kết nối, cuộc trò chuyện / tin nhắn mới vẫn hiện (tự cập nhật), admin vẫn trả lời được; bỏ chặn → tự kết nối lại, tin nhắn tức thì; khách mất realtime vẫn nhận được trả lời (10 bước) |
 | `ai-e2e.js` | Trợ lý AI (widget, trang tư vấn, gợi ý màu / phong cách), bố cục mobile |
 | `local-ai-e2e.js` | Trợ lý không có AI: chip "Giao hàng & bảo hành", giờ mở cửa, hotline (gõ không dấu), mã giảm giá, so sánh gỗ, kích thước bàn ăn, "cảm ơn", câu không hiểu, tìm sản phẩm; trang sản phẩm (giao hàng, mẫu rẻ hơn, màu); khách đã đăng nhập hỏi đơn hàng của mình; giao diện điện thoại (16 bước) |
 | `quote-e2e.js` | Báo giá đặt đóng: tính giá, phương án rẻ hơn, gửi yêu cầu, admin báo giá, khách đồng ý |

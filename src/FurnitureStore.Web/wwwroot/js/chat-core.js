@@ -78,6 +78,72 @@
             .build();
     }
 
+    /**
+     * Starts a hub connection and keeps it up. SignalR's automatic reconnect gives up after ~45 s (server restarted,
+     * computer asleep, network down); from then on this retries for as long as the page is open.
+     * handlers.onUp(recovered) runs on every connection (recovered = false only for the first one; after a recovery the
+     * page must reload what it missed), handlers.onDown() when the connection is lost.
+     * Returns { stop() } for a connection that is replaced on purpose.
+     */
+    function keepConnected(connection, handlers) {
+        const delays = [2000, 5000, 10000, 20000, 30000];
+        let attempt = 0;
+        let timer = null;
+        let stopped = false;
+        let everConnected = false;
+
+        function up(recovered) {
+            attempt = 0;
+            if (handlers.onUp) handlers.onUp(recovered);
+        }
+
+        function down() {
+            if (handlers.onDown) handlers.onDown();
+        }
+
+        function schedule() {
+            if (stopped) return;
+            clearTimeout(timer);
+            timer = setTimeout(start, delays[Math.min(attempt++, delays.length - 1)]);
+        }
+
+        async function start() {
+            if (stopped || connection.state !== 'Disconnected') return;
+            clearTimeout(timer);
+            try {
+                await connection.start();
+                const recovered = everConnected;
+                everConnected = true;
+                up(recovered);
+            } catch (e) {
+                down();
+                schedule();
+            }
+        }
+
+        connection.onreconnecting(down);
+        connection.onreconnected(function () { up(true); });
+        connection.onclose(function () {
+            if (stopped) return;
+            down();
+            schedule();
+        });
+        // A tab coming back from the background (or a laptop waking up) retries at once.
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') start();
+        });
+        window.addEventListener('online', start);
+
+        start();
+        return {
+            stop: async function () {
+                stopped = true;
+                clearTimeout(timer);
+                try { await connection.stop(); } catch (e) { /* already stopped */ }
+            }
+        };
+    }
+
     /** Grows a textarea with its content (up to its CSS max-height). */
     function autoGrow(textarea) {
         textarea.style.height = 'auto';
@@ -104,6 +170,8 @@
         markSeen: markSeen,
         scrollToBottom: scrollToBottom,
         createConnection: createConnection,
+        keepConnected: keepConnected,
+        pollInterval: 15000,
         autoGrow: autoGrow,
         throttle: throttle
     };

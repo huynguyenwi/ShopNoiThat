@@ -393,6 +393,37 @@
     color: #fff;
 }
 
+/* Realtime connection state of the chat page (polling takes over while it is down). */
+.admin-chat-live {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .5rem;
+    font-size: .75rem;
+    color: #6b5f55;
+}
+
+.admin-chat-live::before {
+    content: "";
+    flex-shrink: 0;
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: #b9a48d;
+}
+
+.admin-chat-live.is-live::before {
+    background: #2f7d4a;
+}
+
+.admin-chat-live.is-offline {
+    color: #8a4b00;
+}
+
+.admin-chat-live.is-offline::before {
+    background: #d08a00;
+}
+
 .admin-chat-conversations {
     flex: 1;
     overflow-y: auto;

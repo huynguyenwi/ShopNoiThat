@@ -31,7 +31,7 @@ builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
-    .AddWebServices(builder.Configuration)
+    .AddWebServices(builder.Configuration, builder.Environment)
     .AddKeyStorage(builder.Configuration, builder.Environment);
 var behindReverseProxy = builder.Services.AddReverseProxySupport(builder.Configuration);
 

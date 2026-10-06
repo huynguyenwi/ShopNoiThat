@@ -43,7 +43,7 @@ public static partial class ChatIdentity
             context.Response.Cookies.Append(CookieName, key, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = CookieSecurity.IsSecure(context),
                 SameSite = SameSiteMode.Lax,
                 IsEssential = true,
                 Expires = timeProvider.GetUtcNow().AddDays(30)
@@ -54,7 +54,7 @@ public static partial class ChatIdentity
     }
 
     public static void ClearGuestKey(HttpContext context) =>
-        context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = true, SameSite = SameSiteMode.Lax });
+        context.Response.Cookies.Delete(CookieName, new CookieOptions { Secure = CookieSecurity.IsSecure(context), SameSite = SameSiteMode.Lax });
 
     public static bool IsStaff(ClaimsPrincipal user) =>
         user.Identity?.IsAuthenticated == true && (user.IsInRole(AppRoles.Admin) || user.IsInRole(AppRoles.Staff));

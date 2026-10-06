@@ -10,7 +10,7 @@
     const page = document.getElementById('adminChat');
     if (!badge && !page) return;
 
-    let connection = C.createConnection();
+    const connection = C.createConnection();
     let refreshBadgeTimer = null;
 
     function refreshBadge() {
@@ -41,16 +41,32 @@
         connection.on('Typing', function (conversationId, name, fromStaff) {
             if (ui && !fromStaff) ui.onTyping(conversationId, name);
         });
-        connection.onreconnected(function () {
-            refreshBadge();
-            if (ui) ui.reload();
+        C.keepConnected(connection, {
+            onUp: function (recovered) {
+                if (ui) ui.setLive('live');
+                if (recovered) {
+                    // Messages sent while the connection was down were not pushed: load them now.
+                    refreshBadge();
+                    if (ui) ui.reload();
+                }
+            },
+            onDown: function () { if (ui) ui.setLive('offline'); }
         });
-        connection.start().catch(function () { connection = null; });
+    } else if (ui) {
+        ui.setLive('offline');
     }
 
     function hubReady() {
-        return connection && connection.state === 'Connected';
+        return !!connection && connection.state === 'Connected';
     }
+
+    // Without the realtime connection (server restarted, network down, WebSockets blocked) the badge and the chat page
+    // still update, by polling until the connection is back.
+    setInterval(function () {
+        if (hubReady() || document.visibilityState !== 'visible') return;
+        refreshBadge();
+        if (ui) ui.poll();
+    }, C.pollInterval);
 
     // ================================================================== /admin/chat page
 
@@ -70,6 +86,8 @@
         const input = document.getElementById('threadInput');
         const sendButton = document.getElementById('threadSend');
         const toggleStatus = document.getElementById('threadToggleStatus');
+        const live = document.getElementById('chatLive');
+        const liveText = document.getElementById('chatLiveText');
 
         const state = {
             filter: 'all',
@@ -138,11 +156,12 @@
             return item;
         }
 
-        async function loadList(append) {
+        /** @param {boolean} quiet background refresh: no error toast every 15 s while the server is unreachable */
+        async function loadList(append, quiet) {
             const pageNumber = append ? state.page + 1 : 1;
             const result = await FS.api(query(pageNumber));
             if (!result.success) {
-                FS.toast(result.message || 'Không tải được danh sách.', 'error');
+                if (!quiet) FS.toast(result.message || 'Không tải được danh sách.', 'error');
                 return;
             }
 
@@ -228,6 +247,21 @@
             C.scrollToBottom(messages, true);
             input.focus();
             refreshBadge();
+        }
+
+        /** Polling: new messages and read receipts of the open thread (opening it marks the customer's messages read). */
+        async function refreshThread() {
+            if (!state.selected || inner.hidden) return;
+            const id = state.selected;
+            const result = await FS.api('/api/admin/chat/conversations/' + id);
+            if (!result.success || state.selected !== id) return;
+            const before = state.seen.size;
+            result.data.messages.forEach(function (m) { appendMessage(m); });
+            state.conversation = result.data.conversation;
+            renderHeader(result.data.conversation);
+            const staffMessages = result.data.messages.filter(function (m) { return m.senderType === 'Staff'; });
+            if (staffMessages.length && staffMessages[staffMessages.length - 1].isRead) C.markSeen(messages);
+            if (state.seen.size > before) C.scrollToBottom(messages, false);
         }
 
         async function send() {
@@ -339,6 +373,16 @@
             reload: function () {
                 loadList(false);
                 if (state.selected) openThread(state.selected);
+            },
+            poll: function () {
+                if (!state.search) loadList(false, true);
+                refreshThread();
+            },
+            setLive: function (mode) {
+                live.className = 'admin-chat-live is-' + mode;
+                liveText.textContent = mode === 'live'
+                    ? 'Đang nhận tin nhắn trực tiếp'
+                    : 'Mất kết nối trực tiếp - tự cập nhật mỗi ' + (C.pollInterval / 1000) + ' giây';
             },
             onMessage: function (message, conversation) {
                 const isOpenThread = conversation.id === state.selected && !inner.hidden;

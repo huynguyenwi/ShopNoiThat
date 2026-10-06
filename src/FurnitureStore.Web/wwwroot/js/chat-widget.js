@@ -31,6 +31,7 @@
         unread: 0,
         sending: false,
         connection: null,
+        keeper: null,
         seen: new Set(),
         typingTimer: null
     };
@@ -141,41 +142,49 @@
             state.typingTimer = setTimeout(function () { typing.hidden = true; }, 4000);
         });
 
-        connection.onreconnecting(function () { statusText.textContent = 'Đang kết nối lại...'; });
-        connection.onreconnected(async function () {
-            statusText.textContent = 'Thường trả lời trong vài phút';
-            if (state.loaded && isOpen()) await refresh(); // pick up messages missed while offline
+        // Retries for as long as the page is open; replies missed while disconnected are loaded on recovery.
+        state.keeper = C.keepConnected(connection, {
+            onUp: function (recovered) {
+                statusText.textContent = 'Thường trả lời trong vài phút';
+                if (!recovered) return;
+                if (state.loaded && isOpen()) refresh(); else refreshUnread();
+            },
+            onDown: function () { statusText.textContent = 'Đang kết nối lại... tin nhắn vẫn được gửi'; }
         });
-        connection.onclose(function () {
-            statusText.textContent = 'Mất kết nối realtime - tin nhắn vẫn được gửi';
-            state.connection = null;
-        });
-
-        try {
-            await connection.start();
-            statusText.textContent = 'Thường trả lời trong vài phút';
-        } catch (e) {
-            state.connection = null;
-            statusText.textContent = 'Không kết nối realtime được - tin nhắn vẫn được gửi';
-        }
     }
 
     async function refresh() {
         const result = await FS.api('/api/chat');
         if (result.success && result.data) {
-            (result.data.messages || []).forEach(function (m) { append(m); });
+            const messages = result.data.messages || [];
+            messages.forEach(function (m) { append(m); });
+            const mine = messages.filter(function (m) { return m.senderType === 'Customer'; });
+            if (mine.length && mine[mine.length - 1].isRead) C.markSeen(list);
             C.scrollToBottom(list, false);
         }
     }
 
+    async function refreshUnread() {
+        const result = await FS.api('/api/chat/unread');
+        if (result.success && result.data && result.data.hasConversation) setUnread(result.data.count);
+    }
+
+    /** A new hub connection, e.g. after the guest cookie was issued (the old connection was opened without it). */
     async function reconnect() {
-        if (state.connection) {
-            const old = state.connection;
+        if (state.keeper) {
+            const keeper = state.keeper;
+            state.keeper = null;
             state.connection = null;
-            try { await old.stop(); } catch (e) { /* ignore */ }
+            await keeper.stop();
         }
         await connect();
     }
+
+    // Without the realtime connection the shop's replies still arrive, by polling until it is back.
+    setInterval(function () {
+        if (!state.connection || state.connection.state === 'Connected' || document.visibilityState !== 'visible') return;
+        if (state.loaded && isOpen()) refresh(); else refreshUnread();
+    }, C.pollInterval);
 
     async function send() {
         const content = input.value.trim();

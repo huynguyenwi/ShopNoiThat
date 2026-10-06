@@ -21,7 +21,7 @@ public static class DependencyInjection
     /// <summary>Header name used by site.js to send the anti-forgery token on AJAX requests.</summary>
     public const string AntiforgeryHeaderName = "X-CSRF-TOKEN";
 
-    public static IServiceCollection AddWebServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWebServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.AddOptions<ApplicationSettings>()
             .Bind(configuration.GetSection(ApplicationSettings.SectionName))
@@ -45,7 +45,7 @@ public static class DependencyInjection
         {
             options.HeaderName = AntiforgeryHeaderName;
             options.Cookie.Name = ".NhaMoc.Antiforgery";
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SecurePolicy = CookieSecurity.PolicyFor(environment);
         });
 
         // Output Vietnamese text as-is instead of &#xNN; entities / \uNNNN escapes.
@@ -132,19 +132,19 @@ public static class DependencyInjection
             options.CombineLogs = true;
         });
 
-        AddAuthentication(services);
+        AddAuthentication(services, environment);
         AddRateLimiting(services, configuration);
 
         return services;
     }
 
-    private static void AddAuthentication(IServiceCollection services)
+    private static void AddAuthentication(IServiceCollection services, IHostEnvironment environment)
     {
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = ".NhaMoc.Auth";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SecurePolicy = CookieSecurity.PolicyFor(environment);
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.LoginPath = "/account/login";
             options.LogoutPath = "/account/logout";
