@@ -1,6 +1,8 @@
 @model FurnitureStore.Application.Common.Models.PagedResult<FurnitureStore.Application.Quotes.QuoteListItemDto>
 @using FurnitureStore.Domain.Entities
+@inject IStoreInfoService StoreInfo
 @{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     ViewData["Title"] = "Yêu cầu báo giá";
     Func<int, string> pageUrl = p => $"/account/quotes?page={p}";
 }
@@ -19,7 +21,7 @@
                     <div class="empty-state">
                         <i class="bi bi-calculator" aria-hidden="true"></i>
                         <h2 class="h5 mt-3">Bạn chưa gửi yêu cầu báo giá nào</h2>
-                        <p class="text-muted-fs">Cần món nội thất theo kích thước riêng? Xưởng Nhà Mộc nhận đóng theo yêu cầu.</p>
+                        <p class="text-muted-fs">Cần món nội thất theo kích thước riêng? Xưởng @store.BrandName nhận đóng theo yêu cầu.</p>
                         <a class="btn btn-primary" href="/bao-gia">Nhận báo giá</a>
                     </div>
                 }

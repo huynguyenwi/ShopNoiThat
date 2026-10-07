@@ -29,6 +29,7 @@ internal sealed class StoreInfoConfiguration : IEntityTypeConfiguration<StoreInf
     {
         builder.ToTable("StoreInformation");
         builder.Property(s => s.Name).HasMaxLength(150).IsRequired();
+        builder.Property(s => s.LogoSubtitle).HasMaxLength(40);
         builder.Property(s => s.Tagline).HasMaxLength(200);
         builder.Property(s => s.About).HasMaxLength(4000);
         builder.Property(s => s.Address).HasMaxLength(300).IsRequired();
@@ -40,6 +41,31 @@ internal sealed class StoreInfoConfiguration : IEntityTypeConfiguration<StoreInf
         builder.Property(s => s.TikTokUrl).HasMaxLength(300);
         builder.Property(s => s.ZaloUrl).HasMaxLength(300);
         builder.Property(s => s.GoogleMapsEmbedUrl).HasMaxLength(1000);
+        builder.ConfigureAudit();
+    }
+}
+
+internal sealed class HomeBannerConfiguration : IEntityTypeConfiguration<HomeBanner>
+{
+    public void Configure(EntityTypeBuilder<HomeBanner> builder)
+    {
+        builder.ToTable("HomeBanners");
+        builder.Property(b => b.Eyebrow).HasMaxLength(60);
+        builder.Property(b => b.Title).HasMaxLength(120).IsRequired();
+        builder.Property(b => b.TitleHighlight).HasMaxLength(80);
+        builder.Property(b => b.Description).HasMaxLength(400);
+        builder.Property(b => b.PrimaryButtonText).HasMaxLength(40);
+        builder.Property(b => b.PrimaryButtonUrl).HasMaxLength(300);
+        builder.Property(b => b.SecondaryButtonText).HasMaxLength(40);
+        builder.Property(b => b.SecondaryButtonUrl).HasMaxLength(300);
+        builder.Property(b => b.Stat1Value).HasMaxLength(20);
+        builder.Property(b => b.Stat1Label).HasMaxLength(40);
+        builder.Property(b => b.Stat2Value).HasMaxLength(20);
+        builder.Property(b => b.Stat2Label).HasMaxLength(40);
+        builder.Property(b => b.Stat3Value).HasMaxLength(20);
+        builder.Property(b => b.Stat3Label).HasMaxLength(40);
+        builder.Property(b => b.ImageUrl).HasMaxLength(500);
+        builder.Property(b => b.ImageAlt).HasMaxLength(200);
         builder.ConfigureAudit();
     }
 }

@@ -28,7 +28,7 @@
     {
         ["@context"] = "https://schema.org",
         ["@type"] = "WebSite",
-        ["name"] = site.SiteName,
+        ["name"] = store.Name,
         ["url"] = homeUrl + "/",
         ["potentialAction"] = new Dictionary<string, string>
         {
@@ -45,6 +45,7 @@
         ["phong-lam-viec"] = "room-office"
     };
     var focus = page.Focus;
+    var banner = Model.Banner;
     var focusUrl = focus is null ? "/products" : $"/products?category={focus.Category.Slug}";
 }
 
@@ -57,34 +58,47 @@
     <div class="container py-5">
         <div class="row align-items-center g-5 py-lg-4">
             <div class="col-lg-6">
-                <span class="hero-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i>Bàn ghế ăn đóng tại xưởng</span>
-                <h1 class="hero-title mt-3 mb-3">Bộ bàn ăn gỗ sồi Nga - <em>màu óc chó</em></h1>
-                <p class="hero-lead mb-4">
-                    Bàn 1m2 + 4 ghế hoặc bàn 1m6 + 6 ghế, làm từ gỗ sồi Nga nguyên khối, sơn màu óc chó ấm áp.
-                    Chọn mẫu và gửi yêu cầu - cửa hàng gọi lại tư vấn, báo phí giao hàng &amp; lắp đặt.
-                </p>
-                <div class="d-flex flex-wrap gap-3">
-                    <a class="btn btn-primary btn-lg" href="@focusUrl">Xem bộ bàn ăn <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
-                    <a class="btn btn-outline-primary btn-lg" href="/contact"><i class="bi bi-telephone me-1" aria-hidden="true"></i>Nhận tư vấn</a>
-                </div>
-                <div class="hero-stats d-flex flex-wrap gap-4 gap-md-5 mt-5">
-                    <div>
-                        <div class="stat-value">24</div>
-                        <div class="stat-label">tháng bảo hành</div>
+                @if (banner.Eyebrow is not null)
+                {
+                    <span class="hero-eyebrow"><i class="bi bi-stars" aria-hidden="true"></i>@banner.Eyebrow</span>
+                }
+                <h1 class="hero-title mt-3 mb-3">@banner.Title@if (banner.TitleHighlight is not null) {<text> <em>@banner.TitleHighlight</em></text>}</h1>
+                @if (banner.Description is not null)
+                {
+                    <p class="hero-lead mb-4">@banner.Description</p>
+                }
+                @if (banner.PrimaryButtonText is not null || banner.SecondaryButtonText is not null)
+                {
+                    <div class="d-flex flex-wrap gap-3">
+                        @if (banner.PrimaryButtonText is not null)
+                        {
+                            <a class="btn btn-primary btn-lg" href="@(banner.PrimaryButtonUrl ?? focusUrl)">@banner.PrimaryButtonText <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+                        }
+                        @if (banner.SecondaryButtonText is not null && banner.SecondaryButtonUrl is not null)
+                        {
+                            var phone = banner.SecondaryButtonUrl.StartsWith("tel:", StringComparison.OrdinalIgnoreCase)
+                                        || banner.SecondaryButtonUrl.Equals("/contact", StringComparison.OrdinalIgnoreCase);
+                            <a class="btn btn-outline-primary btn-lg" href="@banner.SecondaryButtonUrl">@if (phone) {<i class="bi bi-telephone me-1" aria-hidden="true"></i>}@banner.SecondaryButtonText</a>
+                        }
                     </div>
-                    <div>
-                        <div class="stat-value">100%</div>
-                        <div class="stat-label">sản xuất tại xưởng</div>
+                }
+                @if (banner.Stats.Count > 0)
+                {
+                    <div class="hero-stats d-flex flex-wrap gap-4 gap-md-5 mt-5">
+                        @foreach (var stat in banner.Stats)
+                        {
+                            <div>
+                                <div class="stat-value">@stat.Value</div>
+                                <div class="stat-label">@stat.Label</div>
+                            </div>
+                        }
                     </div>
-                    <div>
-                        <div class="stat-value">7 ngày</div>
-                        <div class="stat-label">đổi trả nếu lỗi</div>
-                    </div>
-                </div>
+                }
             </div>
             <div class="col-lg-6 text-center">
-                <img class="hero-illustration" src="~/images/hero-dining-room.svg" width="580" height="471"
-                     alt="Minh họa phòng ăn với bộ bàn ghế gỗ sồi màu óc chó và đèn thả" fetchpriority="high" />
+                <img class="hero-illustration@(banner.HasCustomImage ? " hero-photo" : "")" src="@banner.ImageUrl" srcset="@ImageSizes.SrcSet(banner.ImageUrl)"
+                     sizes="(max-width: 991.98px) 90vw, 640px" width="@banner.ImageWidth" height="@banner.ImageHeight"
+                     alt="@banner.ImageAlt" fetchpriority="high" />
             </div>
         </div>
     </div>
@@ -199,7 +213,7 @@
     <div class="container">
         <div class="section-header">
             <div>
-                <p class="section-eyebrow">Vì sao chọn Nhà Mộc</p>
+                <p class="section-eyebrow">Vì sao chọn @store.BrandName</p>
                 <h2 id="why-title" class="section-title">Làm nội thất như làm cho chính ngôi nhà mình</h2>
             </div>
         </div>

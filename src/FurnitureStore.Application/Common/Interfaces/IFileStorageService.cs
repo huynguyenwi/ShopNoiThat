@@ -3,7 +3,8 @@ using FurnitureStore.Application.Common.Media;
 namespace FurnitureStore.Application.Common.Interfaces;
 
 /// <summary>A stored file and the public URL it is served from.</summary>
-public sealed record StoredFile(string Url, string FileName, long SizeBytes, string ContentType);
+/// <param name="Width">Pixel size of a stored picture, when the storage knows it (for width / height attributes).</param>
+public sealed record StoredFile(string Url, string FileName, long SizeBytes, string ContentType, int? Width = null, int? Height = null);
 
 /// <summary>
 /// Stores uploaded files. The MVP writes to wwwroot/uploads; a cloud implementation (Azure Blob, S3)

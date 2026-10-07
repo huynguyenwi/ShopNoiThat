@@ -1,6 +1,8 @@
 @model FurnitureStore.Application.Engagement.ContactMessageDto
 @using FurnitureStore.Domain.Enums
+@inject FurnitureStore.Application.Engagement.IStoreInfoService StoreInfo
 @{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     ViewData["Title"] = $"Liên hệ từ {Model.FullName}";
 }
 <a href="/admin/contacts" class="d-inline-block mb-3 text-decoration-none"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Liên hệ</a>
@@ -29,7 +31,7 @@
                     <textarea id="adminNote" name="adminNote" class="form-control mb-2" rows="4" maxlength="1000">@Model.AdminNote</textarea>
                     <button type="submit" class="btn btn-primary w-100">Lưu</button>
                 </form>
-                <a class="btn btn-outline-primary w-100 mt-2" href="mailto:@Model.Email?subject=@Uri.EscapeDataString("Phản hồi liên hệ - Nhà Mộc Furniture")"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Trả lời qua email</a>
+                <a class="btn btn-outline-primary w-100 mt-2" href="mailto:@Model.Email?subject=@Uri.EscapeDataString($"Phản hồi liên hệ - {store.Name}")"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Trả lời qua email</a>
             </div>
         </div>
     </div>

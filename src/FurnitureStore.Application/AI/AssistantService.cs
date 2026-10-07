@@ -210,7 +210,7 @@ public sealed class AssistantService(
         if (match.Products.Count == 0)
         {
             return new Answer(
-                $"Hiện cửa hàng chưa có mẫu phù hợp với {intent.Describe()}. Xưởng của Nhà Mộc nhận đóng theo kích thước và chất liệu bạn muốn - "
+                $"Hiện cửa hàng chưa có mẫu phù hợp với {intent.Describe()}. Xưởng của {store.BrandName} nhận đóng theo kích thước và chất liệu bạn muốn - "
                 + "bạn có thể nhận báo giá dự kiến ở trang Báo giá (/bao-gia) hoặc chat với nhân viên để được tư vấn thêm.",
                 [], new Dictionary<int, string>(), ["Tìm mẫu tương tự rẻ hơn", "Đặt đóng theo yêu cầu", "Chat với nhân viên"], UsedAi: false);
         }

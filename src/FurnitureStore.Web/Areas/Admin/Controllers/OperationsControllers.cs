@@ -211,7 +211,7 @@ public sealed class StoreController(IStoreInfoService store) : AdminControllerBa
         var info = await store.GetAsync(cancellationToken);
         return View(new StoreInfoCommand
         {
-            Name = info.Name, Tagline = info.Tagline, About = info.About, Address = info.Address, WorkshopAddress = info.WorkshopAddress,
+            Name = info.Name, LogoSubtitle = info.LogoSubtitle, Tagline = info.Tagline, About = info.About, Address = info.Address, WorkshopAddress = info.WorkshopAddress,
             Hotline = info.Hotline, Email = info.Email, OpeningHours = info.OpeningHours, FacebookUrl = info.FacebookUrl,
             TikTokUrl = info.TikTokUrl, ZaloUrl = info.ZaloUrl, GoogleMapsEmbedUrl = info.GoogleMapsEmbedUrl
         });

@@ -10,10 +10,27 @@
         <div class="admin-card-body row g-3">
             <div class="col-md-6">
                 <label asp-for="Name" class="form-label">Tên cửa hàng *</label>
-                <input asp-for="Name" class="form-control" maxlength="150" />
+                <input asp-for="Name" class="form-control" maxlength="150" data-logo-source="name" aria-describedby="nameHelp" />
+                <div class="form-text" id="nameHelp">Hiện trên logo (header, footer), tiêu đề trang, khung chat và email gửi khách.</div>
                 <span asp-validation-for="Name" class="text-danger small"></span>
             </div>
             <div class="col-md-6">
+                <label asp-for="LogoSubtitle" class="form-label">Dòng chữ nhỏ dưới logo</label>
+                <input asp-for="LogoSubtitle" class="form-control" maxlength="40" placeholder="Furniture" data-logo-source="subtitle" aria-describedby="logoSubtitleHelp" />
+                <div class="form-text" id="logoSubtitleHelp">Tên kết thúc bằng chữ này thì logo tách 2 dòng: "Nhà Mộc <strong>Furniture</strong>" → Nhà Mộc / FURNITURE. Để trống: logo chỉ hiện tên.</div>
+                <span asp-validation-for="LogoSubtitle" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <div class="small text-muted-fs mb-1">Logo sẽ hiển thị:</div>
+                <div class="store-logo-preview" data-logo-preview aria-live="polite">
+                    <img src="~/images/logo-mark.svg" width="40" height="40" alt="" />
+                    <span class="brand-text">
+                        <span class="brand-name" data-logo-name>@FurnitureStore.Application.Engagement.StoreInfoDto.BrandNameOf(Model.Name ?? string.Empty, Model.LogoSubtitle)</span>
+                        <span class="brand-sub" data-logo-sub hidden="@string.IsNullOrWhiteSpace(Model.LogoSubtitle)">@Model.LogoSubtitle</span>
+                    </span>
+                </div>
+            </div>
+            <div class="col-12">
                 <label asp-for="Tagline" class="form-label">Khẩu hiệu</label>
                 <input asp-for="Tagline" class="form-control" maxlength="200" />
             </div>
@@ -73,4 +90,9 @@
         </div>
     </div>
     <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu thông tin</button>
+    <a class="btn btn-light ms-2" href="/admin/banner"><i class="bi bi-image me-1" aria-hidden="true"></i>Sửa banner trang chủ</a>
 </form>
+
+@section Scripts {
+    <script src="~/js/admin-store.js" asp-append-version="true"></script>
+}

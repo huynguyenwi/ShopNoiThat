@@ -334,6 +334,7 @@ public sealed class StoreInfoCommandValidator : AbstractValidator<StoreInfoComma
     public StoreInfoCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().WithMessage("Vui lòng nhập tên cửa hàng.").MaximumLength(150);
+        RuleFor(x => x.LogoSubtitle).MaximumLength(40).WithMessage("Dòng chữ nhỏ dưới logo tối đa 40 ký tự.");
         RuleFor(x => x.Tagline).MaximumLength(200);
         RuleFor(x => x.About).MaximumLength(4000);
         RuleFor(x => x.Address).NotEmpty().WithMessage("Vui lòng nhập địa chỉ.").MaximumLength(300);
@@ -404,6 +405,7 @@ public sealed class StoreInfoService(
         }
 
         entity.Name = command.Name.Trim();
+        entity.LogoSubtitle = Clean(command.LogoSubtitle);
         entity.Tagline = Clean(command.Tagline);
         entity.About = Clean(command.About);
         entity.Address = command.Address.Trim();
@@ -424,12 +426,12 @@ public sealed class StoreInfoService(
     private StoreInfoDto FromSettings()
     {
         var s = siteOptions.Value.Store;
-        return new StoreInfoDto(s.Name, siteOptions.Value.Tagline, null, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours,
+        return new StoreInfoDto(s.Name, s.LogoSubtitle, siteOptions.Value.Tagline, null, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours,
             s.FacebookUrl, s.TikTokUrl, s.ZaloUrl, s.GoogleMapsEmbedUrl);
     }
 
     private static StoreInfoDto Map(StoreInfo s) =>
-        new(s.Name, s.Tagline, s.About, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours, s.FacebookUrl, s.TikTokUrl, s.ZaloUrl, s.GoogleMapsEmbedUrl);
+        new(s.Name, s.LogoSubtitle, s.Tagline, s.About, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours, s.FacebookUrl, s.TikTokUrl, s.ZaloUrl, s.GoogleMapsEmbedUrl);
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

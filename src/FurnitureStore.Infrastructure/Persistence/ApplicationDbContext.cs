@@ -65,6 +65,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     // System
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<StoreInfo> StoreInformation => Set<StoreInfo>();
+    public DbSet<HomeBanner> HomeBanners => Set<HomeBanner>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

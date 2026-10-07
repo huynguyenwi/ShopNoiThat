@@ -1,9 +1,10 @@
 @model FurnitureStore.Web.ViewModels.Catalog.ProductListViewModel
 @inject IOptions<ApplicationSettings> SiteOptions
+@inject IStoreInfoService StoreInfo
 @{
     ViewData["Title"] = Model.Heading;
     ViewData["MetaDescription"] = Model.Category?.Description
-        ?? $"{Model.Heading} tại {SiteOptions.Value.SiteName}: nội thất gỗ đẹp, nhiều màu sắc, kích thước; giao hàng và lắp đặt tận nơi.";
+        ?? $"{Model.Heading} tại {(await StoreInfo.GetAsync(Context.RequestAborted)).Name}: nội thất gỗ đẹp, nhiều màu sắc, kích thước; giao hàng và lắp đặt tận nơi.";
     var baseUrl = SiteOptions.Value.BaseUrl.TrimEnd('/');
     // Canonical: only the category (and page) matter for indexing; other filter combinations are not indexed.
     ViewData["Canonical"] = baseUrl + (Model.Category is not null ? $"/products?category={Model.Category.Slug}" : "/products")

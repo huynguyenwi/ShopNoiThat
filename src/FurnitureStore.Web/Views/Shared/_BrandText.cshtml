@@ -1,0 +1,9 @@
+@model StoreInfoDto
+@* Text of the logo (header, footer): the store name from /admin/store, with its small line under it. *@
+<span class="brand-text">
+    <span class="brand-name">@Model.BrandName</span>
+    @if (!string.IsNullOrWhiteSpace(Model.LogoSubtitle))
+    {
+        <span class="brand-sub">@Model.LogoSubtitle</span>
+    }
+</span>

@@ -10,7 +10,7 @@ const publicPages = ['/', '/products', '/products?category=phong-khach', '/produ
   '/account/login', '/account/register', '/account/forgotpassword', '/this-page-does-not-exist'];
 const customerPages = ['/account/profile', '/account/orders', '/account/addresses', '/wishlist', '/account/quotes', '/account/ai-history', '/checkout'];
 const adminPages = ['/admin', '/admin/orders', '/admin/products', '/admin/products/create', '/admin/categories', '/admin/customers', '/admin/reviews',
-  '/admin/chat', '/admin/quotes', '/admin/price-rules', '/admin/coupons', '/admin/coupons/create', '/admin/coupons/1', '/admin/coupons/1/edit', '/admin/products/qrlabels?id=1', '/admin/orders/print/1', '/admin/orders/details/1', '/admin/ai', '/admin/ai-knowledge', '/admin/store', '/admin/audit-logs'];
+  '/admin/chat', '/admin/quotes', '/admin/price-rules', '/admin/coupons', '/admin/coupons/create', '/admin/coupons/1', '/admin/coupons/1/edit', '/admin/products/qrlabels?id=1', '/admin/orders/print/1', '/admin/orders/details/1', '/admin/ai', '/admin/ai-knowledge', '/admin/store', '/admin/banner', '/admin/audit-logs'];
 
 async function login(browser, email, password) {
   const ctx = await browser.createBrowserContext();

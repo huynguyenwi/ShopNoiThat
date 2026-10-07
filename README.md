@@ -66,7 +66,7 @@ Các quyết định kỹ thuật chính:
 | Khách hàng | `CustomerAddresses`, `Wishlists`, `WishlistItems`, `Reviews`, `ReviewImages` |
 | Giao tiếp | `ChatConversations`, `ChatMessages`, `ContactMessages`, `Notifications` |
 | AI | `AIConversations`, `AIMessages`, `AIKnowledgeEntries`, `QuoteRequests` |
-| Hệ thống | `AuditLogs`, `StoreInformation` |
+| Hệ thống | `AuditLogs`, `StoreInformation`, `HomeBanners` |
 
 Mô hình variant: một sản phẩm có nhiều variant; mỗi variant có SKU, giá, giá cũ, tồn kho, ảnh riêng và nhiều
 màu / chất liệu / kích thước qua bảng nối. Mỗi chiều có đúng một giá trị `IsPrimary` (dùng cho bộ chọn trên trang sản phẩm);
@@ -110,7 +110,7 @@ dotnet ef migrations has-pending-model-changes --project src/FurnitureStore.Infr
 ```
 
 Migration hiện có: `InitialCreate`, `AddProductSearchText` (cột tìm kiếm không dấu cho sản phẩm), `AddCouponIsPublic` (mã giảm giá công khai),
-`AddCartItemSelection` (tích chọn từng sản phẩm trong giỏ hàng, mục 22).
+`AddCartItemSelection` (tích chọn từng sản phẩm trong giỏ hàng, mục 22), `AddHomeBannerAndLogoSubtitle` (banner trang chủ + dòng chữ nhỏ dưới logo, mục 24).
 
 ## 6. Tạo database & seed dữ liệu
 
@@ -124,7 +124,7 @@ Thư mục [database/](database/) chứa script đã sinh sẵn:
 |---|---|
 | `FurnitureStoreDb_full.sql` | Tạo database `FurnitureStoreDb` (nếu chưa có) + toàn bộ schema + dữ liệu mẫu. **Chỉ cần chạy file này.** |
 | `01_schema.sql` | Chỉ schema (script migration idempotent, chạy lại nhiều lần không lỗi) |
-| `02_seed_data.sql` | Roles, catalog demo (23 danh mục, 37 sản phẩm, 110 variant), thông tin cửa hàng, 3 mã giảm giá, 6 mục nội dung chatbot AI, 59 tham số bảng giá đặt đóng. Chỉ chèn vào bảng còn trống |
+| `02_seed_data.sql` | Roles, catalog demo (23 danh mục, 43 sản phẩm, 124 variant), thông tin cửa hàng, 3 mã giảm giá, 6 mục nội dung chatbot AI, 60 tham số bảng giá đặt đóng. Chỉ chèn vào bảng còn trống |
 
 ```powershell
 # SSMS: mở FurnitureStoreDb_full.sql rồi Execute (F5). Hoặc dùng sqlcmd (-f 65001 để giữ tiếng Việt):
@@ -159,7 +159,7 @@ powershell -ExecutionPolicy Bypass -File database\generate-sql.ps1
 3. Tạo tài khoản admin và tài khoản khách demo **nếu đã cấu hình mật khẩu** (xem mục 7).
 4. Tạo thông tin cửa hàng từ `ApplicationSettings:Store`.
 5. Seed catalog demo khi chưa có sản phẩm (`Database:SeedDemoData = true`):
-   **23 danh mục, 37 sản phẩm, 110 variant**, 15 màu, 16 chất liệu, 8 phong cách, 28 kích thước;
+   **23 danh mục, 43 sản phẩm, 124 variant**, 15 màu, 17 chất liệu, 8 phong cách, 30 kích thước;
    có sẵn sản phẩm khuyến mãi, sắp hết hàng và hết hàng để test.
 6. Seed mã giảm giá: `CHAOBAN10` (10%, tối đa 2 triệu, đơn từ 5 triệu, 1 lần/khách), `GIAM500K` (đơn từ 10 triệu), `HETHAN` (đã hết hạn, để test).
 7. Seed hoạt động demo (một lần, nhận biết qua tài khoản `khach01@furniture.local`): 12 khách hàng demo
@@ -390,7 +390,7 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | Mã QR | Quét: `/q/p/{id}` (sản phẩm), `/q/o/{mã đơn}` (đơn hàng) · Ảnh: `/qr/products/{id}.svg\|.png`, `/qr/orders/{mã đơn}.svg\|.png` · In: `/admin/products/qrlabels`, `/admin/orders/print/{id}` |
 | Áp mã giảm giá (khách) | Ô nhập mã + "Ưu đãi dành cho bạn" ở `/cart` và `/checkout` · API `POST` / `DELETE /api/cart/coupon` |
 | Quản trị AI | `/admin/ai` (hội thoại), `/admin/ai-knowledge` (nội dung chatbot) |
-| Quản trị (ADMIN) | `/admin` — dashboard, `/admin/orders`, `/admin/customers`, `/admin/products`, `/admin/categories`, `/admin/attributes/colors`, `/admin/reviews`, `/admin/contacts`, `/admin/store`, `/admin/audit-logs`, `/admin/notifications` |
+| Quản trị (ADMIN) | `/admin` — dashboard, `/admin/orders`, `/admin/customers`, `/admin/products`, `/admin/categories`, `/admin/attributes/colors`, `/admin/reviews`, `/admin/contacts`, `/admin/store` (tên cửa hàng, logo), `/admin/banner` (banner trang chủ), `/admin/audit-logs`, `/admin/notifications` |
 | API báo giá | `POST /api/ai/price-estimate` (tính giá, không lưu), `POST /api/quotes` (gửi yêu cầu), `GET /api/quotes`, `GET /api/quotes/{code}`, `POST /api/quotes/{code}/accept`, `/reject`, `/cancel` |
 | API AI | `POST /api/ai/chat`, `/api/ai/recommend`, `/api/ai/color-recommend`, `/api/ai/style-recommend`, `GET /api/ai/conversations`, `/api/ai/status` |
 | API chat | `/api/chat`, `/api/chat/conversations`, `/api/chat/start`, `/api/chat/messages`, `/api/admin/chat/conversations` · SignalR hub `/hubs/chat` |
@@ -510,6 +510,7 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
 | `cart-select-e2e.js` | Giỏ hàng tích chọn: mặc định đã chọn, bỏ chọn / chọn tất cả cập nhật tổng tiền tại chỗ (không tải lại trang, giữ focus bàn phím), không chọn gì thì không vào được trang đặt hàng, chỉ sản phẩm đã chọn được đặt và sản phẩm còn lại ở lại giỏ; địa chỉ: chưa chọn tỉnh thì chưa chọn được phường / xã, danh sách phường / xã tải theo tỉnh (nhóm Phường / Xã / Đặc khu), địa chỉ đã lưu điền đúng tỉnh + phường, phường cũ trước 07/2025 được nhắc chọn lại, sổ địa chỉ không còn Quận / Huyện; điện thoại không tràn ngang (22 bước) |
 | `uploads-e2e.js` | Ảnh tải lên: chọn avatar là tự tải lên (không cần nút), ảnh chụp > 20 MB được nhận và hiện ở hồ sơ + header (256 × 256), avatar admin hiện ở thanh trên trang quản trị, ảnh > 50 MB bị báo ngay trên trình duyệt; admin tải ảnh ngang + dọc: lưu 1200 × 900 / 900 × 1200 kèm bản 480 px, không méo; gallery hiện trọn ảnh dọc, thẻ sản phẩm dùng bản 480 px (1200 px trên màn hình nét cao); thông báo chưa đọc nổi bật, bấm vào thì mở trang liên quan, chuông giảm 1 và thông báo chuyển sang đã đọc (17 bước) |
+| `branding-e2e.js` | Tên cửa hàng & banner: xem trước logo khi gõ tên, đổi tên thì logo header / footer / sidebar admin và tiêu đề trang đổi theo, tên rất dài tự xuống dòng không làm vỡ header (1440 / 1200 / 992 / 375 px); banner: xem trước đổi theo khi gõ, ảnh chọn được xem trước, link `javascript:` bị từ chối (giữ nội dung đã gõ), lưu thì trang chủ hiện đúng chữ / nút / số liệu / ảnh (1400 px kèm bản 700 px cho điện thoại, không méo), khôi phục mặc định xóa ảnh (19 bước) |
 | `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
 | `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
 | `chat-offline-e2e.js` | Chat khi mất realtime: chặn kết nối SignalR của admin → trang báo mất kết nối, cuộc trò chuyện / tin nhắn mới vẫn hiện (tự cập nhật), admin vẫn trả lời được; bỏ chặn → tự kết nối lại, tin nhắn tức thì; khách mất realtime vẫn nhận được trả lời (10 bước) |
@@ -704,3 +705,30 @@ thêm lại. Ở Production (`SeedDemoData = false`) không có dữ liệu mẫ
 - Thông báo **chưa đọc nổi bật**: nền vàng sáng, viền cam bên trái, chấm đỏ, tiêu đề in đậm, nhãn *"Mới"*; đã đọc thì nền trắng, chữ nhạt.
 - Chỉ mở được thông báo của quản trị (kiểm tra ở server, có anti-forgery); liên kết trong thông báo chỉ được mở nếu là trang của chính website.
 
+
+## 24. Tên cửa hàng, logo & banner trang chủ
+
+**Tên cửa hàng** (`/admin/store`) giờ được dùng ở **mọi nơi**: logo ở header / footer / sidebar quản trị, tiêu đề tab trình duyệt
+(`Trang | Tên cửa hàng`), thẻ chia sẻ mạng xã hội, khung chat, trợ lý AI, email gửi khách (đơn hàng, báo giá, tài khoản).
+Lưu xong là thấy ngay, không cần khởi động lại.
+
+- **Dòng chữ nhỏ dưới logo** (mới, tùy chọn): nếu tên kết thúc bằng chữ này thì logo tách thành 2 dòng —
+  tên `Nhà Mộc Furniture` + dòng nhỏ `Furniture` → logo **Nhà Mộc** / FURNITURE. Tên không kết thúc bằng chữ đó thì logo hiện cả tên
+  và dòng nhỏ bên dưới; để trống thì logo chỉ hiện tên. Form có ô **xem trước logo** đổi theo khi gõ.
+- Tên dài tự xuống dòng (tối đa 2 dòng) trong logo, không đẩy menu hay làm trang bị cuộn ngang trên điện thoại.
+- Database cũ được migration gán sẵn dòng nhỏ `Furniture` (logo trước đây luôn hiện chữ này).
+- Email người gửi (`Email:FromName` trong cấu hình) vẫn đọc từ appsettings / biến môi trường.
+
+**Banner trang chủ** (`/admin/banner`, menu *Hệ thống → Banner trang chủ*, chỉ ADMIN):
+
+| Phần | Ghi chú |
+|---|---|
+| Dòng chữ nhỏ phía trên, tiêu đề, phần cuối tiêu đề (chữ nghiêng màu gỗ), mô tả | Tiêu đề bắt buộc; ô trống thì phần đó được ẩn; mô tả giữ xuống dòng |
+| Nút chính / nút phụ: chữ + đường dẫn | Trang trong website (`/products?onSale=true`), link `https://...` hoặc `tel:0900000000`. Nút chính để trống đường dẫn → trang mặt hàng chính. Xóa chữ để ẩn nút. Link `javascript:` / `//...` bị từ chối |
+| 3 số liệu nổi bật (con số + mô tả) | Để trống cả hai ô để ẩn |
+| Ảnh bên phải | JPG / PNG / WEBP ≤ 50 MB, **tự thu nhỏ** tối đa 1400 px (kèm bản 700 px cho điện thoại), giữ tỉ lệ, xóa EXIF / GPS; PNG nền trong suốt lưu WebP. Có ô mô tả ảnh (alt) và lựa chọn quay lại ảnh minh họa mặc định |
+
+- Phần **Xem trước** ở đầu trang đổi theo ngay khi gõ / chọn ảnh; trang chủ chỉ đổi khi bấm **Lưu banner**.
+- **Khôi phục banner mặc định**: xóa nội dung đã chỉnh và ảnh đã tải lên, trang chủ quay về banner gốc.
+- Chưa lưu lần nào thì trang chủ dùng banner gốc (bảng `HomeBanners` trống). Mỗi lần lưu / khôi phục được ghi vào nhật ký hoạt động.
+- Ảnh cũ bị thay hoặc bỏ được xóa khỏi `wwwroot/uploads/banners`.

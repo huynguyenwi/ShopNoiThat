@@ -185,6 +185,24 @@ img {
     line-height: 1;
 }
 
+/* The store name comes from /admin/store: a long one wraps (at most 2 lines) instead of pushing the menu. */
+.brand-text {
+    display: inline-block;
+    min-width: 0;
+    max-width: 15rem;
+    white-space: normal; /* .navbar-brand is nowrap */
+    overflow-wrap: anywhere;
+}
+
+.brand-text .brand-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.25; /* room for stacked Vietnamese accents (Ỗ, Ộ) inside the clipped box */
+}
+
 .brand-sub {
     display: block;
     font-family: var(--fs-font-body);
@@ -311,12 +329,21 @@ img {
     font-size: 1.075rem;
     color: var(--fs-muted);
     max-width: 34rem;
+    white-space: pre-line; /* line breaks typed in /admin/banner */
 }
 
 .hero-illustration {
     width: 100%;
     max-width: 580px;
+    height: auto;
     filter: drop-shadow(0 30px 40px rgba(91, 58, 36, .12));
+}
+
+/* A photo uploaded in /admin/banner (instead of the illustration). */
+.hero-photo {
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: 1.25rem;
 }
 
 .hero-stats .stat-value {
@@ -2842,6 +2869,18 @@ body[data-open-panel="chat"] .ai-widget {
 
 .site-header .brand {
     flex-shrink: 0;
+}
+
+/* Phones / tablets: the logo takes the room left by the cart and menu buttons, a long store name wraps inside it. */
+@media (max-width: 991.98px) {
+    .site-header .brand {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .site-header .brand-text {
+        max-width: none;
+    }
 }
 
 /* Below 1400px "Sản phẩm" is reached from "Danh mục" (Xem tất cả sản phẩm), leaving room for the search box. */

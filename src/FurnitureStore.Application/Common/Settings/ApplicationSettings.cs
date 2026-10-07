@@ -38,6 +38,10 @@ public sealed class StoreSettings
 {
     [Required]
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Small line under the name in the logo; see <c>StoreInfoDto.BrandName</c>.</summary>
+    public string? LogoSubtitle { get; set; }
+
     public string Address { get; set; } = string.Empty;
     public string WorkshopAddress { get; set; } = string.Empty;
     public string Hotline { get; set; } = string.Empty;

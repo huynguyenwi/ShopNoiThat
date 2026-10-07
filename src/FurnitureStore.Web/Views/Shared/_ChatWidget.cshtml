@@ -1,12 +1,14 @@
 @* Customer ↔ shop chat (SignalR). Behaviour in wwwroot/js/chat-widget.js; messages are rendered with textContent only. *@
+@inject IStoreInfoService StoreInfo
 @{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     var signedIn = User.Identity?.IsAuthenticated == true;
     var hasChat = signedIn || FurnitureStore.Web.Services.ChatIdentity.GuestKey(Context) is not null;
 }
 <div class="chat-widget" id="chatWidget" data-signed-in="@(signedIn ? "true" : "false")" data-has-chat="@(hasChat ? "true" : "false")">
     <button type="button" class="chat-launcher" id="chatLauncher" aria-controls="chatPanel" aria-expanded="false">
         <i class="bi bi-chat-dots-fill" aria-hidden="true"></i>
-        <span class="chat-launcher-label">Chat với Nhà Mộc</span>
+        <span class="chat-launcher-label">Chat với @store.BrandName</span>
         <span class="chat-unread d-none" id="chatUnread" aria-label="Tin nhắn chưa đọc">0</span>
     </button>
 
@@ -15,7 +17,7 @@
             <div class="d-flex align-items-center gap-2 min-w-0">
                 <span class="chat-avatar"><img src="~/images/logo-mark.svg" alt="" width="32" height="32" /></span>
                 <div class="min-w-0">
-                    <div class="fw-semibold text-truncate" id="chatTitle">Nhà Mộc Furniture</div>
+                    <div class="fw-semibold text-truncate" id="chatTitle">@store.Name</div>
                     <div class="chat-status" id="chatStatus">Thường trả lời trong vài phút</div>
                 </div>
             </div>
@@ -49,7 +51,7 @@
             <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Tin nhắn" hidden>
                 <button type="button" class="btn btn-link btn-sm w-100 chat-older" id="chatOlder" hidden>Xem tin nhắn cũ hơn</button>
                 <div class="chat-msg from-shop chat-welcome">
-                    <div class="chat-bubble">Xin chào! Nhà Mộc có thể giúp gì cho bạn? Hỏi chúng tôi về sản phẩm, kích thước, chất liệu hay đặt đóng theo yêu cầu nhé.</div>
+                    <div class="chat-bubble">Xin chào! @store.BrandName có thể giúp gì cho bạn? Hỏi chúng tôi về sản phẩm, kích thước, chất liệu hay đặt đóng theo yêu cầu nhé.</div>
                 </div>
             </div>
             <div class="chat-typing" id="chatTyping" hidden><span></span><span></span><span></span> <em id="chatTypingName"></em></div>

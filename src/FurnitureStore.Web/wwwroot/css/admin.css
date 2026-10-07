@@ -656,3 +656,55 @@
     --bs-btn-disabled-color: #b02a37;
     --bs-btn-disabled-border-color: #b02a37;
 }
+
+/* /admin/store: what the logo will look like. */
+.store-logo-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .75rem 1rem;
+    border: 1px dashed var(--fs-line);
+    border-radius: .5rem;
+    background: #fff;
+}
+
+/* /admin/banner: the home page banner, scaled down to fit the card. */
+.banner-preview {
+    padding: 1.5rem 1.75rem;
+    border-radius: 0 0 .75rem .75rem;
+}
+
+.banner-preview .hero-title {
+    font-family: var(--fs-font-display);
+    font-size: 1.9rem;
+    font-weight: 700;
+}
+
+.banner-preview .hero-lead {
+    font-size: .95rem;
+}
+
+.banner-preview .btn {
+    pointer-events: none;
+}
+
+.banner-preview .hero-stats .stat-value {
+    font-size: 1.3rem;
+}
+
+.banner-preview .hero-illustration {
+    max-width: 340px;
+    max-height: 300px;
+    object-fit: contain;
+}
+
+.banner-image-current img {
+    display: block;
+    max-width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    padding: .25rem;
+    border: 1px solid var(--fs-line);
+    border-radius: .5rem;
+    background: var(--fs-cream);
+}

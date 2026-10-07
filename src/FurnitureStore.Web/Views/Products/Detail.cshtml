@@ -5,6 +5,7 @@
 @using FurnitureStore.Web.ViewModels.Catalog
 @using FurnitureStore.Application.Qr
 @inject IOptions<ApplicationSettings> SiteOptions
+@inject IStoreInfoService StoreInfo
 @{
     var p = Model.Product;
     var selected = Model.SelectedVariant;
@@ -53,7 +54,7 @@
         ["description"] = p.ShortDescription,
         ["image"] = p.Images.Select(i => baseUrl + i.Url).Take(5),
         ["category"] = p.Category.Name,
-        ["brand"] = new Dictionary<string, string> { ["@type"] = "Brand", ["name"] = SiteOptions.Value.SiteName },
+        ["brand"] = new Dictionary<string, string> { ["@type"] = "Brand", ["name"] = (await StoreInfo.GetAsync(Context.RequestAborted)).Name },
         ["offers"] = new Dictionary<string, object?>
         {
             ["@type"] = "AggregateOffer",

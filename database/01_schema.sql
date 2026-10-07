@@ -2017,3 +2017,71 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007083827_AddHomeBannerAndLogoSubtitle'
+)
+BEGIN
+    ALTER TABLE [StoreInformation] ADD [LogoSubtitle] nvarchar(40) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007083827_AddHomeBannerAndLogoSubtitle'
+)
+BEGIN
+    UPDATE [StoreInformation] SET [LogoSubtitle] = N'Furniture' WHERE [LogoSubtitle] IS NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007083827_AddHomeBannerAndLogoSubtitle'
+)
+BEGIN
+    CREATE TABLE [HomeBanners] (
+        [Id] int NOT NULL IDENTITY,
+        [Eyebrow] nvarchar(60) NULL,
+        [Title] nvarchar(120) NOT NULL,
+        [TitleHighlight] nvarchar(80) NULL,
+        [Description] nvarchar(400) NULL,
+        [PrimaryButtonText] nvarchar(40) NULL,
+        [PrimaryButtonUrl] nvarchar(300) NULL,
+        [SecondaryButtonText] nvarchar(40) NULL,
+        [SecondaryButtonUrl] nvarchar(300) NULL,
+        [Stat1Value] nvarchar(20) NULL,
+        [Stat1Label] nvarchar(40) NULL,
+        [Stat2Value] nvarchar(20) NULL,
+        [Stat2Label] nvarchar(40) NULL,
+        [Stat3Value] nvarchar(20) NULL,
+        [Stat3Label] nvarchar(40) NULL,
+        [ImageUrl] nvarchar(500) NULL,
+        [ImageWidth] int NULL,
+        [ImageHeight] int NULL,
+        [ImageAlt] nvarchar(200) NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [CreatedBy] nvarchar(256) NULL,
+        [UpdatedAt] datetime2 NULL,
+        [UpdatedBy] nvarchar(256) NULL,
+        CONSTRAINT [PK_HomeBanners] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007083827_AddHomeBannerAndLogoSubtitle'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261007083827_AddHomeBannerAndLogoSubtitle', N'8.0.31');
+END;
+GO
+
+COMMIT;
+GO
+

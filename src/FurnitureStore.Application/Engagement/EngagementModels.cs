@@ -104,6 +104,7 @@ public interface IContactRepository : Common.Interfaces.IRepository<Domain.Entit
 
 public sealed record StoreInfoDto(
     string Name,
+    string? LogoSubtitle,
     string? Tagline,
     string? About,
     string Address,
@@ -117,11 +118,32 @@ public sealed record StoreInfoDto(
     string? GoogleMapsEmbedUrl)
 {
     public string HotlineDigits => new(Hotline.Where(c => char.IsDigit(c) || c == '+').ToArray());
+
+    /// <summary>
+    /// Big line of the logo, also the short name in texts such as "Chat với ...": the name without its logo subtitle when
+    /// it ends with it ("Nhà Mộc Furniture" + "Furniture" → "Nhà Mộc"), otherwise the whole name.
+    /// </summary>
+    public string BrandName => BrandNameOf(Name, LogoSubtitle);
+
+    /// <summary>See <see cref="BrandName"/> (same rule as the live preview in wwwroot/js/admin-store.js).</summary>
+    public static string BrandNameOf(string name, string? logoSubtitle)
+    {
+        name = name.Trim();
+        var subtitle = logoSubtitle?.Trim();
+        if (string.IsNullOrEmpty(subtitle) || !name.EndsWith(" " + subtitle, StringComparison.OrdinalIgnoreCase))
+        {
+            return name;
+        }
+
+        var shortName = name[..^(subtitle.Length + 1)].TrimEnd();
+        return shortName.Length == 0 ? name : shortName;
+    }
 }
 
 public sealed class StoreInfoCommand
 {
     public string Name { get; set; } = string.Empty;
+    public string? LogoSubtitle { get; set; }
     public string? Tagline { get; set; }
     public string? About { get; set; }
     public string Address { get; set; } = string.Empty;

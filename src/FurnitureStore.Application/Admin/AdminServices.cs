@@ -91,7 +91,7 @@ public sealed class OrderAdminService(
     IEmailSender emailSender,
     IAuditLogService auditLog,
     ICurrentUserService currentUser,
-    IOptions<ApplicationSettings> siteOptions,
+    Engagement.IStoreInfoService storeInfo,
     TimeProvider timeProvider,
     ILogger<OrderAdminService> logger) : IOrderAdminService
 {
@@ -228,8 +228,8 @@ public sealed class OrderAdminService(
     {
         try
         {
-            var site = siteOptions.Value;
-            await emailSender.SendAsync(new EmailMessage(order.CustomerEmail, subject, EmailTemplates.Layout(site.SiteName, body), order.CustomerName));
+            var storeName = (await storeInfo.GetAsync()).Name;
+            await emailSender.SendAsync(new EmailMessage(order.CustomerEmail, subject, EmailTemplates.Layout(storeName, body), order.CustomerName));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

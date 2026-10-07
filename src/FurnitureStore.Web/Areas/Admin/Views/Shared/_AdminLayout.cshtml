@@ -3,8 +3,10 @@
 @inject IAntiforgery Antiforgery
 @inject FurnitureStore.Application.Chat.IChatService Chat
 @inject FurnitureStore.Application.Quotes.IQuoteService Quotes
+@inject FurnitureStore.Application.Engagement.IStoreInfoService StoreInfo
 @{
     var site = SiteOptions.Value;
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     var csrfToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
@@ -30,6 +32,7 @@
         ("AiConversations", "Hội thoại AI", "bi-stars", "/admin/ai", "Trợ lý AI"),
         ("AiKnowledge", "Nội dung chatbot", "bi-journal-richtext", "/admin/ai-knowledge", null),
         ("Store", "Thông tin cửa hàng", "bi-shop-window", "/admin/store", "Hệ thống"),
+        ("Banner", "Banner trang chủ", "bi-image", "/admin/banner", null),
         ("Activity", "Nhật ký hoạt động", "bi-journal-text", "/admin/audit-logs", null)
     };
     if (!isAdmin)
@@ -44,7 +47,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <meta name="csrf-token" content="@csrfToken" />
-    <title>@ViewData["Title"] | Quản trị @site.SiteName</title>
+    <title>@ViewData["Title"] | Quản trị @store.Name</title>
     <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -63,8 +66,8 @@
             <div class="admin-sidebar-header">
                 <a class="brand" href="@(isAdmin ? "/admin" : "/admin/chat")">
                     <img src="~/images/logo-mark.svg" width="36" height="36" alt="" />
-                    <span>
-                        <span class="brand-name text-white">Nhà Mộc</span>
+                    <span class="brand-text">
+                        <span class="brand-name text-white">@store.BrandName</span>
                         <span class="brand-sub">Quản trị</span>
                     </span>
                 </a>

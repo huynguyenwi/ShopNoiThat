@@ -81,7 +81,7 @@ public sealed partial class LocalFileStorageService(
         var url = "/" + Path.Combine(relativeDirectory, fileName).Replace('\\', '/');
         logger.LogInformation("Stored image {Url}: {Width}x{Height}, {Copies} sizes, {UploadedBytes} bytes uploaded, {StoredBytes} bytes kept",
             url, largest.Width, largest.Height, processed.Sizes.Count, buffer.Length, processed.Sizes.Sum(s => (long)s.Content.Length));
-        return new StoredFile(url, fileName, largest.Content.Length, processed.ContentType);
+        return new StoredFile(url, fileName, largest.Content.Length, processed.ContentType, largest.Width, largest.Height);
     }
 
     public Task DeleteAsync(string? url, CancellationToken cancellationToken = default)

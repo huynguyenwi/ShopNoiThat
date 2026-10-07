@@ -2,13 +2,17 @@
 @inject IOptions<ApplicationSettings> SiteOptions
 @inject IAntiforgery Antiforgery
 @inject IOptions<SeoSettings> SeoOptions
+@inject IStoreInfoService StoreInfo
 @{
     var seo = SeoOptions.Value;
     var site = SiteOptions.Value;
+    // The name and tagline admins set in /admin/store (cached), so a new name shows everywhere at once.
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
+    var siteName = store.Name;
     var pageTitle = ViewData["Title"] as string;
-    var fullTitle = string.IsNullOrWhiteSpace(pageTitle) ? $"{site.SiteName} - {site.Tagline}" : $"{pageTitle} | {site.SiteName}";
+    var fullTitle = string.IsNullOrWhiteSpace(pageTitle) ? $"{siteName} - {store.Tagline ?? site.Tagline}" : $"{pageTitle} | {siteName}";
     var description = ViewData["MetaDescription"] as string
-        ?? $"{site.SiteName}: cửa hàng và xưởng nội thất gỗ - sofa, bàn ăn, giường, tủ, kệ. Tư vấn nội thất bằng AI và báo giá đồ gỗ theo yêu cầu.";
+        ?? $"{siteName}: cửa hàng và xưởng nội thất gỗ - sofa, bàn ăn, giường, tủ, kệ. Tư vấn nội thất bằng AI và báo giá đồ gỗ theo yêu cầu.";
     var baseUrl = site.BaseUrl.TrimEnd('/');
     var canonical = ViewData["Canonical"] as string ?? $"{baseUrl}{Context.Request.Path}";
     // Social networks do not render SVG: pages without a raster image share the default card image.
@@ -33,7 +37,7 @@
     <meta name="user-signed-in" content="@(User.Identity?.IsAuthenticated == true ? "true" : "false")" />
 
     <meta property="og:type" content="@ogType" />
-    <meta property="og:site_name" content="@site.SiteName" />
+    <meta property="og:site_name" content="@siteName" />
     <meta property="og:locale" content="vi_VN" />
     <meta property="og:title" content="@fullTitle" />
     <meta property="og:description" content="@description" />
@@ -44,7 +48,7 @@
     {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="@site.SiteName - nội thất gỗ từ xưởng" />
+        <meta property="og:image:alt" content="@siteName - nội thất gỗ từ xưởng" />
     }
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="@fullTitle" />

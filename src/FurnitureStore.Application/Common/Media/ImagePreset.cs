@@ -29,7 +29,10 @@ public sealed record ImagePreset(string Folder, int MaxWidth, int MaxHeight, Ima
     /// <summary>Avatars: square, shown at most 88 px wide (256 covers 3x screens).</summary>
     public static readonly ImagePreset Avatar = new("avatars", 256, 256, ImageFit.Cover, []);
 
-    public static readonly IReadOnlyList<ImagePreset> All = [Product, Review, Avatar];
+    /// <summary>Home page banner picture (half of the page, ~640 px wide; 1400 for high-DPI screens); 700 px copy for phones.</summary>
+    public static readonly ImagePreset Banner = new("banners", 1400, 1400, ImageFit.Contain, [700]);
+
+    public static readonly IReadOnlyList<ImagePreset> All = [Product, Review, Avatar, Banner];
 }
 
 /// <summary>

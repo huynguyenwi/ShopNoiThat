@@ -5,6 +5,7 @@ using FurnitureStore.Application.Common.Emails;
 using FurnitureStore.Application.Common.Exceptions;
 using FurnitureStore.Application.Common.Interfaces;
 using FurnitureStore.Application.Common.Settings;
+using FurnitureStore.Application.Engagement;
 using FurnitureStore.Application.Sales;
 using FurnitureStore.Domain.Constants;
 using FurnitureStore.Domain.Enums;
@@ -28,7 +29,7 @@ public sealed class AccountController(
     IEmailSender emailSender,
     IAuditLogService auditLog,
     IFileStorageService fileStorage,
-    IOptions<ApplicationSettings> siteOptions,
+    IStoreInfoService storeInfo,
     ICartService cartService,
     CartOwnerResolver cartOwners,
     IChatService chatService,
@@ -174,10 +175,11 @@ public sealed class AccountController(
         await auditLog.LogAsync(new AuditEntry(AuditAction.Create, "User", user.Id, "Đăng ký tài khoản",
             NewValues: new { user.Email, user.FullName, user.PhoneNumber }, UserId: user.Id, UserName: user.Email));
 
-        await TrySendEmailAsync(new EmailMessage(email, $"Chào mừng bạn đến với {siteOptions.Value.SiteName}",
-            EmailTemplates.Welcome(siteOptions.Value.SiteName, user.FullName, AbsoluteUrl("/products")), user.FullName));
+        var store = await storeInfo.GetAsync(HttpContext.RequestAborted);
+        await TrySendEmailAsync(new EmailMessage(email, $"Chào mừng bạn đến với {store.Name}",
+            EmailTemplates.Welcome(store.Name, user.FullName, AbsoluteUrl("/products")), user.FullName));
 
-        TempData[StatusMessageKey] = "Đăng ký thành công! Chào mừng bạn đến với Nhà Mộc.";
+        TempData[StatusMessageKey] = $"Đăng ký thành công! Chào mừng bạn đến với {store.BrandName}.";
         return RedirectToLocal(model.ReturnUrl);
     }
 
@@ -202,7 +204,7 @@ public sealed class AccountController(
             var resetUrl = AbsoluteUrl(Url.Action(nameof(ResetPassword), "Account", new { email = user.Email, code })!);
 
             await TrySendEmailAsync(new EmailMessage(user.Email!, "Đặt lại mật khẩu",
-                EmailTemplates.PasswordReset(siteOptions.Value.SiteName, user.FullName, resetUrl,
+                EmailTemplates.PasswordReset((await storeInfo.GetAsync(HttpContext.RequestAborted)).Name, user.FullName, resetUrl,
                     (int)AccountSecurity.PasswordResetTokenLifespan.TotalHours), user.FullName));
             logger.LogInformation("Password reset requested for user {UserId}", user.Id);
         }
@@ -368,7 +370,7 @@ public sealed class AccountController(
         await signInManager.RefreshSignInAsync(user);
         await auditLog.LogAsync(new AuditEntry(AuditAction.Update, "User", user.Id, "Đổi mật khẩu"));
         await TrySendEmailAsync(new EmailMessage(user.Email!, "Mật khẩu của bạn đã được thay đổi",
-            EmailTemplates.PasswordChanged(siteOptions.Value.SiteName, user.FullName), user.FullName));
+            EmailTemplates.PasswordChanged((await storeInfo.GetAsync(HttpContext.RequestAborted)).Name, user.FullName), user.FullName));
 
         TempData[StatusMessageKey] = "Đổi mật khẩu thành công.";
         return RedirectToAction(nameof(Profile));

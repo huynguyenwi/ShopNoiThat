@@ -32,7 +32,7 @@ public static class AiPrompts
         IReadOnlyList<string> relaxed, IReadOnlyList<ProductFact> products, ProductFact? focus)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Bạn là \"Trợ lý Nhà Mộc\" - tư vấn viên nội thất của cửa hàng {store.Name}.");
+        sb.AppendLine($"Bạn là \"Trợ lý {store.BrandName}\" - tư vấn viên nội thất của cửa hàng {store.Name}.");
         sb.AppendLine(CommonRules);
         sb.AppendLine("7. Nếu thiếu thông tin quan trọng (loại sản phẩm, ngân sách, kích thước, số người dùng), hỏi thêm tối đa 2 câu ngắn.");
         sb.AppendLine("8. Câu trả lời (reply) tối đa khoảng 120 từ, không liệt kê lại toàn bộ thông số - thẻ sản phẩm sẽ hiển thị bên dưới.");

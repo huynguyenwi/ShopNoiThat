@@ -27,6 +27,10 @@ public class AuditLog : BaseEntity
 public class StoreInfo : AuditableEntity
 {
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Small line under the name in the logo ("Furniture"); split off the name when the name ends with it.</summary>
+    public string? LogoSubtitle { get; set; }
+
     public string? Tagline { get; set; }
     public string? About { get; set; }
     public string Address { get; set; } = string.Empty;
@@ -38,4 +42,41 @@ public class StoreInfo : AuditableEntity
     public string? TikTokUrl { get; set; }
     public string? ZaloUrl { get; set; }
     public string? GoogleMapsEmbedUrl { get; set; }
+}
+
+/// <summary>
+/// The banner at the top of the home page, editable by admins (single row, table HomeBanners).
+/// No row means the built-in banner. Empty optional texts hide their element (button, statistic...).
+/// </summary>
+public class HomeBanner : AuditableEntity
+{
+    public string? Eyebrow { get; set; }
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>End of the title shown in italics and wood colour ("màu óc chó").</summary>
+    public string? TitleHighlight { get; set; }
+
+    public string? Description { get; set; }
+
+    public string? PrimaryButtonText { get; set; }
+
+    /// <summary>Empty: the main product line (ApplicationSettings:FocusCategorySlug).</summary>
+    public string? PrimaryButtonUrl { get; set; }
+
+    public string? SecondaryButtonText { get; set; }
+    public string? SecondaryButtonUrl { get; set; }
+
+    public string? Stat1Value { get; set; }
+    public string? Stat1Label { get; set; }
+    public string? Stat2Value { get; set; }
+    public string? Stat2Label { get; set; }
+    public string? Stat3Value { get; set; }
+    public string? Stat3Label { get; set; }
+
+    /// <summary>Uploaded picture (resized); empty: the built-in dining room illustration.</summary>
+    public string? ImageUrl { get; set; }
+
+    public int? ImageWidth { get; set; }
+    public int? ImageHeight { get; set; }
+    public string? ImageAlt { get; set; }
 }

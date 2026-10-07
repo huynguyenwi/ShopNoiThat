@@ -1,0 +1,185 @@
+@model FurnitureStore.Application.Engagement.HomeBannerCommand
+@using FurnitureStore.Application.Engagement
+@{
+    ViewData["Title"] = "Banner trang chủ";
+    var saved = (HomeBannerDto)ViewData["Saved"]!;
+    var maxMb = (int)ViewData["MaxImageMb"]!;
+    var focusUrl = (string)ViewData["FocusUrl"]!;
+    var stats = new[] { (Model.Stat1Value, Model.Stat1Label), (Model.Stat2Value, Model.Stat2Label), (Model.Stat3Value, Model.Stat3Label) };
+}
+@* The preview is filled from the form by wwwroot/js/admin-banner.js (textContent only); without JavaScript it shows the saved banner. *@
+<div class="admin-card mb-3">
+    <div class="admin-card-header">
+        <h2>Xem trước</h2>
+        <a class="btn btn-light btn-sm" href="/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Mở trang chủ</a>
+    </div>
+    <div class="banner-preview hero" data-banner-preview aria-label="Xem trước banner">
+        <div class="row align-items-center g-4">
+            <div class="col-md-7">
+                <span class="hero-eyebrow" data-preview="Eyebrow" hidden="@string.IsNullOrWhiteSpace(Model.Eyebrow)"><i class="bi bi-stars" aria-hidden="true"></i><span data-preview-text>@Model.Eyebrow</span></span>
+                <p class="hero-title mt-3 mb-3"><span data-preview="Title">@Model.Title</span> <em data-preview="TitleHighlight">@Model.TitleHighlight</em></p>
+                <p class="hero-lead mb-3" data-preview="Description">@Model.Description</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="btn btn-primary" data-preview="PrimaryButtonText" hidden="@string.IsNullOrWhiteSpace(Model.PrimaryButtonText)"><span data-preview-text>@Model.PrimaryButtonText</span> <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></span>
+                    <span class="btn btn-outline-primary" data-preview="SecondaryButtonText" hidden="@string.IsNullOrWhiteSpace(Model.SecondaryButtonText)"><span data-preview-text>@Model.SecondaryButtonText</span></span>
+                </div>
+                <div class="hero-stats d-flex flex-wrap gap-4 mt-4">
+                    @for (var i = 0; i < stats.Length; i++)
+                    {
+                        var (value, label) = stats[i];
+                        <div data-preview-stat="@(i + 1)" hidden="@(string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(label))">
+                            <div class="stat-value">@value</div>
+                            <div class="stat-label">@label</div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="col-md-5 text-center">
+                <img class="hero-illustration" data-preview-image src="@saved.ImageUrl" data-saved-src="@saved.ImageUrl" data-default-src="@HomeBannerDefaults.ImageUrl" alt="" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-action="Index" enctype="multipart/form-data" novalidate data-banner-form>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Nội dung chữ</h2></div>
+                <div class="admin-card-body row g-3">
+                    <div class="col-12">
+                        <label asp-for="Eyebrow" class="form-label">Dòng chữ nhỏ phía trên</label>
+                        <input asp-for="Eyebrow" class="form-control" maxlength="60" placeholder="Bàn ghế ăn đóng tại xưởng" />
+                        <span asp-validation-for="Eyebrow" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-7">
+                        <label asp-for="Title" class="form-label">Tiêu đề *</label>
+                        <input asp-for="Title" class="form-control" maxlength="120" required />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-5">
+                        <label asp-for="TitleHighlight" class="form-label">Phần cuối tiêu đề (chữ nghiêng, màu gỗ)</label>
+                        <input asp-for="TitleHighlight" class="form-control" maxlength="80" placeholder="màu óc chó" />
+                        <span asp-validation-for="TitleHighlight" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Description" class="form-label">Mô tả</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" maxlength="400"></textarea>
+                        <div class="form-text">Tối đa 400 ký tự. Xuống dòng sẽ được giữ nguyên.</div>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Nút bấm</h2></div>
+                <div class="admin-card-body row g-3">
+                    <div class="col-md-5">
+                        <label asp-for="PrimaryButtonText" class="form-label">Nút chính - chữ</label>
+                        <input asp-for="PrimaryButtonText" class="form-control" maxlength="40" placeholder="Xem bộ bàn ăn" />
+                        <span asp-validation-for="PrimaryButtonText" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-7">
+                        <label asp-for="PrimaryButtonUrl" class="form-label">Nút chính - đường dẫn</label>
+                        <input asp-for="PrimaryButtonUrl" class="form-control" maxlength="300" placeholder="@focusUrl" aria-describedby="primaryUrlHelp" />
+                        <div class="form-text" id="primaryUrlHelp">Để trống: mở trang mặt hàng chính (@focusUrl).</div>
+                        <span asp-validation-for="PrimaryButtonUrl" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-5">
+                        <label asp-for="SecondaryButtonText" class="form-label">Nút phụ - chữ</label>
+                        <input asp-for="SecondaryButtonText" class="form-control" maxlength="40" placeholder="Nhận tư vấn" />
+                        <span asp-validation-for="SecondaryButtonText" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-7">
+                        <label asp-for="SecondaryButtonUrl" class="form-label">Nút phụ - đường dẫn</label>
+                        <input asp-for="SecondaryButtonUrl" class="form-control" maxlength="300" placeholder="/contact" />
+                        <span asp-validation-for="SecondaryButtonUrl" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12 form-text mt-1">
+                        Đường dẫn: trang trong website (vd. <code>/products?onSale=true</code>, <code>/bao-gia</code>), link <code>https://...</code>
+                        (Zalo, Facebook) hoặc <code>tel:0900000000</code> để gọi điện. Xóa chữ trên nút để ẩn nút đó.
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Số liệu nổi bật</h2></div>
+                <div class="admin-card-body">
+                    <p class="form-text mt-0">Để trống cả hai ô của một dòng để ẩn số liệu đó.</p>
+                    @for (var i = 1; i <= 3; i++)
+                    {
+                        var valueName = $"Stat{i}Value";
+                        var labelName = $"Stat{i}Label";
+                        var (value, label) = stats[i - 1];
+                        <div class="row g-2 mb-2 align-items-start">
+                            <div class="col-4 col-md-3">
+                                <label class="form-label small mb-1" for="@valueName">Số liệu @i - con số</label>
+                                <input class="form-control" id="@valueName" name="@valueName" value="@value" maxlength="20" placeholder="24" />
+                                <span class="text-danger small field-validation-error" data-valmsg-for="@valueName">@ViewData.ModelState[valueName]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                            </div>
+                            <div class="col-8 col-md-9">
+                                <label class="form-label small mb-1" for="@labelName">Mô tả</label>
+                                <input class="form-control" id="@labelName" name="@labelName" value="@label" maxlength="40" placeholder="tháng bảo hành" />
+                                <span class="text-danger small field-validation-error" data-valmsg-for="@labelName">@ViewData.ModelState[labelName]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-5">
+            <div class="admin-card mb-3">
+                <div class="admin-card-header"><h2>Ảnh bên phải</h2></div>
+                <div class="admin-card-body">
+                    <div class="banner-image-current mb-3">
+                        <img src="@saved.ImageUrl" alt="" />
+                        <div class="small text-muted-fs mt-1">
+                            @(saved.HasCustomImage ? "Ảnh đang dùng (đã tải lên)" : "Đang dùng ảnh minh họa mặc định")
+                            @if (saved.HasCustomImage && saved.ImageWidth is not null)
+                            {
+                                <span>· @saved.ImageWidth × @saved.ImageHeight px</span>
+                            }
+                        </div>
+                    </div>
+                    <label for="bannerImage" class="form-label">Tải ảnh mới</label>
+                    <input type="file" id="bannerImage" name="image" class="form-control" accept=".jpg,.jpeg,.jfif,.png,.webp" data-max-mb="@maxMb" aria-describedby="bannerImageHelp bannerImageError" />
+                    <div class="form-text" id="bannerImageHelp">
+                        JPG, PNG hoặc WEBP, tối đa @maxMb MB. Ảnh tự thu nhỏ vừa khung (tối đa 1400 px), giữ nguyên tỉ lệ, không méo.
+                        Nên dùng ảnh ngang hoặc vuông; PNG nền trong suốt được giữ nền trong.
+                    </div>
+                    <div class="text-danger small" id="bannerImageError" role="alert" hidden></div>
+
+                    <label asp-for="ImageAlt" class="form-label mt-3">Mô tả ảnh (cho người khiếm thị và Google)</label>
+                    <input asp-for="ImageAlt" class="form-control" maxlength="200" placeholder="Phòng ăn với bộ bàn 6 ghế gỗ sồi màu óc chó" />
+                    <span asp-validation-for="ImageAlt" class="text-danger small"></span>
+
+                    @if (saved.HasCustomImage)
+                    {
+                        <div class="form-check mt-3">
+                            <input asp-for="RemoveImage" class="form-check-input" data-remove-image />
+                            <label asp-for="RemoveImage" class="form-check-label">Bỏ ảnh đã tải lên, dùng lại ảnh minh họa mặc định</label>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Lưu banner</button>
+        <span class="small text-muted-fs">@(saved.IsCustomized ? "Trang chủ đang dùng banner đã chỉnh." : "Trang chủ đang dùng banner mặc định.")</span>
+    </div>
+</form>
+
+@if (saved.IsCustomized)
+{
+    <form method="post" action="/admin/banner/reset" asp-antiforgery="true" class="mt-3" data-confirm="Khôi phục banner mặc định? Nội dung và ảnh đã tải lên sẽ bị xóa.">
+        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Khôi phục banner mặc định</button>
+    </form>
+}
+
+@section Scripts {
+    <script src="~/js/admin-banner.js" asp-append-version="true"></script>
+}

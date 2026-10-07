@@ -1,6 +1,8 @@
 @* Floating AI assistant (behaviour: wwwroot/js/ai-assistant.js). Answers are rendered with textContent only. *@
 @inject FurnitureStore.Application.AI.IAssistantService Assistant
+@inject IStoreInfoService StoreInfo
 @{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     var aiEnabled = Assistant.AiEnabled;
 }
 <div class="ai-widget" id="aiWidget" data-ai-enabled="@(aiEnabled ? "true" : "false")" data-signed-in="@(User.Identity?.IsAuthenticated == true ? "true" : "false")">
@@ -14,7 +16,7 @@
             <div class="d-flex align-items-center gap-2 min-w-0">
                 <span class="chat-avatar ai-avatar" aria-hidden="true"><i class="bi bi-stars"></i></span>
                 <div class="min-w-0">
-                    <div class="fw-semibold text-truncate" id="aiTitle">Trợ lý AI Nhà Mộc</div>
+                    <div class="fw-semibold text-truncate" id="aiTitle">Trợ lý AI @store.BrandName</div>
                     <div class="chat-status">
                         @(aiEnabled ? "Tư vấn bằng AI từ dữ liệu sản phẩm thật" : "Trợ lý tự động · hỏi đáp nhanh & tìm sản phẩm")
                     </div>

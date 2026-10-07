@@ -63,6 +63,7 @@ public sealed class QuoteService(
     IValidator<QuoteSubmitCommand> submitValidator,
     IUnitOfWork unitOfWork,
     IOptions<ApplicationSettings> siteOptions,
+    Engagement.IStoreInfoService storeInfo,
     TimeProvider timeProvider,
     ILogger<QuoteService> logger) : IQuoteService
 {
@@ -269,7 +270,8 @@ public sealed class QuoteService(
             phuongAnKhac = alternatives.Select(a => new { chatLieu = a.MaterialName, giaMotSanPham = AiPrompts.Vnd(a.UnitPrice) })
         }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(System.Text.Unicode.UnicodeRanges.All) });
 
-        var system = "Bạn là tư vấn viên của xưởng nội thất Nhà Mộc, giải thích báo giá dự kiến cho khách bằng tiếng Việt (80 - 150 từ). "
+        var brand = (await storeInfo.GetAsync(cancellationToken)).BrandName;
+        var system = $"Bạn là tư vấn viên của xưởng nội thất {brand}, giải thích báo giá dự kiến cho khách bằng tiếng Việt (80 - 150 từ). "
                      + "QUY TẮC: giá do hệ thống tính - KHÔNG được thay đổi, làm tròn khác hay tự tính thêm con số nào; chỉ dùng đúng số trong DỮ LIỆU. "
                      + "Không hứa giảm giá. Nêu rõ đây là giá tham khảo, cửa hàng sẽ xác nhận giá cuối cùng. Có thể gợi ý phương án khác trong DỮ LIỆU để tiết kiệm. "
                      + "Nếu có giả định (kích thước / chất liệu tạm tính) hãy nhắc khách kiểm tra lại. "
@@ -324,7 +326,7 @@ public sealed class QuoteService(
         if (quote.Email is not null)
         {
             await TryEmailAsync(quote.Email, quote.CustomerName, $"Đã nhận yêu cầu báo giá {quote.QuoteCode}",
-                EmailTemplates.QuoteReceived(siteOptions.Value.SiteName, quote.CustomerName, quote.QuoteCode, Summary(spec), b.UnitPrice, b.Quantity, b.Total,
+                EmailTemplates.QuoteReceived((await storeInfo.GetAsync(cancellationToken)).Name, quote.CustomerName, quote.QuoteCode, Summary(spec), b.UnitPrice, b.Quantity, b.Total,
                     userId is null ? null : Url($"/account/quotes/{quote.QuoteCode}")));
         }
 
@@ -421,7 +423,7 @@ public sealed class QuoteService(
             if (quote.Status == QuoteStatus.Quoted && quote.Email is not null)
             {
                 await TryEmailAsync(quote.Email, quote.CustomerName, $"Báo giá chính thức {quote.QuoteCode}",
-                    EmailTemplates.QuoteAnswered(siteOptions.Value.SiteName, quote.CustomerName, quote.QuoteCode, quote.FinalQuotedPrice!.Value, quote.AdminNote,
+                    EmailTemplates.QuoteAnswered((await storeInfo.GetAsync(cancellationToken)).Name, quote.CustomerName, quote.QuoteCode, quote.FinalQuotedPrice!.Value, quote.AdminNote,
                         quote.UserId is null ? null : Url($"/account/quotes/{quote.QuoteCode}")));
             }
         }

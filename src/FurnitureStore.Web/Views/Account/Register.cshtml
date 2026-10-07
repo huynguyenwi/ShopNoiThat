@@ -1,5 +1,7 @@
 @model FurnitureStore.Web.ViewModels.Account.RegisterViewModel
+@inject IStoreInfoService StoreInfo
 @{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
     ViewData["Title"] = "Đăng ký tài khoản";
 }
 
@@ -8,7 +10,7 @@
         <div class="auth-card">
             <div class="auth-aside d-none d-lg-flex">
                 <div>
-                    <p class="section-eyebrow" style="color: var(--fs-sand)">Thành viên Nhà Mộc</p>
+                    <p class="section-eyebrow" style="color: var(--fs-sand)">Thành viên @store.BrandName</p>
                     <h2 class="text-white">Tạo tài khoản để mua sắm nhanh hơn.</h2>
                     <ul class="auth-benefits">
                         <li><i class="bi bi-bag-check" aria-hidden="true"></i>Gửi yêu cầu đặt hàng nhanh, theo dõi đơn</li>

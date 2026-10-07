@@ -90,6 +90,7 @@ public sealed class DatabaseInitializer(
         context.StoreInformation.Add(new StoreInfo
         {
             Name = store.Name,
+            LogoSubtitle = store.LogoSubtitle,
             Tagline = site.Tagline,
             About = "Xưởng và showroom nội thất gỗ, sản xuất trực tiếp và nhận đóng theo yêu cầu.",
             Address = store.Address,

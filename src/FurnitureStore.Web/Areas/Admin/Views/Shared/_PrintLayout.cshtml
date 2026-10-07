@@ -1,4 +1,7 @@
-@inject IOptions<ApplicationSettings> SiteOptions
+@inject FurnitureStore.Application.Engagement.IStoreInfoService StoreInfo
+@{
+    var store = await StoreInfo.GetAsync(Context.RequestAborted);
+}
 @* Printable pages (QR labels, delivery slips): no back-office chrome, A4 print styles, a toolbar hidden when printing. *@
 <!DOCTYPE html>
 <html lang="vi">
@@ -6,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
-    <title>@ViewData["Title"] | @SiteOptions.Value.SiteName</title>
+    <title>@ViewData["Title"] | @store.Name</title>
     <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

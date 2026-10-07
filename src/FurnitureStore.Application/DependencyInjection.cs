@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IContactService, ContactService>();
         services.AddScoped<IStoreInfoService, StoreInfoService>();
+        services.AddScoped<IHomeBannerService, HomeBannerService>();
 
         services.AddScoped<IChatService, ChatService>();
 

@@ -40,6 +40,7 @@ public sealed class OrderService(
     IAuditLogService auditLog,
     ICurrentUserService currentUser,
     IOptions<ApplicationSettings> siteOptions,
+    Engagement.IStoreInfoService storeInfo,
     TimeProvider timeProvider,
     ILogger<OrderService> logger) : IOrderService
 {
@@ -318,7 +319,8 @@ public sealed class OrderService(
         {
             var site = siteOptions.Value;
             var baseUrl = site.BaseUrl.TrimEnd('/');
-            var html = EmailTemplates.OrderPlaced(site.SiteName, order, instructions, $"{baseUrl}/account/orders/{order.OrderCode}",
+            var storeName = (await storeInfo.GetAsync()).Name;
+            var html = EmailTemplates.OrderPlaced(storeName, order, instructions, $"{baseUrl}/account/orders/{order.OrderCode}",
                 $"{baseUrl}{QrLinks.OrderImage(order.OrderCode, "png")}?scale=5");
             await emailSender.SendAsync(new EmailMessage(order.CustomerEmail, $"Đã nhận yêu cầu đặt hàng {order.OrderCode}", html, order.CustomerName));
         }

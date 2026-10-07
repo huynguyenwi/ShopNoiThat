@@ -9,7 +9,7 @@ namespace FurnitureStore.Tests.AI;
 /// <summary>The built-in answers used when no AI model is configured.</summary>
 public sealed class LocalAssistantTests
 {
-    private static readonly StoreInfoDto Store = new("Nhà Mộc Furniture", null, null, "123 Nguyễn Văn Linh, Q.7, TP.HCM", "KCN Tân Uyên, Bình Dương",
+    private static readonly StoreInfoDto Store = new("Nhà Mộc Furniture", "Furniture", null, null, "123 Nguyễn Văn Linh, Q.7, TP.HCM", "KCN Tân Uyên, Bình Dương",
         "1900 0000", "contact@furniture.local", "08:00 - 21:00 (Thứ 2 - Chủ nhật)", "https://facebook.com/nhamoc", null, "https://zalo.me/19000000", null);
 
     private static LocalFacts Facts(IReadOnlyList<AIKnowledgeEntry>? knowledge = null, IReadOnlyList<Coupon>? coupons = null,
