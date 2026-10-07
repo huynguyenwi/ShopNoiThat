@@ -48,7 +48,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <meta name="csrf-token" content="@csrfToken" />
     <title>@ViewData["Title"] | Quản trị @store.Name</title>
-    <link rel="icon" href="~/images/logo-mark.svg" type="image/svg+xml" />
+    <link rel="icon" href="@store.IconUrl" type="@store.IconContentType" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" />
@@ -65,9 +65,19 @@
         <aside class="admin-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="adminSidebar" aria-label="Menu quản trị">
             <div class="admin-sidebar-header">
                 <a class="brand" href="@(isAdmin ? "/admin" : "/admin/chat")">
-                    <img src="~/images/logo-mark.svg" width="36" height="36" alt="" />
+                    @if (store.HasCustomLogo)
+                    {
+                        <img class="brand-logo brand-logo-custom" src="@store.LogoUrl" width="@store.LogoWidth" height="@store.LogoHeight" alt="@(store.ShowsBrandText ? "" : store.Name)" />
+                    }
+                    else
+                    {
+                        <img class="brand-logo" src="~/images/logo-mark.svg" width="36" height="36" alt="" />
+                    }
                     <span class="brand-text">
-                        <span class="brand-name text-white">@store.BrandName</span>
+                        @if (store.ShowsBrandText)
+                        {
+                            <span class="brand-name text-white">@store.BrandName</span>
+                        }
                         <span class="brand-sub">Quản trị</span>
                     </span>
                 </a>

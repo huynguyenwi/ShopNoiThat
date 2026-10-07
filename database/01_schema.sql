@@ -2085,3 +2085,55 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007092901_AddStoreLogo'
+)
+BEGIN
+    ALTER TABLE [StoreInformation] ADD [LogoHeight] int NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007092901_AddStoreLogo'
+)
+BEGIN
+    ALTER TABLE [StoreInformation] ADD [LogoShowsName] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007092901_AddStoreLogo'
+)
+BEGIN
+    ALTER TABLE [StoreInformation] ADD [LogoUrl] nvarchar(500) NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007092901_AddStoreLogo'
+)
+BEGIN
+    ALTER TABLE [StoreInformation] ADD [LogoWidth] int NULL;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007092901_AddStoreLogo'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261007092901_AddStoreLogo', N'8.0.31');
+END;
+GO
+
+COMMIT;
+GO
+

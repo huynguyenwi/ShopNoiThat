@@ -110,7 +110,7 @@ dotnet ef migrations has-pending-model-changes --project src/FurnitureStore.Infr
 ```
 
 Migration hiện có: `InitialCreate`, `AddProductSearchText` (cột tìm kiếm không dấu cho sản phẩm), `AddCouponIsPublic` (mã giảm giá công khai),
-`AddCartItemSelection` (tích chọn từng sản phẩm trong giỏ hàng, mục 22), `AddHomeBannerAndLogoSubtitle` (banner trang chủ + dòng chữ nhỏ dưới logo, mục 24).
+`AddCartItemSelection` (tích chọn từng sản phẩm trong giỏ hàng, mục 22), `AddHomeBannerAndLogoSubtitle` (banner trang chủ + dòng chữ nhỏ dưới logo, mục 24), `AddStoreLogo` (ảnh logo cửa hàng, mục 24).
 
 ## 6. Tạo database & seed dữ liệu
 
@@ -510,7 +510,7 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
 | `cart-select-e2e.js` | Giỏ hàng tích chọn: mặc định đã chọn, bỏ chọn / chọn tất cả cập nhật tổng tiền tại chỗ (không tải lại trang, giữ focus bàn phím), không chọn gì thì không vào được trang đặt hàng, chỉ sản phẩm đã chọn được đặt và sản phẩm còn lại ở lại giỏ; địa chỉ: chưa chọn tỉnh thì chưa chọn được phường / xã, danh sách phường / xã tải theo tỉnh (nhóm Phường / Xã / Đặc khu), địa chỉ đã lưu điền đúng tỉnh + phường, phường cũ trước 07/2025 được nhắc chọn lại, sổ địa chỉ không còn Quận / Huyện; điện thoại không tràn ngang (22 bước) |
 | `uploads-e2e.js` | Ảnh tải lên: chọn avatar là tự tải lên (không cần nút), ảnh chụp > 20 MB được nhận và hiện ở hồ sơ + header (256 × 256), avatar admin hiện ở thanh trên trang quản trị, ảnh > 50 MB bị báo ngay trên trình duyệt; admin tải ảnh ngang + dọc: lưu 1200 × 900 / 900 × 1200 kèm bản 480 px, không méo; gallery hiện trọn ảnh dọc, thẻ sản phẩm dùng bản 480 px (1200 px trên màn hình nét cao); thông báo chưa đọc nổi bật, bấm vào thì mở trang liên quan, chuông giảm 1 và thông báo chuyển sang đã đọc (17 bước) |
-| `branding-e2e.js` | Tên cửa hàng & banner: xem trước logo khi gõ tên, đổi tên thì logo header / footer / sidebar admin và tiêu đề trang đổi theo, tên rất dài tự xuống dòng không làm vỡ header (1440 / 1200 / 992 / 375 px); banner: xem trước đổi theo khi gõ, ảnh chọn được xem trước, link `javascript:` bị từ chối (giữ nội dung đã gõ), lưu thì trang chủ hiện đúng chữ / nút / số liệu / ảnh (1400 px kèm bản 700 px cho điện thoại, không méo), khôi phục mặc định xóa ảnh (19 bước) |
+| `branding-e2e.js` | Tên cửa hàng & banner: xem trước logo khi gõ tên, đổi tên thì logo header / footer / sidebar admin và tiêu đề trang đổi theo, tên rất dài tự xuống dòng không làm vỡ header (1440 / 1200 / 992 / 375 px); banner: xem trước đổi theo khi gõ, ảnh chọn được xem trước, link `javascript:` bị từ chối (giữ nội dung đã gõ), lưu thì trang chủ hiện đúng chữ / nút / số liệu / ảnh (1400 px kèm bản 700 px cho điện thoại, không méo), khôi phục mặc định xóa ảnh; logo: xem trước khung logo, ảnh chọn được xem trước, "logo đã có tên" ẩn chữ, logo ngang hiện cao 40 px giữ tỉ lệ ở header / sidebar admin (không dùng làm favicon), bỏ logo thì xóa ảnh; TikTok gõ `@tenshop` được lưu thành link đầy đủ và hiện ở chân trang (29 bước) |
 | `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
 | `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
 | `chat-offline-e2e.js` | Chat khi mất realtime: chặn kết nối SignalR của admin → trang báo mất kết nối, cuộc trò chuyện / tin nhắn mới vẫn hiện (tự cập nhật), admin vẫn trả lời được; bỏ chặn → tự kết nối lại, tin nhắn tức thì; khách mất realtime vẫn nhận được trả lời (10 bước) |
@@ -707,6 +707,19 @@ thêm lại. Ở Production (`SeedDemoData = false`) không có dữ liệu mẫ
 
 
 ## 24. Tên cửa hàng, logo & banner trang chủ
+
+**Logo cửa hàng** (`/admin/store`, thẻ *Logo & tên cửa hàng*): tải ảnh PNG (nền trong suốt là đẹp nhất), JPG hoặc WEBP ≤ 50 MB —
+ảnh tự thu nhỏ (tối đa 640 × 160 px, giữ tỉ lệ) và hiện **cao 40 px** thay biểu tượng ngôi nhà ở header, footer và sidebar quản trị.
+
+- Ô *"Ảnh logo đã có tên cửa hàng - ẩn chữ bên cạnh"*: dùng khi ảnh đã viết sẵn tên (logo dạng chữ).
+- Logo **vuông** còn được dùng làm biểu tượng tab trình duyệt (favicon) và ảnh đại diện khung chat; logo **ngang** thì giữ biểu tượng ngôi nhà ở 2 chỗ đó (thu nhỏ 16 px sẽ không đọc được).
+- *"Bỏ ảnh logo"* quay về biểu tượng ngôi nhà và xóa ảnh khỏi `wwwroot/uploads/logos`. Ảnh cũ bị thay cũng được xóa.
+- Khung **xem trước logo** đổi theo khi chọn ảnh / gõ tên.
+
+**Mạng xã hội** (Facebook, TikTok, Zalo): hiện thành biểu tượng ở chân trang và trang Liên hệ, trợ lý AI cũng dùng để trả lời
+"liên hệ qua đâu". Không cần gõ đủ link: `@tenshop` (TikTok) → `https://www.tiktok.com/@tenshop`, số điện thoại (Zalo) →
+`https://zalo.me/0900000000`, `facebook.com/tenshop` → `https://facebook.com/tenshop`. Link `http://`, `javascript:`... vẫn bị từ chối.
+(Bản trước, ô nhập TikTok bị Razor render ẩn đi do chuỗi `@@` trong placeholder - đã sửa và có test chống tái phát.)
 
 **Tên cửa hàng** (`/admin/store`) giờ được dùng ở **mọi nơi**: logo ở header / footer / sidebar quản trị, tiêu đề tab trình duyệt
 (`Trang | Tên cửa hàng`), thẻ chia sẻ mạng xã hội, khung chat, trợ lý AI, email gửi khách (đơn hàng, báo giá, tài khoản).

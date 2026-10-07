@@ -657,15 +657,27 @@
     --bs-btn-disabled-border-color: #b02a37;
 }
 
-/* /admin/store: what the logo will look like. */
+/* /admin/store: what the logo will look like (same 40 px height as the header). */
 .store-logo-preview {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: .6rem;
+    width: fit-content;
+    max-width: 100%;
     padding: .75rem 1rem;
     border: 1px dashed var(--fs-line);
     border-radius: .5rem;
     background: #fff;
+}
+
+.store-logo-preview .brand-logo {
+    width: auto;
+    height: 40px;
+}
+
+.store-logo-preview .brand-text {
+    flex: 0 1 auto;
+    min-width: 8rem;
 }
 
 /* /admin/banner: the home page banner, scaled down to fit the card. */
@@ -707,4 +719,17 @@
     border: 1px solid var(--fs-line);
     border-radius: .5rem;
     background: var(--fs-cream);
+}
+
+/* Uploaded logos on the dark sidebar: a light tile, so dark logos stay visible. */
+.admin-sidebar .brand-logo-custom {
+    height: 36px;
+    max-width: 150px;
+    padding: 2px;
+    border-radius: .4rem;
+    background: #fff;
+}
+
+.social-label-icon {
+    color: var(--fs-wood-dark);
 }

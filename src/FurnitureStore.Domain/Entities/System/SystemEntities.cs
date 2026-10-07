@@ -31,6 +31,15 @@ public class StoreInfo : AuditableEntity
     /// <summary>Small line under the name in the logo ("Furniture"); split off the name when the name ends with it.</summary>
     public string? LogoSubtitle { get; set; }
 
+    /// <summary>Uploaded logo picture (resized); empty: the built-in house icon.</summary>
+    public string? LogoUrl { get; set; }
+
+    public int? LogoWidth { get; set; }
+    public int? LogoHeight { get; set; }
+
+    /// <summary>The picture already contains the store name: the name text next to it is hidden.</summary>
+    public bool LogoShowsName { get; set; }
+
     public string? Tagline { get; set; }
     public string? About { get; set; }
     public string Address { get; set; } = string.Empty;

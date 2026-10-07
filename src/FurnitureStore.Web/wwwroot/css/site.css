@@ -185,6 +185,18 @@ img {
     line-height: 1;
 }
 
+/* Logo picture uploaded in /admin/store: 40 px high, wide logos keep their shape. */
+.brand-logo {
+    flex: 0 0 auto;
+}
+
+.brand-logo-custom {
+    width: auto;
+    height: 40px;
+    max-width: 180px;
+    object-fit: contain;
+}
+
 /* The store name comes from /admin/store: a long one wraps (at most 2 lines) instead of pushing the menu. */
 .brand-text {
     display: inline-block;
@@ -2404,6 +2416,7 @@ img {
 .chat-avatar img {
     width: 1.6rem;
     height: 1.6rem;
+    object-fit: contain; /* a logo uploaded in /admin/store */
 }
 
 .chat-status {
@@ -2880,6 +2893,12 @@ body[data-open-panel="chat"] .ai-widget {
 
     .site-header .brand-text {
         max-width: none;
+    }
+
+    .site-header .brand-logo-custom {
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 100%;
     }
 }
 

@@ -1,11 +1,13 @@
 using FurnitureStore.Application.Admin;
 using FurnitureStore.Application.Common.Exceptions;
+using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Engagement;
 using FurnitureStore.Domain.Enums;
 using FurnitureStore.Web.Areas.Admin.Models;
 using FurnitureStore.Web.Infrastructure;
 using FurnitureStore.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace FurnitureStore.Web.Areas.Admin.Controllers;
 
@@ -202,36 +204,55 @@ public sealed class ContactsController(IContactService contacts) : AdminControll
     }
 }
 
-/// <summary>/admin/store - store / workshop information shown across the site.</summary>
-public sealed class StoreController(IStoreInfoService store) : AdminControllerBase
+/// <summary>/admin/store - store / workshop information shown across the site, and the logo picture.</summary>
+public sealed class StoreController(IStoreInfoService store, IOptions<StorageSettings> storageOptions) : AdminControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var info = await store.GetAsync(cancellationToken);
+        SetPageData(info);
         return View(new StoreInfoCommand
         {
-            Name = info.Name, LogoSubtitle = info.LogoSubtitle, Tagline = info.Tagline, About = info.About, Address = info.Address, WorkshopAddress = info.WorkshopAddress,
-            Hotline = info.Hotline, Email = info.Email, OpeningHours = info.OpeningHours, FacebookUrl = info.FacebookUrl,
-            TikTokUrl = info.TikTokUrl, ZaloUrl = info.ZaloUrl, GoogleMapsEmbedUrl = info.GoogleMapsEmbedUrl
+            Name = info.Name, LogoSubtitle = info.LogoSubtitle, LogoShowsName = info.LogoShowsName, Tagline = info.Tagline, About = info.About,
+            Address = info.Address, WorkshopAddress = info.WorkshopAddress, Hotline = info.Hotline, Email = info.Email, OpeningHours = info.OpeningHours,
+            FacebookUrl = info.FacebookUrl, TikTokUrl = info.TikTokUrl, ZaloUrl = info.ZaloUrl, GoogleMapsEmbedUrl = info.GoogleMapsEmbedUrl
         });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Index(StoreInfoCommand command, CancellationToken cancellationToken)
+    [RequestSizeLimit(UploadLimits.PerImageBytes + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes + UploadLimits.FormFieldsBytes)]
+    public async Task<IActionResult> Index(StoreInfoCommand command, IFormFile? logo, CancellationToken cancellationToken)
     {
         try
         {
             ModelState.ThrowIfBindingFailed();
-            await store.UpdateAsync(command, cancellationToken);
+            if (logo is { Length: > 0 })
+            {
+                await using var stream = logo.OpenReadStream();
+                await store.UpdateAsync(command, (stream, logo.FileName), cancellationToken);
+            }
+            else
+            {
+                await store.UpdateAsync(command, null, cancellationToken);
+            }
+
             SetStatus("Đã lưu thông tin cửa hàng.");
             return RedirectToAction(nameof(Index));
         }
         catch (AppValidationException ex)
         {
             ModelState.AddApplicationErrors(ex, prefix: string.Empty);
+            SetPageData(await store.GetAsync(cancellationToken));
             return View(command);
         }
+    }
+
+    private void SetPageData(StoreInfoDto saved)
+    {
+        ViewData["Saved"] = saved;
+        ViewData["MaxImageMb"] = storageOptions.Value.MaxFileSizeMb;
     }
 }
 

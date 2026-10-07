@@ -36,6 +36,17 @@ function writePhoto(file, width, height) {
   fs.mkdirSync(FIXTURES, { recursive: true });
   const photo = path.join(FIXTURES, 'phong-an-mua-thu.png');
   writePhoto(photo, 1800, 1200);
+  // A wide logo (3:1) on a transparent background: a brown bar with a transparent border.
+  const logo = path.join(FIXTURES, 'logo-shop.png');
+  const logoPng = new PNG({ width: 600, height: 200 });
+  for (let y = 0; y < 200; y++) {
+    for (let x = 0; x < 600; x++) {
+      const i = (600 * y + x) << 2;
+      const inside = x > 20 && x < 580 && y > 40 && y < 160;
+      logoPng.data[i] = 91; logoPng.data[i + 1] = 58; logoPng.data[i + 2] = 36; logoPng.data[i + 3] = inside ? 255 : 0;
+    }
+  }
+  fs.writeFileSync(logo, PNG.sync.write(logoPng));
 
   const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, acceptInsecureCerts: true, args: ['--ignore-certificate-errors'] });
   try {
@@ -52,6 +63,11 @@ function writePhoto(file, width, height) {
     await go(admin, '/admin/store');
     // Read from the form, not sqlcmd: its console output loses Vietnamese letters.
     const [originalName, originalSub] = await admin.evaluate(() => [document.getElementById('Name').value, document.getElementById('LogoSubtitle').value]);
+    const previewBox = await admin.evaluate(() => ({
+      icon: Math.round(document.querySelector('[data-logo-image]').getBoundingClientRect().height),
+      text: Math.round(document.querySelector('[data-logo-name]').getBoundingClientRect().width)
+    }));
+    check('Logo preview is laid out like the header (40 px icon, readable name)', previewBox.icon === 40 && previewBox.text > 60, JSON.stringify(previewBox));
     await setValue(admin, '#Name', 'Gỗ Việt Home');
     await setValue(admin, '#LogoSubtitle', 'Home');
     check('Logo preview follows the name while typing', await text(admin, '[data-logo-name]') === 'Gỗ Việt' && await text(admin, '[data-logo-sub]') === 'Home',
@@ -94,6 +110,47 @@ function writePhoto(file, width, height) {
     await click(admin, 'form[action="/admin/store"] button[type="submit"].btn-primary');
     await go(admin, '/admin/store');
     check('Store name restored', await admin.$eval('#Name', i => i.value) === originalName && await admin.$eval('#LogoSubtitle', i => i.value) === originalSub, originalName);
+
+    // ---------- Logo picture
+    const originalTikTok = await admin.$eval('#TikTokUrl', i => i.value);
+    await (await admin.$('#storeLogo')).uploadFile(logo);
+    check('Chosen logo is previewed before saving', await admin.$eval('[data-logo-image]', i => i.src.startsWith('blob:') && i.classList.contains('brand-logo-custom')));
+    await admin.click('#LogoShowsName');
+    check('…"logo already has the name" hides the text in the preview', await admin.$eval('[data-logo-text]', e => e.hidden));
+    await admin.click('#LogoShowsName');
+    await setValue(admin, '#TikTokUrl', '@nhamoc.furniture');
+    await click(admin, 'form[action="/admin/store"] button[type="submit"].btn-primary');
+    check('TikTok typed as @handle is saved as the full link', await admin.$eval('#TikTokUrl', i => i.value) === 'https://www.tiktok.com/@nhamoc.furniture');
+
+    await go(visitor, '/');
+    const logoInHeader = await visitor.evaluate(() => {
+      const img = document.querySelector('.site-header .brand-logo');
+      const r = img.getBoundingClientRect();
+      const tiktok = document.querySelector('.site-footer a[aria-label="TikTok"]');
+      return {
+        custom: img.classList.contains('brand-logo-custom'), loaded: img.complete && img.naturalWidth > 0, height: Math.round(r.height), ratio: Math.round(r.width / r.height * 10) / 10,
+        name: !!document.querySelector('.site-header .brand-name'), icon: document.querySelector('link[rel="icon"]').getAttribute('href'),
+        tiktok: tiktok && tiktok.href, tiktokIcon: !!(tiktok && tiktok.querySelector('.bi-tiktok')) && getComputedStyle(tiktok.querySelector('.bi-tiktok'), '::before').content !== 'none'
+      };
+    });
+    check('Uploaded logo in the header: 40 px high, wide shape kept, name still next to it', logoInHeader.custom && logoInHeader.loaded && logoInHeader.height === 40
+      && Math.abs(logoInHeader.ratio - 3) < 0.15 && logoInHeader.name, JSON.stringify(logoInHeader));
+    check('…a wide logo is not used as the tab icon', logoInHeader.icon === '/images/logo-mark.svg', logoInHeader.icon);
+    check('TikTok link and icon in the footer', logoInHeader.tiktok === 'https://www.tiktok.com/@nhamoc.furniture' && logoInHeader.tiktokIcon, JSON.stringify(logoInHeader));
+    await visitor.screenshot({ path: path.join(OUT, 'header-logo.png'), clip: { x: 0, y: 0, width: 1366, height: 120 } });
+    const logoUrl = await visitor.$eval('.site-header .brand-logo', i => new URL(i.src).pathname);
+    await go(admin, '/admin');
+    check('…and on the admin sidebar', await admin.$eval('.admin-sidebar .brand-logo', i => i.classList.contains('brand-logo-custom') && i.complete && i.naturalWidth > 0));
+
+    await go(admin, '/admin/store');
+    await admin.click('#RemoveLogo');
+    check('"Remove logo" previews the house icon again', await admin.$eval('[data-logo-image]', i => i.src.endsWith('/images/logo-mark.svg')));
+    await setValue(admin, '#TikTokUrl', originalTikTok);
+    await click(admin, 'form[action="/admin/store"] button[type="submit"].btn-primary');
+    await go(visitor, '/');
+    const removedStatus = await visitor.evaluate(async url => (await fetch(url, { cache: 'no-store' })).status, logoUrl);
+    check('Logo removed: house icon back, picture deleted', await visitor.$eval('.site-header .brand-logo', i => i.getAttribute('src')) === '/images/logo-mark.svg' && removedStatus === 404,
+      `${logoUrl} -> ${removedStatus}`);
 
     // ---------- Banner: live preview
     await go(admin, '/admin/banner');
@@ -173,7 +230,7 @@ function writePhoto(file, width, height) {
     await click(admin, 'form[action="/admin/banner/reset"] button[type="submit"]');
     await go(visitor, '/');
     const back = await visitor.evaluate(() => ({ title: document.querySelector('.hero-title').textContent.replace(/\s+/g, ' ').trim(), img: document.querySelector('.hero img').getAttribute('src') }));
-    const gone = await visitor.evaluate(async url => (await fetch(url)).status, imageUrl);
+    const gone = await visitor.evaluate(async url => (await fetch(url, { cache: 'no-store' })).status, imageUrl);
     check('Reset brings back the built-in banner and deletes the picture', back.title === 'Bộ bàn ăn gỗ sồi Nga - màu óc chó' && back.img === '/images/hero-dining-room.svg'
       && gone === 404 && sql('SELECT COUNT(*) FROM HomeBanners') === '0', JSON.stringify({ ...back, gone }));
   } catch (e) {

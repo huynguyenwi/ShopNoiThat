@@ -121,6 +121,12 @@ public static class AiPrompts
     private static void AppendStore(StringBuilder sb, StoreInfoDto store, IReadOnlyList<AIKnowledgeEntry> knowledge)
     {
         sb.AppendLine($"THÔNG TIN CỬA HÀNG: {store.Name}; showroom: {store.Address}; hotline: {store.Hotline}; giờ mở cửa: {store.OpeningHours}.");
+        var social = new[] { ("Zalo", store.ZaloUrl), ("Facebook", store.FacebookUrl), ("TikTok", store.TikTokUrl) }
+            .Where(s => !string.IsNullOrWhiteSpace(s.Item2)).Select(s => $"{s.Item1}: {s.Item2}").ToList();
+        if (social.Count > 0)
+        {
+            sb.AppendLine($"MẠNG XÃ HỘI: {string.Join("; ", social)}.");
+        }
         if (knowledge.Count > 0)
         {
             sb.AppendLine("CHÍNH SÁCH & HỎI ĐÁP (nguồn chính thức):");

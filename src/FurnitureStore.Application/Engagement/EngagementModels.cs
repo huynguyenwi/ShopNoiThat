@@ -117,6 +117,40 @@ public sealed record StoreInfoDto(
     string? ZaloUrl,
     string? GoogleMapsEmbedUrl)
 {
+    /// <summary>The house icon shown when no logo picture was uploaded.</summary>
+    public const string DefaultLogoUrl = "/images/logo-mark.svg";
+
+    /// <summary>Uploaded logo picture, or null (the house icon).</summary>
+    public string? LogoUrl { get; init; }
+
+    public int? LogoWidth { get; init; }
+    public int? LogoHeight { get; init; }
+
+    /// <summary>The uploaded picture already contains the name: the logo shows the picture only.</summary>
+    public bool LogoShowsName { get; init; }
+
+    public bool HasCustomLogo => !string.IsNullOrEmpty(LogoUrl);
+
+    /// <summary>The name text is shown next to the picture (always with the house icon).</summary>
+    public bool ShowsBrandText => !HasCustomLogo || !LogoShowsName;
+
+    /// <summary>
+    /// A roughly square logo also serves as the browser tab icon and the chat avatar; a wide one (a name written out)
+    /// would be unreadable that small, so those keep the house icon.
+    /// </summary>
+    public string IconUrl => HasCustomLogo && LogoWidth is > 0 && LogoHeight is > 0 && LogoWidth <= LogoHeight * 1.3 && LogoHeight <= LogoWidth * 1.3
+        ? LogoUrl!
+        : DefaultLogoUrl;
+
+    /// <summary>Media type of <see cref="IconUrl"/> for &lt;link rel="icon"&gt;.</summary>
+    public string IconContentType => Path.GetExtension(IconUrl).ToLowerInvariant() switch
+    {
+        ".svg" => "image/svg+xml",
+        ".webp" => "image/webp",
+        ".png" => "image/png",
+        _ => "image/jpeg"
+    };
+
     public string HotlineDigits => new(Hotline.Where(c => char.IsDigit(c) || c == '+').ToArray());
 
     /// <summary>
@@ -144,6 +178,13 @@ public sealed class StoreInfoCommand
 {
     public string Name { get; set; } = string.Empty;
     public string? LogoSubtitle { get; set; }
+
+    /// <summary>The logo picture already contains the name: hide the name text next to it.</summary>
+    public bool LogoShowsName { get; set; }
+
+    /// <summary>Go back to the house icon (ignored when a new logo is uploaded).</summary>
+    public bool RemoveLogo { get; set; }
+
     public string? Tagline { get; set; }
     public string? About { get; set; }
     public string Address { get; set; } = string.Empty;

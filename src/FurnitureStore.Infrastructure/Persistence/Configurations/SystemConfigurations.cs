@@ -30,6 +30,7 @@ internal sealed class StoreInfoConfiguration : IEntityTypeConfiguration<StoreInf
         builder.ToTable("StoreInformation");
         builder.Property(s => s.Name).HasMaxLength(150).IsRequired();
         builder.Property(s => s.LogoSubtitle).HasMaxLength(40);
+        builder.Property(s => s.LogoUrl).HasMaxLength(500);
         builder.Property(s => s.Tagline).HasMaxLength(200);
         builder.Property(s => s.About).HasMaxLength(4000);
         builder.Property(s => s.Address).HasMaxLength(300).IsRequired();

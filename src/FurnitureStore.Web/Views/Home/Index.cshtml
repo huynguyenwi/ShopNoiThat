@@ -19,6 +19,7 @@
         ["description"] = store.About ?? store.Tagline,
         ["url"] = homeUrl + "/",
         ["image"] = homeUrl + "/images/og-default.png",
+        ["logo"] = store.HasCustomLogo ? homeUrl + store.LogoUrl : null,
         ["telephone"] = store.Hotline,
         ["email"] = store.Email,
         ["address"] = new Dictionary<string, string> { ["@type"] = "PostalAddress", ["streetAddress"] = store.Address, ["addressCountry"] = "VN" },

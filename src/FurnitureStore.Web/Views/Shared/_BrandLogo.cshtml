@@ -1,0 +1,20 @@
+@model StoreInfoDto
+@* Logo (header, footer): the picture uploaded in /admin/store or the house icon, then the store name - unless the picture already contains it. *@
+@if (Model.HasCustomLogo)
+{
+    <img class="brand-logo brand-logo-custom" src="@Model.LogoUrl" width="@Model.LogoWidth" height="@Model.LogoHeight" alt="@(Model.ShowsBrandText ? "" : Model.Name)" />
+}
+else
+{
+    <img class="brand-logo" src="@StoreInfoDto.DefaultLogoUrl" width="40" height="40" alt="" />
+}
+@if (Model.ShowsBrandText)
+{
+    <span class="brand-text">
+        <span class="brand-name">@Model.BrandName</span>
+        @if (!string.IsNullOrWhiteSpace(Model.LogoSubtitle))
+        {
+            <span class="brand-sub">@Model.LogoSubtitle</span>
+        }
+    </span>
+}

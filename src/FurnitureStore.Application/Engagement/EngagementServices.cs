@@ -2,6 +2,7 @@
 using FurnitureStore.Application.Catalog;
 using FurnitureStore.Application.Common.Exceptions;
 using FurnitureStore.Application.Common.Interfaces;
+using FurnitureStore.Application.Common.Media;
 using FurnitureStore.Application.Common.Models;
 using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Common.Validation;
@@ -326,7 +327,62 @@ public sealed class ContactService(
 public interface IStoreInfoService
 {
     Task<StoreInfoDto> GetAsync(CancellationToken cancellationToken = default);
-    Task UpdateAsync(StoreInfoCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the store information; <paramref name="logo"/> replaces the logo picture (resized, the previous one is deleted).</summary>
+    Task UpdateAsync(StoreInfoCommand command, (Stream Content, string FileName)? logo = null, CancellationToken cancellationToken = default);
+}
+
+public enum SocialNetwork
+{
+    Facebook,
+    TikTok,
+    Zalo
+}
+
+/// <summary>
+/// Turns what admins paste for a social page into a full https link: "facebook.com/nhamoc" → "https://facebook.com/nhamoc",
+/// "@nhamoc" (TikTok) → "https://www.tiktok.com/@nhamoc", a phone number (Zalo) → "https://zalo.me/0900000000".
+/// A value with a scheme ("http://", "javascript:"...) is left as typed, for the validator to refuse.
+/// </summary>
+public static partial class SocialLinks
+{
+    public static string? Normalize(string? value, SocialNetwork network)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var link = value.Trim();
+        if (SchemeRegex().IsMatch(link))
+        {
+            return link;
+        }
+
+        if (network == SocialNetwork.TikTok && TikTokHandleRegex().IsMatch(link))
+        {
+            return "https://www.tiktok.com/" + link;
+        }
+
+        if (network == SocialNetwork.Zalo && PhoneRegex().IsMatch(link))
+        {
+            return "https://zalo.me/" + new string(link.Where(char.IsAsciiDigit).ToArray());
+        }
+
+        return DomainRegex().IsMatch(link) ? "https://" + link : link;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[A-Za-z][A-Za-z0-9+.\-]*:")]
+    private static partial System.Text.RegularExpressions.Regex SchemeRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^@[A-Za-z0-9._]{2,24}$")]
+    private static partial System.Text.RegularExpressions.Regex TikTokHandleRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^\+?[0-9][0-9 .\-]{7,16}$")]
+    private static partial System.Text.RegularExpressions.Regex PhoneRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(www\.)?[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)+(/\S*)?$")]
+    private static partial System.Text.RegularExpressions.Regex DomainRegex();
 }
 
 public sealed class StoreInfoCommandValidator : AbstractValidator<StoreInfoCommand>
@@ -342,9 +398,9 @@ public sealed class StoreInfoCommandValidator : AbstractValidator<StoreInfoComma
         RuleFor(x => x.Hotline).NotEmpty().WithMessage("Vui lòng nhập hotline.").MaximumLength(30).Matches(@"^[0-9+\s.\-()]+$").WithMessage("Hotline chỉ gồm chữ số.");
         RuleFor(x => x.Email).NotEmpty().EmailAddress().WithMessage("Email không hợp lệ.").MaximumLength(256);
         RuleFor(x => x.OpeningHours).MaximumLength(150);
-        RuleFor(x => x.FacebookUrl).Must(BeHttpsUrl).WithMessage("Đường dẫn Facebook phải bắt đầu bằng https://").MaximumLength(300);
-        RuleFor(x => x.TikTokUrl).Must(BeHttpsUrl).WithMessage("Đường dẫn TikTok phải bắt đầu bằng https://").MaximumLength(300);
-        RuleFor(x => x.ZaloUrl).Must(BeHttpsUrl).WithMessage("Đường dẫn Zalo phải bắt đầu bằng https://").MaximumLength(300);
+        RuleFor(x => x.FacebookUrl).Must(BeHttpsUrl).WithMessage("Link Facebook không hợp lệ - dán link trang, vd. https://facebook.com/tenshop.").MaximumLength(300);
+        RuleFor(x => x.TikTokUrl).Must(BeHttpsUrl).WithMessage("Link TikTok không hợp lệ - dán link kênh (https://www.tiktok.com/@tenshop) hoặc gõ @tenshop.").MaximumLength(300);
+        RuleFor(x => x.ZaloUrl).Must(BeHttpsUrl).WithMessage("Link Zalo không hợp lệ - dán link https://zalo.me/... hoặc gõ số điện thoại Zalo.").MaximumLength(300);
         // Rendered inside an <iframe>: only Google Maps embeds are allowed.
         RuleFor(x => x.GoogleMapsEmbedUrl)
             .Must(url => string.IsNullOrWhiteSpace(url)
@@ -362,6 +418,7 @@ public sealed class StoreInfoCommandValidator : AbstractValidator<StoreInfoComma
 public sealed class StoreInfoService(
     IRepository<StoreInfo> store,
     IValidator<StoreInfoCommand> validator,
+    IFileStorageService fileStorage,
     IUnitOfWork unitOfWork,
     IMemoryCache cache,
     IAuditLogService auditLog,
@@ -394,15 +451,23 @@ public sealed class StoreInfoService(
         }
     }
 
-    public async Task UpdateAsync(StoreInfoCommand command, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(StoreInfoCommand command, (Stream Content, string FileName)? logo = null, CancellationToken cancellationToken = default)
     {
+        // Normalized first, so the form shows the full links if something else is refused.
+        command.FacebookUrl = SocialLinks.Normalize(command.FacebookUrl, SocialNetwork.Facebook);
+        command.TikTokUrl = SocialLinks.Normalize(command.TikTokUrl, SocialNetwork.TikTok);
+        command.ZaloUrl = SocialLinks.Normalize(command.ZaloUrl, SocialNetwork.Zalo);
         await validator.EnsureValidAsync(command, cancellationToken);
+
         var entity = (await store.ListAsync(cancellationToken: cancellationToken)).OrderBy(s => s.Id).FirstOrDefault();
-        if (entity is null)
-        {
-            entity = new StoreInfo();
-            await store.AddAsync(entity, cancellationToken);
-        }
+        var isNew = entity is null;
+        entity ??= new StoreInfo();
+        var previousLogo = entity.LogoUrl;
+
+        // Validated and resized before anything changes: a refused picture leaves the store information as it was.
+        var stored = logo is { } upload
+            ? await fileStorage.SaveImageAsync(upload.Content, upload.FileName, ImagePreset.Logo, cancellationToken)
+            : null;
 
         entity.Name = command.Name.Trim();
         entity.LogoSubtitle = Clean(command.LogoSubtitle);
@@ -413,14 +478,50 @@ public sealed class StoreInfoService(
         entity.Hotline = command.Hotline.Trim();
         entity.Email = command.Email.Trim();
         entity.OpeningHours = Clean(command.OpeningHours);
-        entity.FacebookUrl = Clean(command.FacebookUrl);
-        entity.TikTokUrl = Clean(command.TikTokUrl);
-        entity.ZaloUrl = Clean(command.ZaloUrl);
+        entity.FacebookUrl = command.FacebookUrl;
+        entity.TikTokUrl = command.TikTokUrl;
+        entity.ZaloUrl = command.ZaloUrl;
         entity.GoogleMapsEmbedUrl = Clean(command.GoogleMapsEmbedUrl);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (stored is not null)
+        {
+            (entity.LogoUrl, entity.LogoWidth, entity.LogoHeight) = (stored.Url, stored.Width, stored.Height);
+        }
+        else if (command.RemoveLogo)
+        {
+            (entity.LogoUrl, entity.LogoWidth, entity.LogoHeight) = (null, null, null);
+        }
+
+        // The house icon never contains the name.
+        entity.LogoShowsName = entity.LogoUrl is not null && command.LogoShowsName;
+
+        if (isNew)
+        {
+            await store.AddAsync(entity, cancellationToken);
+        }
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            if (stored is not null)
+            {
+                await fileStorage.DeleteAsync(stored.Url, CancellationToken.None);
+            }
+
+            throw;
+        }
+
+        if (previousLogo is not null && previousLogo != entity.LogoUrl)
+        {
+            await fileStorage.DeleteAsync(previousLogo, cancellationToken);
+        }
+
         cache.Remove(CacheKey);
-        await auditLog.LogAsync(new AuditEntry(AuditAction.Update, nameof(StoreInfo), entity.Id.ToString(), "Cập nhật thông tin cửa hàng", NewValues: command), cancellationToken);
+        await auditLog.LogAsync(new AuditEntry(AuditAction.Update, nameof(StoreInfo), entity.Id.ToString(),
+            stored is null ? "Cập nhật thông tin cửa hàng" : "Cập nhật thông tin cửa hàng (logo mới)", NewValues: command), cancellationToken);
     }
 
     private StoreInfoDto FromSettings()
@@ -431,7 +532,13 @@ public sealed class StoreInfoService(
     }
 
     private static StoreInfoDto Map(StoreInfo s) =>
-        new(s.Name, s.LogoSubtitle, s.Tagline, s.About, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours, s.FacebookUrl, s.TikTokUrl, s.ZaloUrl, s.GoogleMapsEmbedUrl);
+        new(s.Name, s.LogoSubtitle, s.Tagline, s.About, s.Address, s.WorkshopAddress, s.Hotline, s.Email, s.OpeningHours, s.FacebookUrl, s.TikTokUrl, s.ZaloUrl, s.GoogleMapsEmbedUrl)
+        {
+            LogoUrl = s.LogoUrl,
+            LogoWidth = s.LogoWidth,
+            LogoHeight = s.LogoHeight,
+            LogoShowsName = s.LogoShowsName
+        };
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

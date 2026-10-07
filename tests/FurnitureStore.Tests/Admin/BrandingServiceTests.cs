@@ -90,6 +90,96 @@ public sealed class BrandingServiceTests : IAsyncLifetime
         Assert.True(ex.FieldErrors.ContainsKey(nameof(StoreInfoCommand.LogoSubtitle)));
     }
 
+    // ------------------------------------------------------------------ logo picture, social links
+
+    private Task<StoreInfoDto> GetStoreAsync() => _host.RunAsync(sp => sp.GetRequiredService<IStoreInfoService>().GetAsync());
+
+    private Task SaveStoreAsync(Action<StoreInfoCommand>? change = null, (Stream, string)? logo = null) =>
+        _host.RunAsync(async sp =>
+        {
+            var command = new StoreInfoCommand { Name = "Nhà Mộc Furniture", LogoSubtitle = "Furniture", Address = "1 Đường Test", Hotline = "0900000001", Email = "shop@example.com" };
+            change?.Invoke(command);
+            await sp.GetRequiredService<IStoreInfoService>().UpdateAsync(command, logo);
+            return 0;
+        });
+
+    [Fact]
+    public async Task LogoPicture_IsUsed_Replaced_AndRemoved()
+    {
+        Assert.False((await GetStoreAsync()).HasCustomLogo);
+
+        await SaveStoreAsync(c => c.LogoShowsName = true, Png("logo-1.png"));
+        var first = await GetStoreAsync();
+        Assert.True(first.HasCustomLogo);
+        Assert.StartsWith("/uploads/logos/", first.LogoUrl);
+        Assert.True(first.LogoShowsName);
+        Assert.False(first.ShowsBrandText);                     // the picture contains the name
+        Assert.True(_host.Files.Files.ContainsKey(first.LogoUrl!));
+
+        await SaveStoreAsync(logo: Png("logo-2.png"));
+        var second = await GetStoreAsync();
+        Assert.NotEqual(first.LogoUrl, second.LogoUrl);
+        Assert.False(_host.Files.Files.ContainsKey(first.LogoUrl!)); // the replaced picture is deleted
+        Assert.True(second.ShowsBrandText);
+
+        await SaveStoreAsync(c => { c.RemoveLogo = true; c.LogoShowsName = true; });
+        var third = await GetStoreAsync();
+        Assert.False(third.HasCustomLogo);
+        Assert.False(third.LogoShowsName);                      // the house icon never contains the name
+        Assert.True(third.ShowsBrandText);
+        Assert.Equal(StoreInfoDto.DefaultLogoUrl, third.IconUrl);
+        Assert.Empty(_host.Files.Files);
+    }
+
+    [Fact]
+    public async Task RefusedLogo_LeavesTheStoreAsItWas()
+    {
+        await Assert.ThrowsAsync<AppValidationException>(() =>
+            SaveStoreAsync(c => c.Name = "Không được lưu", (new MemoryStream("not a picture"u8.ToArray()), "logo.png")));
+
+        Assert.NotEqual("Không được lưu", (await GetStoreAsync()).Name);
+        Assert.Empty(_host.Files.Files);
+    }
+
+    [Theory]
+    [InlineData(400, 400, true)]
+    [InlineData(160, 140, true)]
+    [InlineData(640, 160, false)] // a name written out: unreadable as a 16 px tab icon
+    [InlineData(null, null, false)]
+    public void SquareLogos_AlsoServeAsTabIcon(int? width, int? height, bool used)
+    {
+        var store = new StoreInfoDto("Gỗ Việt", null, null, null, "1 Đường Test", null, "0900000001", "shop@example.com", null, null, null, null, null)
+        {
+            LogoUrl = "/uploads/logos/2026/10/abc-400w.webp", LogoWidth = width, LogoHeight = height
+        };
+
+        Assert.Equal(used ? store.LogoUrl : StoreInfoDto.DefaultLogoUrl, store.IconUrl);
+        Assert.Equal(used ? "image/webp" : "image/svg+xml", store.IconContentType);
+    }
+
+    [Theory]
+    [InlineData(SocialNetwork.TikTok, "@nhamoc.furniture", "https://www.tiktok.com/@nhamoc.furniture")]
+    [InlineData(SocialNetwork.TikTok, "tiktok.com/@nhamoc", "https://tiktok.com/@nhamoc")]
+    [InlineData(SocialNetwork.TikTok, " https://www.tiktok.com/@nhamoc ", "https://www.tiktok.com/@nhamoc")]
+    [InlineData(SocialNetwork.Zalo, "0900 000 000", "https://zalo.me/0900000000")]
+    [InlineData(SocialNetwork.Zalo, "zalo.me/0900000000", "https://zalo.me/0900000000")]
+    [InlineData(SocialNetwork.Facebook, "www.facebook.com/nhamoc", "https://www.facebook.com/nhamoc")]
+    [InlineData(SocialNetwork.Facebook, "javascript:alert(1)", "javascript:alert(1)")] // left for the validator to refuse
+    [InlineData(SocialNetwork.Facebook, "http://facebook.com/nhamoc", "http://facebook.com/nhamoc")]
+    [InlineData(SocialNetwork.Facebook, "   ", null)]
+    public void SocialLinks_AreCompletedFromWhatAdminsPaste(SocialNetwork network, string typed, string? expected) =>
+        Assert.Equal(expected, SocialLinks.Normalize(typed, network));
+
+    [Fact]
+    public async Task SocialLinks_AreSavedCompleted()
+    {
+        await SaveStoreAsync(c => { c.TikTokUrl = "@nhamoc"; c.ZaloUrl = "0900 000 001"; c.FacebookUrl = "facebook.com/nhamoc"; });
+
+        var store = await GetStoreAsync();
+        Assert.Equal(("https://www.tiktok.com/@nhamoc", "https://zalo.me/0900000001", "https://facebook.com/nhamoc"),
+            (store.TikTokUrl, store.ZaloUrl, store.FacebookUrl));
+    }
+
     // ------------------------------------------------------------------ banner
 
     [Fact]

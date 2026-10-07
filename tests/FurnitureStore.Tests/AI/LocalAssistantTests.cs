@@ -10,7 +10,7 @@ namespace FurnitureStore.Tests.AI;
 public sealed class LocalAssistantTests
 {
     private static readonly StoreInfoDto Store = new("Nhà Mộc Furniture", "Furniture", null, null, "123 Nguyễn Văn Linh, Q.7, TP.HCM", "KCN Tân Uyên, Bình Dương",
-        "1900 0000", "contact@furniture.local", "08:00 - 21:00 (Thứ 2 - Chủ nhật)", "https://facebook.com/nhamoc", null, "https://zalo.me/19000000", null);
+        "1900 0000", "contact@furniture.local", "08:00 - 21:00 (Thứ 2 - Chủ nhật)", "https://facebook.com/nhamoc", "https://www.tiktok.com/@nhamoc", "https://zalo.me/19000000", null);
 
     private static LocalFacts Facts(IReadOnlyList<AIKnowledgeEntry>? knowledge = null, IReadOnlyList<Coupon>? coupons = null,
         IReadOnlyList<OrderListItemDto>? orders = null, ProductFact? focus = null, int? warranty = null) =>
@@ -35,6 +35,7 @@ public sealed class LocalAssistantTests
     [InlineData("dia chi cua hang", LocalTopic.Address)]
     [InlineData("cho mình xin số hotline", LocalTopic.Contact)]
     [InlineData("có zalo không", LocalTopic.Contact)]
+    [InlineData("shop có tiktok không", LocalTopic.Contact)]
     [InlineData("Phí ship bao nhiêu?", LocalTopic.Shipping)]
     [InlineData("giao hàng mất mấy ngày", LocalTopic.Shipping)]
     [InlineData("Chào shop, cho mình hỏi phí vận chuyển ra Hà Nội", LocalTopic.Shipping)] // greeting + real question
@@ -111,6 +112,8 @@ public sealed class LocalAssistantTests
         var contact = Ask("số hotline là gì").Text;
         Assert.Contains("1900 0000", contact);
         Assert.Contains("https://zalo.me/19000000", contact);
+        Assert.Contains("https://facebook.com/nhamoc", contact);
+        Assert.Contains("TikTok: https://www.tiktok.com/@nhamoc", contact);
     }
 
     [Fact]

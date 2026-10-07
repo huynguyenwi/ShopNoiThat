@@ -68,7 +68,7 @@ public static partial class LocalAssistant
             "chu nhat|1", "ngay le|1", "thu bay|1", "buoi toi|1")),
         (LocalTopic.Address, T("dia chi", "o dau", "showroom|2", "cua hang o", "chi nhanh", "ban do", "den xem", "xem truc tiep", "xem hang truc tiep",
             "xuong san xuat", "xuong o", "duong nao", "toi cua hang")),
-        (LocalTopic.Contact, T("hotline|2", "so dien thoai", "sdt|2", "lien he", "goi dien", "zalo|2", "facebook|2", "fanpage|2", "email|2",
+        (LocalTopic.Contact, T("hotline|2", "so dien thoai", "sdt|2", "lien he", "goi dien", "zalo|2", "facebook|2", "fanpage|2", "tiktok|2", "tik tok", "email|2",
             "gap nhan vien", "noi chuyen voi nhan vien", "tu van vien", "nhan vien tu van")),
         (LocalTopic.Shipping, T("giao hang", "van chuyen", "ship|1", "phi ship", "phi giao", "phi van chuyen", "lap dat", "giao tan noi",
             "giao tinh", "giao ra", "freeship|2", "mien phi giao", "bao lau|1", "may ngay|1")),
@@ -339,6 +339,7 @@ public static partial class LocalAssistant
                 if (!string.IsNullOrWhiteSpace(store.Email)) lines.Add($"• Email: {store.Email}");
                 if (!string.IsNullOrWhiteSpace(store.ZaloUrl)) lines.Add($"• Zalo: {store.ZaloUrl}");
                 if (!string.IsNullOrWhiteSpace(store.FacebookUrl)) lines.Add($"• Facebook: {store.FacebookUrl}");
+                if (!string.IsNullOrWhiteSpace(store.TikTokUrl)) lines.Add($"• TikTok: {store.TikTokUrl}");
                 lines.Add("• Hoặc bấm \"Chat với tư vấn viên\" để nhắn trực tiếp với nhân viên.");
                 return new($"Bạn liên hệ {store.Name} qua:\n{string.Join("\n", lines)}", ["Giờ mở cửa?", "Địa chỉ showroom?", "Chat với nhân viên"]);
             }

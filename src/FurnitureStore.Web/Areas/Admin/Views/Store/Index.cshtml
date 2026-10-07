@@ -1,17 +1,56 @@
 @model FurnitureStore.Application.Engagement.StoreInfoCommand
+@using FurnitureStore.Application.Engagement
 @{
     ViewData["Title"] = "Thông tin cửa hàng";
+    var saved = (StoreInfoDto)ViewData["Saved"]!;
+    var maxMb = (int)ViewData["MaxImageMb"]!;
+    var brandName = StoreInfoDto.BrandNameOf(Model.Name ?? string.Empty, Model.LogoSubtitle);
+    var hideText = saved.HasCustomLogo && Model.LogoShowsName;
 }
-
-<form method="post" asp-action="Index" novalidate style="max-width: 920px">
+@* The logo preview follows the form (wwwroot/js/admin-store.js); without JavaScript it shows the saved logo. *@
+<form method="post" asp-action="Index" enctype="multipart/form-data" novalidate style="max-width: 920px" data-store-form>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
     <div class="admin-card mb-3">
-        <div class="admin-card-header"><h2>Thông tin hiển thị trên website</h2></div>
+        <div class="admin-card-header"><h2>Logo &amp; tên cửa hàng</h2></div>
         <div class="admin-card-body row g-3">
+            <div class="col-12">
+                <div class="small text-muted-fs mb-1">Logo sẽ hiển thị (header, footer, trang quản trị):</div>
+                <div class="store-logo-preview" data-logo-preview aria-live="polite">
+                    <img class="brand-logo@(saved.HasCustomLogo ? " brand-logo-custom" : "")" src="@(saved.LogoUrl ?? StoreInfoDto.DefaultLogoUrl)" alt="" width="40" height="40"
+                         data-logo-image data-saved-src="@(saved.LogoUrl ?? StoreInfoDto.DefaultLogoUrl)" data-default-src="@StoreInfoDto.DefaultLogoUrl" data-saved-custom="@(saved.HasCustomLogo ? "true" : "false")" />
+                    <span class="brand-text" data-logo-text hidden="@hideText">
+                        <span class="brand-name" data-logo-name>@brandName</span>
+                        <span class="brand-sub" data-logo-sub hidden="@string.IsNullOrWhiteSpace(Model.LogoSubtitle)">@Model.LogoSubtitle</span>
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label for="storeLogo" class="form-label">Ảnh logo</label>
+                <input type="file" id="storeLogo" name="logo" class="form-control" accept=".jpg,.jpeg,.jfif,.png,.webp" data-max-mb="@maxMb" aria-describedby="storeLogoHelp storeLogoError" />
+                <div class="form-text" id="storeLogoHelp">
+                    PNG nền trong suốt là đẹp nhất (cũng nhận JPG, WEBP), tối đa @maxMb MB. Ảnh tự thu nhỏ, giữ nguyên tỉ lệ, hiển thị cao 40 px.
+                    Logo vuông còn được dùng làm biểu tượng tab trình duyệt và ảnh đại diện khung chat. Chưa tải ảnh: dùng biểu tượng ngôi nhà.
+                </div>
+                <div class="text-danger small" id="storeLogoError" role="alert" hidden></div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check mt-md-4">
+                    <input asp-for="LogoShowsName" class="form-check-input" data-logo-shows-name />
+                    <label asp-for="LogoShowsName" class="form-check-label">Ảnh logo đã có tên cửa hàng - ẩn chữ bên cạnh</label>
+                </div>
+                @if (saved.HasCustomLogo)
+                {
+                    <div class="form-check mt-2">
+                        <input asp-for="RemoveLogo" class="form-check-input" data-remove-logo />
+                        <label asp-for="RemoveLogo" class="form-check-label">Bỏ ảnh logo, dùng lại biểu tượng ngôi nhà</label>
+                    </div>
+                }
+            </div>
             <div class="col-md-6">
                 <label asp-for="Name" class="form-label">Tên cửa hàng *</label>
                 <input asp-for="Name" class="form-control" maxlength="150" data-logo-source="name" aria-describedby="nameHelp" />
-                <div class="form-text" id="nameHelp">Hiện trên logo (header, footer), tiêu đề trang, khung chat và email gửi khách.</div>
+                <div class="form-text" id="nameHelp">Hiện trên logo, tiêu đề trang, khung chat và email gửi khách.</div>
                 <span asp-validation-for="Name" class="text-danger small"></span>
             </div>
             <div class="col-md-6">
@@ -20,16 +59,12 @@
                 <div class="form-text" id="logoSubtitleHelp">Tên kết thúc bằng chữ này thì logo tách 2 dòng: "Nhà Mộc <strong>Furniture</strong>" → Nhà Mộc / FURNITURE. Để trống: logo chỉ hiện tên.</div>
                 <span asp-validation-for="LogoSubtitle" class="text-danger small"></span>
             </div>
-            <div class="col-12">
-                <div class="small text-muted-fs mb-1">Logo sẽ hiển thị:</div>
-                <div class="store-logo-preview" data-logo-preview aria-live="polite">
-                    <img src="~/images/logo-mark.svg" width="40" height="40" alt="" />
-                    <span class="brand-text">
-                        <span class="brand-name" data-logo-name>@FurnitureStore.Application.Engagement.StoreInfoDto.BrandNameOf(Model.Name ?? string.Empty, Model.LogoSubtitle)</span>
-                        <span class="brand-sub" data-logo-sub hidden="@string.IsNullOrWhiteSpace(Model.LogoSubtitle)">@Model.LogoSubtitle</span>
-                    </span>
-                </div>
-            </div>
+        </div>
+    </div>
+
+    <div class="admin-card mb-3">
+        <div class="admin-card-header"><h2>Thông tin hiển thị trên website</h2></div>
+        <div class="admin-card-body row g-3">
             <div class="col-12">
                 <label asp-for="Tagline" class="form-label">Khẩu hiệu</label>
                 <input asp-for="Tagline" class="form-control" maxlength="200" />
@@ -63,22 +98,29 @@
             </div>
         </div>
     </div>
+
     <div class="admin-card mb-3">
         <div class="admin-card-header"><h2>Mạng xã hội &amp; bản đồ</h2></div>
         <div class="admin-card-body row g-3">
+            <p class="form-text mt-0 mb-0 col-12">
+                Link hiện thành biểu tượng ở chân trang và trang Liên hệ, trợ lý AI cũng dùng để trả lời khách. Để trống ô nào thì ẩn biểu tượng đó.
+            </p>
             <div class="col-md-4">
-                <label asp-for="FacebookUrl" class="form-label">Facebook</label>
-                <input asp-for="FacebookUrl" class="form-control" placeholder="https://facebook.com/..." />
+                <label asp-for="FacebookUrl" class="form-label"><i class="bi bi-facebook me-1 social-label-icon" aria-hidden="true"></i>Facebook</label>
+                <input asp-for="FacebookUrl" class="form-control" placeholder="https://facebook.com/tenshop" />
                 <span asp-validation-for="FacebookUrl" class="text-danger small"></span>
             </div>
             <div class="col-md-4">
-                <label asp-for="TikTokUrl" class="form-label">TikTok</label>
-                <input asp-for="TikTokUrl" class="form-control" placeholder="https://tiktok.com/@@..." />
+                <label asp-for="TikTokUrl" class="form-label"><i class="bi bi-tiktok me-1 social-label-icon" aria-hidden="true"></i>TikTok</label>
+                @* "&#64;" rather than "@@": Razor mangles an escaped @ inside a tag helper attribute (it hid this input). *@
+                <input asp-for="TikTokUrl" class="form-control" placeholder="https://www.tiktok.com/&#64;tenshop" aria-describedby="tiktokHelp" />
+                <div class="form-text" id="tiktokHelp">Dán link kênh hoặc gõ <code>&#64;tenshop</code>.</div>
                 <span asp-validation-for="TikTokUrl" class="text-danger small"></span>
             </div>
             <div class="col-md-4">
-                <label asp-for="ZaloUrl" class="form-label">Zalo</label>
-                <input asp-for="ZaloUrl" class="form-control" placeholder="https://zalo.me/..." />
+                <label asp-for="ZaloUrl" class="form-label"><i class="bi bi-chat-dots me-1 social-label-icon" aria-hidden="true"></i>Zalo</label>
+                <input asp-for="ZaloUrl" class="form-control" placeholder="https://zalo.me/0900000000" aria-describedby="zaloHelp" />
+                <div class="form-text" id="zaloHelp">Dán link hoặc gõ số điện thoại Zalo.</div>
                 <span asp-validation-for="ZaloUrl" class="text-danger small"></span>
             </div>
             <div class="col-12">

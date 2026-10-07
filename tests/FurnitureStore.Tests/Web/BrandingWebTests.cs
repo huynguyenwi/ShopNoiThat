@@ -27,9 +27,13 @@ public sealed class BrandingWebTests(FurnitureStoreWebApplicationFactory factory
         ["Address"] = "123 Đường Nguyễn Văn Linh, TP. Hồ Chí Minh", ["Hotline"] = "1900 0000", ["Email"] = "contact@furniture.local"
     };
 
-    private static async Task<HttpResponseMessage> PostBannerAsync(HttpClient client, IDictionary<string, string> fields, byte[]? image = null)
+    private static Task<HttpResponseMessage> PostBannerAsync(HttpClient client, IDictionary<string, string> fields, byte[]? image = null) =>
+        PostMultipartAsync(client, "/admin/banner", fields, image is null ? null : ("image", image, "phong-an.jpg", "image/jpeg"));
+
+    private static async Task<HttpResponseMessage> PostMultipartAsync(HttpClient client, string url, IDictionary<string, string> fields,
+        (string Field, byte[] Content, string FileName, string ContentType)? upload)
     {
-        var token = await GetAntiforgeryTokenAsync(client, "/admin/banner");
+        var token = await GetAntiforgeryTokenAsync(client, url);
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(token), "__RequestVerificationToken");
         foreach (var (key, value) in fields)
@@ -37,14 +41,14 @@ public sealed class BrandingWebTests(FurnitureStoreWebApplicationFactory factory
             form.Add(new StringContent(value), key);
         }
 
-        if (image is not null)
+        if (upload is { } u)
         {
-            var file = new ByteArrayContent(image);
-            file.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
-            form.Add(file, "image", "phong-an.jpg");
+            var file = new ByteArrayContent(u.Content);
+            file.Headers.ContentType = new MediaTypeHeaderValue(u.ContentType);
+            form.Add(file, u.Field, u.FileName);
         }
 
-        return await client.PostAsync("/admin/banner", form);
+        return await client.PostAsync(url, form);
     }
 
     private static Dictionary<string, string> BannerFields(string title = "Bộ sưu tập mùa thu -") => new()
@@ -105,6 +109,88 @@ public sealed class BrandingWebTests(FurnitureStoreWebApplicationFactory factory
         Assert.Contains("data-logo-name>Nhà Mộc</span>", page);
         Assert.Contains("data-logo-sub>Furniture</span>", page);
         Assert.Contains("/js/admin-store.js", page);
+        Assert.Contains("type=\"file\" id=\"storeLogo\" name=\"logo\"", page);
+        Assert.Contains("enctype=\"multipart/form-data\"", page);
+
+        // Each social link has a visible box (an escaped "@" in the TikTok placeholder once rendered it hidden).
+        foreach (var field in new[] { "FacebookUrl", "TikTokUrl", "ZaloUrl" })
+        {
+            var input = System.Text.RegularExpressions.Regex.Match(page, $"<input[^>]*id=\"{field}\"[^>]*>").Value;
+            Assert.Contains("type=\"text\"", input);
+            Assert.DoesNotContain("hidden", input);
+        }
+
+        Assert.Contains("placeholder=\"https://www.tiktok.com/&#64;tenshop\"", page);
+    }
+
+    [Fact]
+    public async Task LogoPicture_ShowsInHeaderFooterAndAdmin_AsTabIcon_CanHideTheName_AndBeRemoved()
+    {
+        var admin = await AdminAsync();
+        var webRoot = factory.Services.GetRequiredService<IWebHostEnvironment>().WebRootPath;
+        string? url = null;
+        try
+        {
+            var saved = await PostMultipartAsync(admin, "/admin/store", StoreFields("Nhà Mộc Furniture", "Furniture"),
+                ("logo", TestImages.Png(400, 400), "logo-shop.png", "image/png"));
+            Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+            url = await DbAsync(db => db.StoreInformation.Select(s => s.LogoUrl).SingleAsync());
+            Assert.Matches(@"^/uploads/logos/\d{4}/\d{2}/[0-9a-f]{32}-160w\.jpg$", url!);          // 400 × 400 → 160 × 160
+            Assert.True(File.Exists(Path.Combine(webRoot, url!.TrimStart('/'))));
+
+            var home = await factory.CreateClient().GetStringAsync("/");
+            Assert.Contains($"<img class=\"brand-logo brand-logo-custom\" src=\"{url}\" width=\"160\" height=\"160\" alt=\"\" />", home); // header + footer
+            Assert.Contains("<span class=\"brand-name\">Nhà Mộc</span>", home);                    // the name stays next to it
+            Assert.Contains($"<link rel=\"icon\" href=\"{url}\" type=\"image/jpeg\" />", home);     // square: tab icon too
+            Assert.Contains($"<span class=\"chat-avatar\"><img src=\"{url}\"", home);
+            Assert.DoesNotContain("src=\"/images/logo-mark.svg\"", home);
+            Assert.Contains($"src=\"{url}\"", await admin.GetStringAsync("/admin"));
+
+            var fields = StoreFields("Nhà Mộc Furniture", "Furniture");
+            fields["LogoShowsName"] = "true";
+            await PostFormAsync(admin, "/admin/store", "/admin/store", fields);
+            home = await factory.CreateClient().GetStringAsync("/");
+            Assert.Contains($"src=\"{url}\" width=\"160\" height=\"160\" alt=\"Nhà Mộc Furniture\" />", home);
+            Assert.DoesNotContain("<span class=\"brand-name\">", home);                            // the picture contains the name
+
+            fields["RemoveLogo"] = "true";
+            await PostFormAsync(admin, "/admin/store", "/admin/store", fields);
+            home = await factory.CreateClient().GetStringAsync("/");
+            Assert.Contains("<img class=\"brand-logo\" src=\"/images/logo-mark.svg\" width=\"40\" height=\"40\" alt=\"\" />", home);
+            Assert.Contains("<span class=\"brand-name\">Nhà Mộc</span>", home);
+            Assert.False(File.Exists(Path.Combine(webRoot, url.TrimStart('/'))));
+            Assert.Null(await DbAsync(db => db.StoreInformation.Select(s => s.LogoUrl).SingleAsync()));
+        }
+        finally
+        {
+            var fields = StoreFields("Nhà Mộc Furniture", "Furniture");
+            fields["RemoveLogo"] = "true";
+            await PostFormAsync(admin, "/admin/store", "/admin/store", fields);
+        }
+    }
+
+    [Fact]
+    public async Task ShortSocialLinks_AreCompleted_AndShownWithTheirIcons()
+    {
+        var admin = await AdminAsync();
+        var fields = StoreFields("Nhà Mộc Furniture", "Furniture");
+        fields["TikTokUrl"] = "@nhamoc.furniture";
+        fields["ZaloUrl"] = "0900 000 001";
+        fields["FacebookUrl"] = "facebook.com/nhamoc";
+
+        var saved = await PostFormAsync(admin, "/admin/store", "/admin/store", fields);
+
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+        var form = await admin.GetStringAsync("/admin/store");
+        Assert.Contains("value=\"https://www.tiktok.com/@nhamoc.furniture\"", form);
+        Assert.Contains("bi bi-tiktok", form);
+        foreach (var page in new[] { "/", "/contact" })
+        {
+            var html = await factory.CreateClient().GetStringAsync(page);
+            Assert.Contains("href=\"https://www.tiktok.com/@nhamoc.furniture\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"TikTok\"", html);
+            Assert.Contains("href=\"https://zalo.me/0900000001\"", html);
+            Assert.Contains("href=\"https://facebook.com/nhamoc\"", html);
+        }
     }
 
     // ------------------------------------------------------------------ banner

@@ -32,7 +32,10 @@ public sealed record ImagePreset(string Folder, int MaxWidth, int MaxHeight, Ima
     /// <summary>Home page banner picture (half of the page, ~640 px wide; 1400 for high-DPI screens); 700 px copy for phones.</summary>
     public static readonly ImagePreset Banner = new("banners", 1400, 1400, ImageFit.Contain, [700]);
 
-    public static readonly IReadOnlyList<ImagePreset> All = [Product, Review, Avatar, Banner];
+    /// <summary>Store logo, shown 36 - 40 px high (160 covers 4x screens); wide logos keep their shape up to 640 px.</summary>
+    public static readonly ImagePreset Logo = new("logos", 640, 160, ImageFit.Contain, []);
+
+    public static readonly IReadOnlyList<ImagePreset> All = [Product, Review, Avatar, Banner, Logo];
 }
 
 /// <summary>
