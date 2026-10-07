@@ -108,8 +108,17 @@
                     }
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-person-circle" aria-hidden="true"></i><span class="d-none d-sm-inline ms-1">@User.DisplayName()</span><span class="visually-hidden d-sm-none">Tài khoản @User.DisplayName()</span>
+                    @{ var avatar = User.AvatarUrl(); }
+                    <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        @if (!string.IsNullOrEmpty(avatar))
+                        {
+                            <img class="user-menu-avatar" src="@avatar" alt="" width="28" height="28" />
+                        }
+                        else
+                        {
+                            <span class="user-menu-avatar account-avatar-placeholder" aria-hidden="true">@(User.DisplayName().FirstOrDefault())</span>
+                        }
+                        <span class="d-none d-sm-inline">@User.DisplayName()</span><span class="visually-hidden d-sm-none">Tài khoản @User.DisplayName()</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="/account/profile">Hồ sơ cá nhân</a></li>

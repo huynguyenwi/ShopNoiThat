@@ -59,9 +59,10 @@ function writePng(file, width, height, noisy) {
     await customer.click('#AcceptTerms');
     await click(customer, 'form[action="/account/register"] button[type="submit"]');
     await go(customer, '/account/profile');
-    await (await customer.$('#avatar')).uploadFile(photo);
-    check('Avatar preview shows the chosen photo before uploading', await customer.$eval('#avatarPreview', i => !i.classList.contains('d-none') && i.src.startsWith('blob:')));
-    await click(customer, 'form[action="/account/avatar"] button[type="submit"]');
+    check('No separate "Tải lên" click needed (button only for browsers without JavaScript)', await customer.$eval('#avatarSubmit', b => b.hidden && b.offsetParent === null));
+    check('Clicking the picture opens the file picker', await customer.$eval('label.avatar-picker', l => l.htmlFor === 'avatar' && !!l.querySelector('#avatarPreview')));
+    // Choosing the photo is enough: it is uploaded right away.
+    await Promise.all([customer.waitForNavigation({ waitUntil: 'networkidle2' }), (await customer.$('#avatar')).uploadFile(photo)]);
     const avatar = await customer.evaluate(() => {
       const i = document.getElementById('avatarPreview');
       const h = document.querySelector('.user-menu-avatar');
@@ -84,6 +85,11 @@ function writePng(file, width, height, noisy) {
     await admin.type('#Email', 'admin@furniture.local');
     await admin.type('#Password', process.env.ADMIN_PW);
     await click(admin, 'form[action="/account/login"] button[type="submit"]');
+    await go(admin, '/account/profile');
+    await Promise.all([admin.waitForNavigation({ waitUntil: 'networkidle2' }), (await admin.$('#avatar')).uploadFile(portrait)]);
+    await go(admin, '/admin');
+    const adminAvatar = await admin.$eval('.admin-topbar .user-menu-avatar', i => ({ src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth }));
+    check('Admin pages show the admin\'s avatar in the top bar', /^\/uploads\/avatars\/.+-256w\.jpg$/.test(adminAvatar.src) && adminAvatar.loaded === 256, JSON.stringify(adminAvatar));
     const productId = sql("SELECT Id FROM Products WHERE Sku = 'BBA-MOCNHIEN'");
     const slug = sql(`SELECT Slug FROM Products WHERE Id = ${productId}`);
     const before = Number(sql(`SELECT COUNT(*) FROM ProductImages WHERE ProductId = ${productId}`));

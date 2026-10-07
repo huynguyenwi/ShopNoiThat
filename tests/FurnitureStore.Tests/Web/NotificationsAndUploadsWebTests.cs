@@ -153,6 +153,37 @@ public sealed partial class NotificationsAndUploadsWebTests(FurnitureStoreWebApp
     }
 
     [Fact]
+    public async Task AdminPages_ShowTheAdminsAvatar()
+    {
+        var admin = await AdminAsync();
+        Assert.Contains("class=\"user-menu-avatar account-avatar-placeholder\"", await admin.GetStringAsync("/admin")); // initial until a picture exists
+
+        var response = await UploadAvatarAsync(admin, TestImages.Jpeg(600, 400));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var url = await DbAsync(db => db.Users.Where(u => u.Email == FurnitureStoreWebApplicationFactory.AdminEmail).Select(u => u.AvatarUrl).SingleAsync());
+        try
+        {
+            Assert.Matches(@"^/uploads/avatars/\d{4}/\d{2}/[0-9a-f]{32}-256w\.jpg$", url!);
+            var page = await admin.GetStringAsync("/admin");
+            Assert.Contains($"class=\"user-menu-avatar\" src=\"{url}\"", page);
+        }
+        finally
+        {
+            await DbAsync(async db =>
+            {
+                var user = await db.Users.SingleAsync(u => u.Email == FurnitureStoreWebApplicationFactory.AdminEmail);
+                user.AvatarUrl = null;
+                return await db.SaveChangesAsync();
+            });
+            if (url is not null)
+            {
+                File.Delete(Path.Combine(factory.Services.GetRequiredService<IWebHostEnvironment>().WebRootPath, url.TrimStart('/')));
+            }
+        }
+    }
+
+    [Fact]
     public async Task UploadOverTheLimit_GetsAClearMessage()
     {
         var client = factory.CreateClient();

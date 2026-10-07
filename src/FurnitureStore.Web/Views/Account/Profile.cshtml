@@ -23,24 +23,29 @@
                 <div class="panel mb-4">
                     <h1 class="h4 mb-4">Hồ sơ cá nhân</h1>
 
+                    @* With JavaScript (profile.js) a picture is uploaded as soon as it is chosen; the button is for browsers without it. *@
                     <form asp-action="Avatar" method="post" enctype="multipart/form-data" class="d-flex flex-wrap align-items-center gap-3 mb-4 pb-4 border-bottom">
-                        @if (!string.IsNullOrEmpty(Model.AvatarUrl))
-                        {
-                            <img id="avatarPreview" class="account-avatar account-avatar-lg" src="@Model.AvatarUrl" alt="Ảnh đại diện" width="88" height="88" />
-                        }
-                        else
-                        {
-                            <span id="avatarPlaceholder" class="account-avatar account-avatar-lg account-avatar-placeholder" aria-hidden="true">@(Model.FullName.FirstOrDefault())</span>
-                            <img id="avatarPreview" class="account-avatar account-avatar-lg d-none" alt="Ảnh đại diện" width="88" height="88" />
-                        }
-                        <div>
+                        <label for="avatar" class="avatar-picker" title="Đổi ảnh đại diện">
+                            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                            {
+                                <img id="avatarPreview" class="account-avatar account-avatar-lg" src="@Model.AvatarUrl" alt="" width="88" height="88" />
+                            }
+                            else
+                            {
+                                <span id="avatarPlaceholder" class="account-avatar account-avatar-lg account-avatar-placeholder" aria-hidden="true">@(Model.FullName.FirstOrDefault())</span>
+                                <img id="avatarPreview" class="account-avatar account-avatar-lg d-none" alt="" width="88" height="88" />
+                            }
+                            <span class="avatar-picker-badge" aria-hidden="true"><i class="bi bi-camera-fill"></i></span>
+                        </label>
+                        <div class="avatar-fields">
                             <label for="avatar" class="form-label mb-1 fw-semibold">Ảnh đại diện</label>
                             <div class="d-flex gap-2">
                                 <input id="avatar" name="avatar" type="file" class="form-control form-control-sm" accept=".jpg,.jpeg,.jfif,.png,.webp" required
                                        data-max-mb="@StorageOptions.Value.MaxFileSizeMb" aria-describedby="avatarHelp avatarError" />
-                                <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">Tải lên</button>
+                                <button type="submit" id="avatarSubmit" class="btn btn-outline-primary btn-sm text-nowrap">Tải lên</button>
                             </div>
-                            <div class="form-text" id="avatarHelp">JPG, PNG hoặc WEBP, tối đa @StorageOptions.Value.MaxFileSizeMb MB. Ảnh được tự cắt vuông và thu nhỏ vừa khung.</div>
+                            <div class="form-text" id="avatarHelp">JPG, PNG hoặc WEBP, tối đa @StorageOptions.Value.MaxFileSizeMb MB. Chọn ảnh là tự tải lên; ảnh được tự cắt vuông và thu nhỏ vừa khung.</div>
+                            <div class="small text-muted-fs mt-1" id="avatarStatus" role="status" hidden><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Đang tải ảnh lên…</div>
                             <div class="text-danger small" id="avatarError" role="alert" hidden></div>
                         </div>
                     </form>
