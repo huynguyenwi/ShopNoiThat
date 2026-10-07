@@ -118,7 +118,7 @@
                         @foreach (var (url, index) in initialImages.Select((u, i) => (u, i)))
                         {
                             <button type="button" class="gallery-thumb @(index == 0 ? "active" : "")" data-image="@url" role="listitem" aria-label="Xem ảnh @(index + 1)">
-                                <img src="@url" alt="" width="120" height="90" loading="lazy" />
+                                <img src="@ImageSizes.Small(url, 240)" alt="" width="120" height="90" loading="lazy" />
                             </button>
                         }
                     </div>
@@ -394,8 +394,8 @@
                                     @Html.ValidationMessage("Review.Comment", new { @class = "text-danger small" })
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="reviewImages">Ảnh thực tế (tối đa 3 ảnh, mỗi ảnh ≤ 5MB)</label>
-                                    <input class="form-control" id="reviewImages" type="file" name="images" accept=".jpg,.jpeg,.png,.webp" multiple data-max-files="3" />
+                                    <label class="form-label" for="reviewImages">Ảnh thực tế (tối đa 3 ảnh, mỗi ảnh ≤ 50 MB, tự thu nhỏ)</label>
+                                    <input class="form-control" id="reviewImages" type="file" name="images" accept=".jpg,.jpeg,.jfif,.png,.webp" multiple data-max-files="3" />
                                     @if (eligibility.Existing?.ImageUrls.Count > 0)
                                     {
                                         <div class="form-text">Chọn ảnh mới sẽ thay thế @eligibility.Existing.ImageUrls.Count ảnh đã gửi trước đó.</div>

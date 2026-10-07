@@ -18,7 +18,7 @@
                             <div class="ai-card-media">
                                 @if (p.ImageUrl is not null)
                                 {
-                                    <img src="@p.ImageUrl" alt="" width="160" height="120" loading="lazy" />
+                                    <img src="@ImageSizes.Small(p.ImageUrl, 320)" alt="" width="160" height="120" loading="lazy" />
                                 }
                             </div>
                             <div class="ai-card-body">

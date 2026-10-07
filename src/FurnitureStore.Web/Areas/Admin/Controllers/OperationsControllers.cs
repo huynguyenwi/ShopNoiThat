@@ -255,4 +255,15 @@ public sealed class ActivityController(IAdminActivityService activity) : AdminCo
         await activity.MarkNotificationsReadAsync(cancellationToken);
         return Redirect("/admin/notifications");
     }
+
+    /// <summary>Opens one notification: it is marked read, then the page it is about is shown.</summary>
+    [HttpPost("admin/notifications/{id:int}/open")]
+    public async Task<IActionResult> Open(int id, CancellationToken cancellationToken)
+    {
+        var notification = await activity.OpenNotificationAsync(id, cancellationToken);
+        // Links are written by the application ("/admin/orders/details/5"); anything else is not followed.
+        return !string.IsNullOrEmpty(notification.Link) && Url.IsLocalUrl(notification.Link)
+            ? LocalRedirect(notification.Link)
+            : Redirect("/admin/notifications");
+    }
 }

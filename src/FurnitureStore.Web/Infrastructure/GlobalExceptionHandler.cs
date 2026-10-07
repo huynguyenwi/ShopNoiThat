@@ -67,7 +67,26 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         NotFoundException ex => (StatusCodes.Status404NotFound, ex.Message, []),
         ForbiddenAccessException ex => (StatusCodes.Status403Forbidden, ex.Message, []),
         UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Vui lòng đăng nhập để tiếp tục.", []),
+        var ex when IsBodyTooLarge(ex) => (StatusCodes.Status413PayloadTooLarge, "Dữ liệu gửi lên quá lớn.", []),
         BadHttpRequestException ex => (ex.StatusCode, "Yêu cầu không hợp lệ.", []),
         _ => (StatusCodes.Status500InternalServerError, GenericErrorMessage, [])
     };
+
+    /// <summary>
+    /// An upload over the endpoint's size limit: cut by the server ([RequestSizeLimit] → 413), or by the multipart form
+    /// reader ([RequestFormLimits]) when the server does not enforce it (e.g. behind some proxies), possibly wrapped by MVC.
+    /// </summary>
+    private static bool IsBodyTooLarge(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }
+                || (current is InvalidDataException && current.Message.Contains("length limit", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

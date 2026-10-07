@@ -8,6 +8,7 @@
     "qr": "node qr-e2e.js",
     "dining": "node dining-e2e.js",
     "cart-select": "node cart-select-e2e.js",
+    "uploads": "node uploads-e2e.js",
     "forms": "node forms-resubmit.js",
     "chat": "node chat-e2e.js",
     "chat-offline": "node chat-offline-e2e.js",

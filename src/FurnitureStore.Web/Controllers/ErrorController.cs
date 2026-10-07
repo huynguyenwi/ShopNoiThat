@@ -38,7 +38,7 @@ public sealed class ErrorController(IWebHostEnvironment environment) : Controlle
     }
 
     [Route("Error/{statusCode:int}")]
-    public IActionResult Status(int statusCode)
+    public IActionResult Status([FromRoute] int statusCode) // not from the form: a re-executed POST may carry an unreadable body
     {
         var reExecuteFeature = HttpContext.Features.Get<IStatusCodeReExecuteFeature>();
         if (reExecuteFeature is null)

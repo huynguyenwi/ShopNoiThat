@@ -1,28 +1,46 @@
 @model IReadOnlyList<FurnitureStore.Application.Admin.NotificationDto>
 @{
     ViewData["Title"] = "Thông báo";
+    var unread = Model.Count(n => !n.IsRead);
 }
+@* Opening a notification is a POST (anti-forgery protected): it marks that one read, then shows the page it is about. *@
 <div class="admin-card" style="max-width: 860px">
     <div class="admin-card-header">
-        <h2>Thông báo gần đây</h2>
+        <h2>
+            Thông báo gần đây
+            @if (unread > 0)
+            {
+                <span class="badge rounded-pill text-bg-danger ms-1" data-unread-count>@unread chưa đọc</span>
+            }
+        </h2>
         <form method="post" action="/admin/notifications/read" asp-antiforgery="true">
-            <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-check2-all me-1" aria-hidden="true"></i>Đánh dấu đã đọc tất cả</button>
+            <button type="submit" class="btn btn-light btn-sm" disabled="@(unread == 0)"><i class="bi bi-check2-all me-1" aria-hidden="true"></i>Đánh dấu đã đọc tất cả</button>
         </form>
     </div>
-    <div class="list-group list-group-flush">
+    <div class="notification-list">
         @if (Model.Count == 0)
         {
-            <div class="list-group-item text-center text-muted-fs py-4">Chưa có thông báo.</div>
+            <div class="text-center text-muted-fs py-4">Chưa có thông báo.</div>
         }
         @foreach (var n in Model)
         {
-            <a class="list-group-item list-group-item-action @(n.IsRead ? "" : "fw-semibold bg-cream")" href="@(n.Link ?? "#")">
-                <div class="d-flex justify-content-between gap-2">
-                    <span>@n.Title</span>
-                    <span class="small text-muted-fs fw-normal text-nowrap">@Format.DateTimeText(n.CreatedAt)</span>
-                </div>
-                <div class="small text-muted-fs fw-normal">@n.Message</div>
-            </a>
+            <form method="post" action="/admin/notifications/@n.Id/open" asp-antiforgery="true">
+                <button type="submit" class="notification-item @(n.IsRead ? "is-read" : "is-unread")" data-notification="@n.Id">
+                    <span class="notification-dot" aria-hidden="true"></span>
+                    <span class="notification-body">
+                        <span class="notification-head">
+                            <span class="notification-title">@n.Title</span>
+                            @if (!n.IsRead)
+                            {
+                                <span class="badge notification-new">Mới</span>
+                            }
+                            <span class="notification-time">@Format.DateTimeText(n.CreatedAt)</span>
+                        </span>
+                        <span class="notification-message">@n.Message</span>
+                    </span>
+                    <span class="visually-hidden">@(n.IsRead ? "Đã đọc" : "Chưa đọc")</span>
+                </button>
+            </form>
         }
     </div>
 </div>

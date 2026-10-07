@@ -29,7 +29,7 @@
                     <div class="review-images">
                         @foreach (var url in r.ImageUrls)
                         {
-                            <a href="@url" target="_blank" rel="noopener"><img src="@url" alt="Ảnh đánh giá của @r.ReviewerName" width="88" height="88" loading="lazy" /></a>
+                            <a href="@url" target="_blank" rel="noopener"><img src="@ImageSizes.Small(url, 176)" alt="Ảnh đánh giá của @r.ReviewerName" width="88" height="88" loading="lazy" /></a>
                         }
                     </div>
                 }

@@ -75,7 +75,7 @@
                                         <span class="summary-item-image">
                                             @if (item.ImageUrl is not null)
                                             {
-                                                <img src="@item.ImageUrl" alt="" width="64" height="48" />
+                                                <img src="@ImageSizes.Small(item.ImageUrl, 128)" alt="" width="64" height="48" />
                                             }
                                         </span>
                                         <span class="flex-grow-1 min-w-0">

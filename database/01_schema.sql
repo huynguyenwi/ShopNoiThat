@@ -1992,3 +1992,28 @@ GO
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006184854_AddCartItemSelection'
+)
+BEGIN
+    ALTER TABLE [CartItems] ADD [IsSelected] bit NOT NULL DEFAULT CAST(1 AS bit);
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006184854_AddCartItemSelection'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006184854_AddCartItemSelection', N'8.0.31');
+END;
+GO
+
+COMMIT;
+GO
+

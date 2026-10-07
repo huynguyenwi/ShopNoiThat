@@ -60,6 +60,12 @@
         }
     }
 
+    /** The 480 px copy of an uploaded product picture ("…-1200w.jpg" → "…-480w.jpg", see ImageSizes on the server) for small thumbnails. */
+    function smallImage(url) {
+        const match = /^(.+\/products\/.+)-(\d{2,5})w(\.(?:jpg|webp))$/.exec(url || '');
+        return match && Number(match[2]) > 480 ? match[1] + '-480w' + match[3] : url;
+    }
+
     /** Shows a Bootstrap toast. Text is inserted with textContent (never innerHTML) to avoid XSS. */
     function toast(message, type) {
         const variant = type || 'success';
@@ -149,7 +155,7 @@
 
                 if (item.imageUrl) {
                     const img = document.createElement('img');
-                    img.src = item.imageUrl;
+                    img.src = smallImage(item.imageUrl);
                     img.alt = '';
                     img.width = 56;
                     img.height = 42;
@@ -276,5 +282,5 @@
         onScroll();
     }
 
-    window.FS = { api: api, toast: toast, formatCurrency: formatCurrency, csrfToken: csrfToken, csrfHeader: csrfHeader };
+    window.FS = { api: api, toast: toast, formatCurrency: formatCurrency, csrfToken: csrfToken, csrfHeader: csrfHeader, smallImage: smallImage };
 })(window, document, window.jQuery);

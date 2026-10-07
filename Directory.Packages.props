@@ -26,6 +26,8 @@
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <!-- QR codes for products and orders (MIT, no dependencies) -->
     <PackageVersion Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
+    <!-- Resizing uploaded images: fully managed (no native libraries, any OS). 2.1.x is Apache-2.0; 3.x has another license. -->
+    <PackageVersion Include="SixLabors.ImageSharp" Version="2.1.13" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

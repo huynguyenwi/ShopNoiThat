@@ -80,7 +80,7 @@
                             <div class="d-flex align-items-center gap-2">
                                 @if (!string.IsNullOrEmpty(p.ImageUrl))
                                 {
-                                    <img class="admin-thumb" src="@p.ImageUrl" alt="" width="48" height="48" loading="lazy" />
+                                    <img class="admin-thumb" src="@ImageSizes.Small(p.ImageUrl, 96)" alt="" width="48" height="48" loading="lazy" />
                                 }
                                 <div class="min-w-0">
                                     <a class="fw-semibold text-decoration-none" asp-action="Edit" asp-route-id="@p.Id">@p.Name</a>

@@ -146,6 +146,9 @@ public interface IAdminReportRepository
     Task<IReadOnlyList<NotificationDto>> GetRoleNotificationsAsync(string role, int take, CancellationToken cancellationToken = default);
     Task<int> CountUnreadRoleNotificationsAsync(string role, CancellationToken cancellationToken = default);
     Task MarkRoleNotificationsReadAsync(string role, DateTime readAtUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks one notification of the role as read; null when it does not exist or belongs to another audience.</summary>
+    Task<NotificationDto?> ReadRoleNotificationAsync(string role, int id, DateTime readAtUtc, CancellationToken cancellationToken = default);
 }
 
 public interface IUserAdminService

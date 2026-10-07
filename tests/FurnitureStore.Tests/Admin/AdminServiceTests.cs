@@ -326,6 +326,45 @@ public sealed class AdminServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task OpeningANotification_MarksThatOneRead_AndGivesItsLink()
+    {
+        await PlaceOrderAsync(_host, await CreateCustomerAsync(_host), "KTT-PINE");
+        await PlaceOrderAsync(_host, await CreateCustomerAsync(_host), "GA-CURVE");
+        var activity = (Func<IAdminActivityService, Task<int>> f) => Run(sp => f(sp.GetRequiredService<IAdminActivityService>()));
+        var list = await Run(sp => sp.GetRequiredService<IAdminActivityService>().GetNotificationsAsync());
+        Assert.Equal(2, await activity(a => a.CountUnreadNotificationsAsync()));
+
+        var opened = await Run(sp => sp.GetRequiredService<IAdminActivityService>().OpenNotificationAsync(list[0].Id));
+
+        Assert.Equal(list[0].Link, opened.Link);
+        Assert.StartsWith("/admin/orders/details/", opened.Link);
+        Assert.Equal(1, await activity(a => a.CountUnreadNotificationsAsync()));      // the bell goes down by one
+        var after = await Run(sp => sp.GetRequiredService<IAdminActivityService>().GetNotificationsAsync());
+        Assert.True(after.Single(n => n.Id == list[0].Id).IsRead);
+        Assert.False(after.Single(n => n.Id == list[1].Id).IsRead);
+
+        await Run(sp => sp.GetRequiredService<IAdminActivityService>().OpenNotificationAsync(list[0].Id));   // again: no change
+        Assert.Equal(1, await activity(a => a.CountUnreadNotificationsAsync()));
+    }
+
+    [Fact]
+    public async Task Notifications_OfACustomer_CannotBeOpenedFromTheBackOffice()
+    {
+        var customerId = await CreateCustomerAsync(_host);
+        var customerNote = await Db(async db =>
+        {
+            var n = new Notification { UserId = customerId, Type = NotificationType.OrderStatusChanged, Title = "Riêng tư", Message = "x", CreatedAt = DateTime.UtcNow };
+            db.Notifications.Add(n);
+            await db.SaveChangesAsync();
+            return n.Id;
+        });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => Run(sp => sp.GetRequiredService<IAdminActivityService>().OpenNotificationAsync(customerNote)));
+        await Assert.ThrowsAsync<NotFoundException>(() => Run(sp => sp.GetRequiredService<IAdminActivityService>().OpenNotificationAsync(999_999)));
+        Assert.False(await Db(db => db.Notifications.Where(n => n.Id == customerNote).Select(n => n.IsRead).SingleAsync()));
+    }
+
+    [Fact]
     public async Task AuditLogs_AreSearchableByOrderCode()
     {
         var placed = await PlaceOrderAsync(_host, await CreateCustomerAsync(_host), "KTT-PINE");

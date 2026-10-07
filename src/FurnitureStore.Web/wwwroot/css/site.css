@@ -1112,10 +1112,11 @@ img {
     background: var(--fs-beige);
 }
 
+/* The whole product stays visible whatever the photo's proportions (portrait photos get side margins). */
 .gallery-main img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .gallery-badge {
@@ -1276,7 +1277,7 @@ img {
 }
 
 .stock-status.is-in { color: #3f7d4e; }
-.stock-status.is-low { color: #b7791f; }
+.stock-status.is-low { color: #8a5a00; } /* 5.9:1 on white (#b7791f was 3.6:1) */
 .stock-status.is-out { color: var(--fs-danger); }
 
 .purchase-box {

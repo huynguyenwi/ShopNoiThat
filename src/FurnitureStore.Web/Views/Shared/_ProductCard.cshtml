@@ -3,7 +3,8 @@
     <a class="product-card-media" href="@Model.Url" aria-label="@Model.Name">
         @if (!string.IsNullOrEmpty(Model.ImageUrl))
         {
-            <img src="@Model.ImageUrl" alt="@Model.Name" loading="lazy" width="400" height="300" />
+            <img src="@ImageSizes.Small(Model.ImageUrl, 480)" srcset="@ImageSizes.SrcSet(Model.ImageUrl)" sizes="(max-width: 575.98px) 50vw, (max-width: 991.98px) 33vw, 300px"
+                 alt="@Model.Name" loading="lazy" width="400" height="300" />
         }
         <span class="product-badges">
             @if (Model.DiscountPercent > 0)

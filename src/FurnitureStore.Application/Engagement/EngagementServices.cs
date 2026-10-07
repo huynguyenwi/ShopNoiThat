@@ -101,7 +101,7 @@ public sealed class ReviewService(
         {
             foreach (var (content, fileName) in images)
             {
-                stored.Add(await fileStorage.SaveImageAsync(content, fileName, "reviews", cancellationToken));
+                stored.Add(await fileStorage.SaveImageAsync(content, fileName, Common.Media.ImagePreset.Review, cancellationToken));
             }
 
             var review = await reviews.GetByUserAndProductAsync(userId, productId, cancellationToken);

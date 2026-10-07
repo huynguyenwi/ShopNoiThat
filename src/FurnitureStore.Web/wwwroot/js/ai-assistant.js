@@ -31,7 +31,7 @@
         const media = el('div', 'ai-card-media');
         if (product.imageUrl) {
             const img = el('img');
-            img.src = product.imageUrl;
+            img.src = window.FS && window.FS.smallImage ? window.FS.smallImage(product.imageUrl) : product.imageUrl;
             img.alt = '';
             img.loading = 'lazy';
             img.width = 160;

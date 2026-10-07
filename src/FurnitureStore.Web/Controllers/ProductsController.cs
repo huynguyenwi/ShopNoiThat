@@ -1,5 +1,6 @@
 using FurnitureStore.Application.Catalog;
 using FurnitureStore.Application.Common.Exceptions;
+using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Engagement;
 using FurnitureStore.Web.Infrastructure;
 using FurnitureStore.Web.ViewModels.Catalog;
@@ -64,7 +65,8 @@ public sealed class ProductsController(ICatalogService catalog, IReviewService r
     [HttpPost("{slug}/reviews")]
     [Authorize(Policy = AuthorizationPolicies.SignedIn)]
     [EnableRateLimiting(RateLimitPolicies.Forms)]
-    [RequestSizeLimit(20 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.PerImageBytes * ReviewService.MaxImages + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes * ReviewService.MaxImages + UploadLimits.FormFieldsBytes)]
     public async Task<IActionResult> SubmitReview(string slug, [Bind(Prefix = "Review")] ReviewCommand command, List<IFormFile>? images, CancellationToken cancellationToken)
     {
         var product = await catalog.GetProductBySlugAsync(slug, cancellationToken);

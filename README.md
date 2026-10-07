@@ -7,7 +7,7 @@ vẫn bán các nhóm khác (sofa, giường, tủ, kệ...). Khách gửi **yê
 (OpenAI hoặc API tương thích).
 
 > Đã hoàn thành cả 11 phase (xem [Tiến độ](#12-tiến-độ)). Bản Release đã được kiểm tra trên database tạo từ file SQL,
-> chạy ở môi trường Production: 657 test tự động + 13 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
+> chạy ở môi trường Production: 705 test tự động + 15 bộ kiểm thử trình duyệt (xem [mục 17](#17-kiểm-thử)).
 
 ---
 
@@ -109,7 +109,8 @@ dotnet ef migrations add <TenMigration> --project src/FurnitureStore.Infrastruct
 dotnet ef migrations has-pending-model-changes --project src/FurnitureStore.Infrastructure --startup-project src/FurnitureStore.Web
 ```
 
-Migration hiện có: `InitialCreate`, `AddProductSearchText` (cột tìm kiếm không dấu cho sản phẩm), `AddCouponIsPublic` (mã giảm giá công khai).
+Migration hiện có: `InitialCreate`, `AddProductSearchText` (cột tìm kiếm không dấu cho sản phẩm), `AddCouponIsPublic` (mã giảm giá công khai),
+`AddCartItemSelection` (tích chọn từng sản phẩm trong giỏ hàng, mục 22).
 
 ## 6. Tạo database & seed dữ liệu
 
@@ -135,7 +136,7 @@ Script **không** chứa tài khoản người dùng (không phát tán password
 tạo ở lần chạy đầu tiên từ `Seed:AdminPassword` (mục 7). Khi chạy ở Development, ứng dụng còn tạo thêm
 dữ liệu hoạt động demo (đơn hàng, đánh giá...) như mô tả bên dưới.
 
-**Nâng cấp database đã tạo từ trước** (ví dụ khi bản mới có thêm migration `AddCouponIsPublic`): chạy lại
+**Nâng cấp database đã tạo từ trước** (ví dụ khi bản mới có thêm migration `AddCartItemSelection`): chạy lại
 `01_schema.sql` — script chỉ áp các migration còn thiếu, dữ liệu hiện có được giữ nguyên, chạy lại nhiều lần không lỗi.
 Ở Development, ứng dụng cũng tự áp migration khi khởi động.
 
@@ -168,7 +169,8 @@ powershell -ExecutionPolicy Bypass -File database\generate-sql.ps1
 Ở Production cả hai cờ mặc định là `false`: chạy `dotnet ef database update` thủ công (hoặc trong pipeline deploy).
 
 Ảnh sản phẩm demo là **ảnh minh họa SVG tự vẽ** (`/images/placeholder/{loại}.svg?color=...`), không dùng ảnh có bản quyền.
-Ảnh do admin / khách tải lên được lưu ở `wwwroot/uploads/` (đã loại khỏi git), kiểm tra đuôi file, dung lượng (≤ 5MB) và chữ ký nhị phân.
+Ảnh do admin / khách tải lên được lưu ở `wwwroot/uploads/` (đã loại khỏi git), kiểm tra đuôi file, dung lượng (≤ 50 MB) và chữ ký nhị phân,
+rồi **tự thu nhỏ vừa khung hiển thị** (mục 23).
 
 ## 7. Tài khoản admin & tài khoản demo
 
@@ -328,7 +330,8 @@ ASP.NET Core đọc biến môi trường với `__` thay cho `:`.
 | `SKIP_SQLSERVER_TESTS` | `1` để bỏ qua test cần SQL Server LocalDB |
 
 Các section cấu hình khác: `ApplicationSettings` (tên site, khẩu hiệu, BaseUrl, thông tin cửa hàng), `Payment` (phương thức thanh toán
-— trang liên hệ đặt hàng tạo đơn **COD** nên `EnabledMethods` phải có `COD`; thông tin chuyển khoản), `Storage` (thư mục upload, dung lượng và định dạng ảnh cho phép). Cấu hình sai (ví dụ `BaseUrl`
+— trang liên hệ đặt hàng tạo đơn **COD** nên `EnabledMethods` phải có `COD`; thông tin chuyển khoản), `Storage` (thư mục upload, `MaxFileSizeMb` dung lượng tối đa mỗi ảnh — mặc định và tối đa 50, `MaxImageMegapixels` số điểm ảnh tối đa — mặc định 100,
+định dạng ảnh cho phép). Cấu hình sai (ví dụ `BaseUrl`
 không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với thông báo rõ ràng.
 
 ## 11. Xử lý sự cố
@@ -372,7 +375,7 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | Sản phẩm (tìm kiếm, lọc, sắp xếp) | `/products?q=ban+go&category=phong-an&color=...&minPrice=...&sort=price-asc` |
 | Chi tiết sản phẩm, chọn màu / chất liệu / kích thước, đánh giá | `/products/{slug}` |
 | Bộ bàn ăn (mặt hàng chính) | `/products?category=bo-ban-an` · theo cỡ: `&size=set-4-ghe-120`, `&size=set-6-ghe-160` |
-| Giỏ hàng / liên hệ đặt hàng | `/cart`, `/checkout` (trang "Liên hệ đặt hàng") |
+| Giỏ hàng / liên hệ đặt hàng | `/cart` (tích chọn sản phẩm muốn đặt), `/checkout` (trang "Liên hệ đặt hàng") |
 | Tài khoản | `/account/login`, `/account/register`, `/account/forgot-password`, `/account/profile` |
 | Đơn hàng, địa chỉ, yêu thích của tôi | `/account/orders`, `/account/addresses`, `/wishlist` |
 | Liên hệ & thông tin cửa hàng | `/contact` |
@@ -391,6 +394,8 @@ không phải URL) sẽ làm ứng dụng dừng ngay khi khởi động với t
 | API báo giá | `POST /api/ai/price-estimate` (tính giá, không lưu), `POST /api/quotes` (gửi yêu cầu), `GET /api/quotes`, `GET /api/quotes/{code}`, `POST /api/quotes/{code}/accept`, `/reject`, `/cancel` |
 | API AI | `POST /api/ai/chat`, `/api/ai/recommend`, `/api/ai/color-recommend`, `/api/ai/style-recommend`, `GET /api/ai/conversations`, `/api/ai/status` |
 | API chat | `/api/chat`, `/api/chat/conversations`, `/api/chat/start`, `/api/chat/messages`, `/api/admin/chat/conversations` · SignalR hub `/hubs/chat` |
+| API địa chỉ (công khai) | `GET /api/locations/provinces`, `GET /api/locations/provinces/{mã tỉnh}/wards` |
+| API chọn sản phẩm trong giỏ | `PUT /api/cart/items/{id}/selected { selected }`, `PUT /api/cart/selected { selected }` (chọn / bỏ tất cả), `POST /api/cart { variantId, quantity, buyNow }` |
 | API | `/api/products`, `/api/products/{id}`, `/api/products/search?q=`, `/api/categories`, `/api/cart`, `/api/orders`, `/api/wishlist`, `/api/account/me`, `/api/admin/products` |
 
 API trả về dạng chuẩn `{ "success": true|false, "message": "...", "data": ..., "errors": [] }`.
@@ -462,6 +467,7 @@ Hệ thống:
 **Hiệu năng**
 - Nén Brotli / Gzip cho HTML, JSON, CSS, JS, SVG, XML (trang chủ ~24KB khi truyền).
 - Cache trình duyệt: file có `?v=` 1 năm (`immutable`), thư viện và ảnh 7 ngày, ảnh upload 30 ngày.
+- Ảnh upload được thu nhỏ khi lưu; thẻ sản phẩm tải bản 480 px (`srcset`, màn hình nét cao lấy bản 1200 px).
 - Dữ liệu catalog dùng chung (menu, bộ lọc, trang chủ, sitemap) cache trong bộ nhớ, tự xóa khi admin thay đổi. Truy vấn nhiều collection dùng split query (test sẽ báo lỗi nếu có truy vấn gây "cartesian explosion").
 - Đo trên máy dev (LocalDB, 10 kết nối song song): trang chủ ~620 req/s (p95 31 ms), danh sách sản phẩm ~860–1000 req/s (p95 12–17 ms), chi tiết sản phẩm ~560 req/s (p95 21 ms).
 
@@ -484,7 +490,7 @@ Hệ thống:
 ### Test tự động (xUnit)
 
 ```powershell
-dotnet test                      # 657 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
+dotnet test                      # 705 test: unit, service và integration qua HTTP (SQLite in-memory), migration trên SQL Server LocalDB
 dotnet test -c Release           # cùng bộ test trên bản build Release
 ```
 
@@ -502,6 +508,8 @@ Chạy bằng Edge / Chrome headless (puppeteer-core). Cần **Node.js 18+** và
 | `coupon-e2e.js` | Mã giảm giá: admin tạo mã (mã ngẫu nhiên, xem trước), khách thấy ưu đãi và áp bằng một cú nhấp ở giỏ hàng, bỏ / nhập sai / nhập đúng mã ở trang liên hệ đặt hàng không tải lại trang (giữ địa chỉ đang nhập), đặt hàng, thống kê lượt dùng, không xóa được mã đã dùng, tắt mã, hủy đơn trả lại lượt (23 bước) |
 | `dining-e2e.js` | Bàn ghế ăn: trang chủ / menu ưu tiên bộ bàn ăn, lọc theo "Bàn 1m2 + 4 ghế" / "Bàn 1m6 + 6 ghế", giá theo cỡ, giỏ hàng và trang **liên hệ đặt hàng** không tính phí giao, đơn COD, email, admin nhập phí giao đã báo → tổng tiền, phiếu giao, trang đơn của khách cập nhật; phí âm bị từ chối; menu một hàng ở 1366 / 1100 px, điện thoại không tràn ngang; trợ lý trả lời phí giao / gỗ sồi Nga (40 bước) |
 | `qr-e2e.js` | Mã QR: chụp mã đang hiển thị và **giải mã thật** (jsQR) ở trang sản phẩm, thẻ admin, tem in, trang đặt hàng thành công, trang đơn, phiếu giao hàng, email; mở địa chỉ giải được: trang sản phẩm (kể cả sau khi đổi URL), khách chưa đăng nhập → đăng nhập → đúng đơn, khách khác → 404, admin → trang quản lý đơn (18 bước) |
+| `cart-select-e2e.js` | Giỏ hàng tích chọn: mặc định đã chọn, bỏ chọn / chọn tất cả cập nhật tổng tiền tại chỗ (không tải lại trang, giữ focus bàn phím), không chọn gì thì không vào được trang đặt hàng, chỉ sản phẩm đã chọn được đặt và sản phẩm còn lại ở lại giỏ; địa chỉ: chưa chọn tỉnh thì chưa chọn được phường / xã, danh sách phường / xã tải theo tỉnh (nhóm Phường / Xã / Đặc khu), địa chỉ đã lưu điền đúng tỉnh + phường, phường cũ trước 07/2025 được nhắc chọn lại, sổ địa chỉ không còn Quận / Huyện; điện thoại không tràn ngang (22 bước) |
+| `uploads-e2e.js` | Ảnh tải lên: avatar từ ảnh chụp > 20 MB được nhận và hiện ở hồ sơ + header (256 × 256), ảnh > 50 MB bị báo ngay trên trình duyệt; admin tải ảnh ngang + dọc: lưu 1200 × 900 / 900 × 1200 kèm bản 480 px, không méo; gallery hiện trọn ảnh dọc, thẻ sản phẩm dùng bản 480 px (1200 px trên màn hình nét cao); thông báo chưa đọc nổi bật, bấm vào thì mở trang liên quan, chuông giảm 1 và thông báo chuyển sang đã đọc (15 bước) |
 | `forms-resubmit.js` | Mọi form sửa của admin / khách gửi lại nguyên trạng đều lưu được; giá trị sai kiểu bị từ chối, không lưu |
 | `chat-e2e.js` | Khách chat từ trang sản phẩm ↔ admin trả lời realtime, chống chèn HTML, bố cục mobile |
 | `chat-offline-e2e.js` | Chat khi mất realtime: chặn kết nối SignalR của admin → trang báo mất kết nối, cuộc trò chuyện / tin nhắn mới vẫn hiện (tự cập nhật), admin vẫn trả lời được; bỏ chặn → tự kết nối lại, tin nhắn tức thì; khách mất realtime vẫn nhận được trả lời (10 bước) |
@@ -641,4 +649,56 @@ Thư viện: `Net.Codecrete.QrCodeGenerator` (MIT, không phụ thuộc thư vi�
 `Database:SeedDemoData = true`) một lần — ứng dụng tự **bổ sung** chất liệu, 2 cỡ bộ bàn ăn, 6 bộ bàn ăn mới và đơn giá gỗ sồi Nga,
 đồng thời cập nhật các nội dung mặc định nhắc tới "miễn phí giao hàng" (chỉ những nội dung admin **chưa sửa**). Sản phẩm admin đã xóa không bị
 thêm lại. Ở Production (`SeedDemoData = false`) không có dữ liệu mẫu nào được thêm. Database mới thì chỉ cần chạy file SQL mới trong `database/`.
+
+## 22. Giỏ hàng chọn từng sản phẩm & địa chỉ Tỉnh → Phường / Xã
+
+**Tích chọn sản phẩm trong giỏ hàng**
+
+- Mỗi sản phẩm trong giỏ có ô tích, kèm ô *"Chọn tất cả"*. Sản phẩm mới thêm được chọn sẵn. Tạm tính, giảm giá, tổng tiền và điều kiện
+  mã giảm giá **chỉ tính các sản phẩm đã chọn**; nút ghi rõ số lượng: *"Liên hệ đặt hàng (2)"*.
+- Trang liên hệ đặt hàng chỉ liệt kê và chỉ đặt các sản phẩm đã chọn; sản phẩm không chọn **vẫn ở lại giỏ hàng** (lựa chọn được lưu ở
+  server nên giữ nguyên khi tải lại trang hay đổi thiết bị). Không chọn gì thì không vào được trang đặt hàng.
+- Nút *"Liên hệ đặt hàng"* trên trang sản phẩm chỉ chọn đúng sản phẩm đó (các sản phẩm khác trong giỏ được giữ lại cho lần sau).
+- Sản phẩm hết hàng / ngừng bán không chọn được; nếu đang chọn mà hết hàng thì cửa hàng nhắc bỏ chọn, sản phẩm không chọn không chặn đơn.
+- Tích / bỏ tích cập nhật ngay tại chỗ (không tải lại trang); không có JavaScript thì dùng form thường.
+
+**Địa chỉ 2 cấp: Tỉnh / Thành phố → Phường / Xã** (từ 01/07/2025 không còn cấp Quận / Huyện)
+
+- Đã **bỏ ô Quận / Huyện** ở trang liên hệ đặt hàng và sổ địa chỉ. Địa chỉ cũ có quận / huyện vẫn hiển thị như trước.
+- Chọn tỉnh / thành rồi chọn phường / xã từ danh sách (nhóm *Phường*, *Xã*, *Đặc khu*, sắp xếp theo tiếng Việt; gõ chữ cái đầu tên để nhảy nhanh).
+  Danh sách lấy qua API của chính website:
+  `GET /api/locations/provinces` (34 tỉnh / thành) và `GET /api/locations/provinces/{mã}/wards` (3.321 phường / xã / đặc khu).
+- Dữ liệu đóng gói sẵn trong ứng dụng (`src/FurnitureStore.Application/Sales/Data/vietnam-administrative-units.json`, nguồn
+  provinces.open-api.vn — mã của Tổng cục Thống kê), nên không phụ thuộc dịch vụ bên ngoài khi chạy. Server kiểm tra phường / xã
+  **phải thuộc** tỉnh đã chọn.
+- Địa chỉ đã lưu với tên phường cũ (ví dụ "Phường Bến Nghé", nay thuộc "Phường Sài Gòn") được nhắc chọn lại.
+
+**Database đã có**: cần thêm cột `CartItems.IsSelected` (migration `AddCartItemSelection`). Chạy app ở Development (tự áp migration) hoặc chạy
+`database/01_schema.sql` mới. Các sản phẩm đang có trong giỏ được giữ ở trạng thái đã chọn.
+
+## 23. Ảnh tải lên tự thu nhỏ & thông báo quản trị
+
+**Ảnh tải lên** (ảnh sản phẩm, ảnh đánh giá, ảnh đại diện) — người dùng chỉ cần chọn ảnh, hệ thống tự xử lý:
+
+| Loại | Lưu ở kích thước | Bản nhỏ | Cách vừa khung |
+|---|---|---|---|
+| Ảnh sản phẩm | tối đa 1200 × 1200 | 480 px (thẻ sản phẩm, ảnh thu nhỏ, giỏ hàng) | Giữ nguyên tỉ lệ; trang chi tiết hiện trọn ảnh (ảnh dọc có lề hai bên) |
+| Ảnh đánh giá | tối đa 1280 × 1280 | 320 px (ảnh nhỏ dưới đánh giá) | Giữ nguyên tỉ lệ |
+| Ảnh đại diện | 256 × 256 | — | Cắt vuông chính giữa |
+
+- **Chỉ thu nhỏ, không bao giờ phóng to** (ảnh nhỏ giữ nguyên kích thước) và thu nhỏ bằng bộ lọc Lanczos3 nên ảnh không méo, không vỡ.
+- Ảnh chụp bằng điện thoại được **xoay đúng chiều** theo EXIF; **thông tin máy ảnh / vị trí GPS bị xóa**. Ảnh thường lưu JPEG (chất lượng 85),
+  ảnh có nền trong suốt lưu WebP. Một ảnh chụp 10 – 20 MB thường còn khoảng 100 – 300 KB.
+- Dung lượng tối đa **50 MB mỗi ảnh** (mọi ảnh điện thoại / máy ảnh đều dưới mức này; chỉnh bằng `Storage:MaxFileSizeMb`, tối đa 50) và
+  100 megapixel. Vẫn giữ một mức trần để máy chủ không bị gửi tệp khổng lồ làm treo. Chọn ảnh quá lớn thì trình duyệt báo ngay, không cần tải lên.
+- Thư viện: **SixLabors.ImageSharp 2.1.13** (Apache-2.0, viết hoàn toàn bằng C#, chạy giống nhau trên Windows / Linux, không cần thư viện native).
+- Chạy trên IIS: `web.config` trong project đã nâng giới hạn request của IIS (mặc định 30 MB) để tải được nhiều ảnh lớn cùng lúc.
+- Ảnh đã tải lên trước bản này vẫn hiển thị bình thường (không có bản nhỏ).
+
+**Thông báo quản trị** (`/admin/notifications`, chuông ở thanh trên)
+
+- Bấm vào một thông báo: thông báo đó được đánh dấu **đã đọc**, số trên chuông **giảm 1**, rồi mở trang liên quan (đơn hàng, chat, liên hệ...).
+  Nút *"Đánh dấu đã đọc tất cả"* vẫn dùng được.
+- Thông báo **chưa đọc nổi bật**: nền vàng sáng, viền cam bên trái, chấm đỏ, tiêu đề in đậm, nhãn *"Mới"*; đã đọc thì nền trắng, chữ nhạt.
+- Chỉ mở được thông báo của quản trị (kiểm tra ở server, có anti-forgery); liên kết trong thông báo chỉ được mở nếu là trang của chính website.
 

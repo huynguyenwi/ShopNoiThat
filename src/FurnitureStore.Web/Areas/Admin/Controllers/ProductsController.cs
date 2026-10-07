@@ -1,5 +1,6 @@
 using FurnitureStore.Application.Catalog.Admin;
 using FurnitureStore.Application.Common.Exceptions;
+using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Engagement;
 using FurnitureStore.Domain.Enums;
 using FurnitureStore.Web.Areas.Admin.Models;
@@ -66,7 +67,8 @@ public sealed class ProductsController(IProductAdminService products, IStoreInfo
     }
 
     [HttpPost]
-    [RequestSizeLimit(60 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
     public async Task<IActionResult> Create([Bind(Prefix = "Command")] ProductUpsertCommand command, string? defaultVariantKey,
         List<IFormFile>? images, CancellationToken cancellationToken)
     {
@@ -94,7 +96,8 @@ public sealed class ProductsController(IProductAdminService products, IStoreInfo
     }
 
     [HttpPost]
-    [RequestSizeLimit(60 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
     public async Task<IActionResult> Edit(int id, [Bind(Prefix = "Command")] ProductUpsertCommand command, string? defaultVariantKey,
         List<IFormFile>? images, CancellationToken cancellationToken)
     {
@@ -137,7 +140,8 @@ public sealed class ProductsController(IProductAdminService products, IStoreInfo
     }
 
     [HttpPost]
-    [RequestSizeLimit(60 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes * ProductAdminService.MaxImagesPerUpload + UploadLimits.FormFieldsBytes)]
     public async Task<IActionResult> UploadImages(int id, List<IFormFile>? images, int? variantId, CancellationToken cancellationToken)
     {
         try

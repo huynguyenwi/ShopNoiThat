@@ -2,7 +2,7 @@
 (function (window, document) {
     'use strict';
 
-    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // the server resizes pictures; this only stops absurd files early
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
     // <select data-autosubmit> submits its form on change.
@@ -25,7 +25,7 @@
                 return;
             }
             if (file.size > MAX_IMAGE_BYTES) {
-                errors.push(file.name + ': vượt quá 5 MB.');
+                errors.push(file.name + ': vượt quá 50 MB.');
                 return;
             }
             const img = document.createElement('img');

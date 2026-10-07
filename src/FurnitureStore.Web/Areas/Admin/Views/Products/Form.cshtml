@@ -141,7 +141,7 @@
                             {
                                 var variantName = image.VariantId.HasValue ? c.Variants.FirstOrDefault(v => v.Id == image.VariantId)?.Name : null;
                                 <div class="image-tile @(image.IsPrimary ? "is-primary" : "")">
-                                    <img src="@image.Url" alt="" loading="lazy" />
+                                    <img src="@ImageSizes.Small(image.Url, 240)" alt="" loading="lazy" />
                                     <div class="image-tile-meta">
                                         @if (image.IsPrimary)
                                         {
@@ -191,8 +191,8 @@
             <div class="admin-card mb-3">
                 <div class="admin-card-header"><h2>Thêm ảnh sản phẩm</h2></div>
                 <div class="admin-card-body">
-                    <input class="form-control" type="file" name="images" multiple accept=".jpg,.jpeg,.png,.webp" aria-label="Chọn ảnh sản phẩm (JPG, PNG, WebP)" data-image-input data-preview-target="productImagePreview" />
-                    <div class="form-text">JPG, PNG, WEBP; tối đa 5 MB/ảnh, 10 ảnh mỗi lần. Ảnh đầu tiên sẽ là ảnh chính nếu sản phẩm chưa có ảnh.</div>
+                    <input class="form-control" type="file" name="images" multiple accept=".jpg,.jpeg,.jfif,.png,.webp" aria-label="Chọn ảnh sản phẩm (JPG, PNG, WebP)" data-image-input data-preview-target="productImagePreview" />
+                    <div class="form-text">JPG, PNG, WEBP; tối đa 50 MB/ảnh, 10 ảnh mỗi lần. Hệ thống tự xoay đúng chiều và thu nhỏ vừa khung hiển thị (không méo, không vỡ). Ảnh đầu tiên sẽ là ảnh chính nếu sản phẩm chưa có ảnh.</div>
                     <div class="image-previews" id="productImagePreview"></div>
                 </div>
             </div>

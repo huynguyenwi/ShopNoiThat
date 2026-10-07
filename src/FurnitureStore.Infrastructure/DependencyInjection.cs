@@ -46,6 +46,7 @@ public static class DependencyInjection
     private static void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddSingleton<IImageProcessor, ImageSharpProcessor>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddSingleton<IQrCodeRenderer, QrCodeRenderer>();
         services.AddScoped<IPaymentProvider, CodPaymentProvider>();

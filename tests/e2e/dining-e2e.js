@@ -123,7 +123,7 @@ const menuRows = page => page.$$eval('#mainNav > .navbar-nav > .nav-item', items
     await go(customer, '/cart');
     const cart = await text(customer, '.order-summary');
     check('Cart: delivery quoted on contact, total = goods', cart.includes('Cửa hàng báo khi liên hệ') && cart.includes('Tổng tiền hàng') && !/miễn phí/i.test(cart), cart);
-    check('Cart button: "Liên hệ đặt hàng"', (await text(customer, '.order-summary a.btn-primary')) === 'Liên hệ đặt hàng');
+    check('Cart button: "Liên hệ đặt hàng" with the ticked quantity', (await text(customer, '.order-summary a.btn-primary')) === 'Liên hệ đặt hàng (1)');
 
     await go(customer, '/checkout');
     await customer.screenshot({ path: path.join(OUT, 'dining-contact-1366.png'), fullPage: true });

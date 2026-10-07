@@ -356,6 +356,96 @@
     padding: 1rem;
 }
 
+/* ---------- Notifications: unread ones stand out ---------- */
+.notification-list form {
+    margin: 0;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    width: 100%;
+    padding: .85rem 1rem;
+    border: 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    border-left: 4px solid transparent;
+    background: #fff;
+    color: #6b5f55;
+    text-align: left;
+    font-size: .9rem;
+}
+
+.notification-item:hover {
+    background: #faf7f2;
+}
+
+.notification-item:focus-visible {
+    outline: 2px solid #5b3a24;
+    outline-offset: -2px;
+}
+
+.notification-item.is-unread {
+    background: #fff3d6;
+    border-left-color: #c47a12;
+    color: #2b2521;
+}
+
+.notification-item.is-unread:hover {
+    background: #ffe9b8;
+}
+
+.notification-dot {
+    flex-shrink: 0;
+    width: .6rem;
+    height: .6rem;
+    margin-top: .45rem;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.notification-item.is-unread .notification-dot {
+    background: #c2410c;
+    box-shadow: 0 0 0 3px rgba(194, 65, 12, .2);
+}
+
+.notification-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-head {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+}
+
+.notification-title {
+    font-weight: 500;
+}
+
+.notification-item.is-unread .notification-title {
+    font-weight: 700;
+}
+
+.notification-new {
+    background: #c2410c; /* 5.2:1 with white text */
+    color: #fff;
+    font-size: .7rem;
+}
+
+.notification-time {
+    margin-left: auto;
+    font-size: .8rem;
+    white-space: nowrap;
+}
+
+.notification-message {
+    display: block;
+    margin-top: .15rem;
+    font-size: .85rem;
+}
+
 /* ---------- Customer chat ---------- */
 .admin-chat {
     display: grid;

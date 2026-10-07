@@ -46,7 +46,6 @@ public sealed class ProductAdminService(
 {
     public const int MaxImagesPerProduct = 30;
     public const int MaxImagesPerUpload = 10;
-    private const string ImageFolder = "products";
 
     public Task<PagedResult<AdminProductListItemDto>> ListAsync(AdminProductQuery query, CancellationToken cancellationToken = default)
     {
@@ -316,7 +315,7 @@ public sealed class ProductAdminService(
 
             foreach (var upload in uploads)
             {
-                var file = await fileStorage.SaveImageAsync(upload.Content, upload.FileName, ImageFolder, cancellationToken);
+                var file = await fileStorage.SaveImageAsync(upload.Content, upload.FileName, Common.Media.ImagePreset.Product, cancellationToken);
                 stored.Add(file);
 
                 var image = new ProductImage

@@ -47,7 +47,7 @@ else
                         <a class="cart-line-image" href="@line.Url">
                             @if (line.ImageUrl is not null)
                             {
-                                <img src="@line.ImageUrl" alt="@line.ProductName" width="120" height="90" loading="lazy" />
+                                <img src="@ImageSizes.Small(line.ImageUrl, 240)" alt="@line.ProductName" width="120" height="90" loading="lazy" />
                             }
                         </a>
                         <div class="cart-line-info">

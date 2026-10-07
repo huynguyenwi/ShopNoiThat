@@ -17,11 +17,30 @@ public sealed class StorageSettings
     [Required]
     public string LocalRootFolder { get; set; } = "uploads";
 
-    [Range(1, 50)]
-    public int MaxFileSizeMb { get; set; } = 5;
+    /// <summary>
+    /// Largest picture accepted, as uploaded (phone and camera photos are 2 - 20 MB). Only the resized copies are kept,
+    /// so this only bounds what one request may make the server read. At most <see cref="UploadLimits.MaxImageMb"/>.
+    /// </summary>
+    [Range(1, UploadLimits.MaxImageMb)]
+    public int MaxFileSizeMb { get; set; } = UploadLimits.MaxImageMb;
+
+    /// <summary>Largest picture in pixels (decoding needs ~4 bytes per pixel in memory): 100 MP covers 108 MP phone cameras.</summary>
+    [Range(1, 300)]
+    public int MaxImageMegapixels { get; set; } = 100;
 
     [MinLength(1)]
-    public string[] AllowedImageExtensions { get; set; } = [".jpg", ".jpeg", ".png", ".webp"];
+    public string[] AllowedImageExtensions { get; set; } = [".jpg", ".jpeg", ".jfif", ".png", ".webp"];
 
     public long MaxFileSizeBytes => MaxFileSizeMb * 1024L * 1024L;
+}
+
+/// <summary>Upper bounds of image uploads, used by the request size limits of the upload endpoints.</summary>
+public static class UploadLimits
+{
+    public const int MaxImageMb = 50;
+
+    /// <summary>Request size for <paramref name="images"/> pictures of the largest size plus the other form fields.</summary>
+    public const long PerImageBytes = MaxImageMb * 1024L * 1024L;
+
+    public const long FormFieldsBytes = 2 * 1024L * 1024L;
 }

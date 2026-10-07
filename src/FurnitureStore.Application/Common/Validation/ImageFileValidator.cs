@@ -10,6 +10,7 @@ public static class ImageFileValidator
     {
         [".jpg"] = "image/jpeg",
         [".jpeg"] = "image/jpeg",
+        [".jfif"] = "image/jpeg", // what Windows names JPEGs saved from a browser
         [".png"] = "image/png",
         [".webp"] = "image/webp"
     };
@@ -54,7 +55,7 @@ public static class ImageFileValidator
 
     public static bool SignatureMatches(string extension, ReadOnlySpan<byte> header) => extension.ToLowerInvariant() switch
     {
-        ".jpg" or ".jpeg" => header.Length >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
+        ".jpg" or ".jpeg" or ".jfif" => header.Length >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
         ".png" => header.Length >= 8 && header[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
         // "RIFF" <size> "WEBP"
         ".webp" => header.Length >= 12

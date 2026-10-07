@@ -244,6 +244,9 @@ public interface IAdminActivityService
     Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(int take = 20, CancellationToken cancellationToken = default);
     Task<int> CountUnreadNotificationsAsync(CancellationToken cancellationToken = default);
     Task MarkNotificationsReadAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Opening a notification marks it read (the bell count goes down by one) and gives where it points to.</summary>
+    Task<NotificationDto> OpenNotificationAsync(int id, CancellationToken cancellationToken = default);
 }
 
 public sealed class AdminActivityService(IAdminReportRepository reports, TimeProvider timeProvider) : IAdminActivityService
@@ -265,4 +268,8 @@ public sealed class AdminActivityService(IAdminReportRepository reports, TimePro
 
     public Task MarkNotificationsReadAsync(CancellationToken cancellationToken = default) =>
         reports.MarkRoleNotificationsReadAsync(AppRoles.Admin, timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
+
+    public async Task<NotificationDto> OpenNotificationAsync(int id, CancellationToken cancellationToken = default) =>
+        await reports.ReadRoleNotificationAsync(AppRoles.Admin, id, timeProvider.GetUtcNow().UtcDateTime, cancellationToken)
+        ?? throw new NotFoundException("thông báo", id);
 }

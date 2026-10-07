@@ -179,7 +179,7 @@ public sealed class InMemoryFileStorage : IFileStorageService
     private int _counter;
     public Dictionary<string, byte[]> Files { get; } = new();
 
-    public async Task<StoredFile> SaveImageAsync(Stream content, string originalFileName, string folder, CancellationToken cancellationToken = default)
+    public async Task<StoredFile> SaveImageAsync(Stream content, string originalFileName, FurnitureStore.Application.Common.Media.ImagePreset preset, CancellationToken cancellationToken = default)
     {
         using var buffer = new MemoryStream();
         await content.CopyToAsync(buffer, cancellationToken);
@@ -191,7 +191,7 @@ public sealed class InMemoryFileStorage : IFileStorageService
             throw new AppValidationException(errors);
         }
 
-        var url = $"/uploads/{folder}/test-{Interlocked.Increment(ref _counter)}{Path.GetExtension(originalFileName).ToLowerInvariant()}";
+        var url = $"/uploads/{preset.Folder}/test-{Interlocked.Increment(ref _counter)}{Path.GetExtension(originalFileName).ToLowerInvariant()}";
         Files[url] = bytes;
         return new StoredFile(url, Path.GetFileName(url), bytes.Length, "image/png");
     }
@@ -206,6 +206,6 @@ public sealed class InMemoryFileStorage : IFileStorageService
         return Task.CompletedTask;
     }
 
-    public static MemoryStream TinyPng() =>
-        new([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D, 0x49, 0x48, 0x44, 0x52]);
+    /// <summary>A real 8 x 8 PNG (the real storage decodes and resizes uploads).</summary>
+    public static MemoryStream TinyPng() => new(TestImages.Png(8, 8));
 }

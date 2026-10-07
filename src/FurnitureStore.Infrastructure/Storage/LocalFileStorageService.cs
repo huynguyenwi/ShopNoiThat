@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using FurnitureStore.Application.Common.Exceptions;
 using FurnitureStore.Application.Common.Interfaces;
+using FurnitureStore.Application.Common.Media;
 using FurnitureStore.Application.Common.Settings;
 using FurnitureStore.Application.Common.Validation;
 using Microsoft.AspNetCore.Hosting;
@@ -10,18 +11,21 @@ using Microsoft.Extensions.Options;
 namespace FurnitureStore.Infrastructure.Storage;
 
 /// <summary>
-/// Stores uploads under wwwroot/{LocalRootFolder}/{folder}/{yyyy}/{MM}/{random}.{ext} and serves them as static files.
+/// Stores uploads under wwwroot/{LocalRootFolder}/{folder}/{yyyy}/{MM}/{random}-{width}w.{ext} and serves them as static
+/// files: the picture resized for its preset, plus its smaller copies (see <see cref="ImageSizes"/>).
 /// File names are generated server-side, so client-provided names can never cause path traversal or overwrite files.
 /// </summary>
 public sealed partial class LocalFileStorageService(
     IWebHostEnvironment environment,
     IOptions<StorageSettings> options,
+    IImageProcessor imageProcessor,
     TimeProvider timeProvider,
     ILogger<LocalFileStorageService> logger) : IFileStorageService
 {
-    public async Task<StoredFile> SaveImageAsync(Stream content, string originalFileName, string folder, CancellationToken cancellationToken = default)
+    public async Task<StoredFile> SaveImageAsync(Stream content, string originalFileName, ImagePreset preset, CancellationToken cancellationToken = default)
     {
         var settings = options.Value;
+        var folder = preset.Folder;
         if (!SafeFolderRegex().IsMatch(folder))
         {
             throw new ArgumentException("Folder may only contain lowercase letters, digits and dashes.", nameof(folder));
@@ -47,24 +51,37 @@ public sealed partial class LocalFileStorageService(
             throw new AppValidationException(errors);
         }
 
-        var extension = Path.GetExtension(originalFileName).ToLowerInvariant();
+        var processed = await imageProcessor.ProcessAsync(buffer.ToArray(), preset, cancellationToken);
+
         var now = timeProvider.GetUtcNow();
         var relativeDirectory = Path.Combine(settings.LocalRootFolder, folder, now.ToString("yyyy"), now.ToString("MM"));
         var absoluteDirectory = Path.Combine(WebRoot, relativeDirectory);
         Directory.CreateDirectory(absoluteDirectory);
 
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        var absolutePath = Path.Combine(absoluteDirectory, fileName);
-
-        buffer.Position = 0;
-        await using (var file = new FileStream(absolutePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
+        var id = Guid.NewGuid().ToString("N");
+        var written = new List<string>();
+        try
         {
-            await buffer.CopyToAsync(file, cancellationToken);
+            foreach (var size in processed.Sizes)
+            {
+                var path = Path.Combine(absoluteDirectory, $"{id}-{size.Width}w{processed.Extension}");
+                await using var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+                written.Add(path);
+                await file.WriteAsync(size.Content, cancellationToken);
+            }
+        }
+        catch
+        {
+            written.ForEach(File.Delete);
+            throw;
         }
 
+        var largest = processed.Sizes[0];
+        var fileName = $"{id}-{largest.Width}w{processed.Extension}";
         var url = "/" + Path.Combine(relativeDirectory, fileName).Replace('\\', '/');
-        logger.LogInformation("Stored image {Url} ({Bytes} bytes)", url, buffer.Length);
-        return new StoredFile(url, fileName, buffer.Length, ImageFileValidator.ContentTypeFor(extension)!);
+        logger.LogInformation("Stored image {Url}: {Width}x{Height}, {Copies} sizes, {UploadedBytes} bytes uploaded, {StoredBytes} bytes kept",
+            url, largest.Width, largest.Height, processed.Sizes.Count, buffer.Length, processed.Sizes.Sum(s => (long)s.Content.Length));
+        return new StoredFile(url, fileName, largest.Content.Length, processed.ContentType);
     }
 
     public Task DeleteAsync(string? url, CancellationToken cancellationToken = default)
@@ -89,6 +106,16 @@ public sealed partial class LocalFileStorageService(
         {
             File.Delete(fullPath);
             logger.LogInformation("Deleted image {Url}", url);
+        }
+
+        // Smaller copies of a resized upload: "{id}-480w.jpg" next to "{id}-1200w.jpg".
+        foreach (var (_, copyUrl) in ImageSizes.Of(url).Where(s => s.Url != url))
+        {
+            var copyPath = Path.GetFullPath(Path.Combine(WebRoot, copyUrl.TrimStart('/')));
+            if (copyPath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(copyPath))
+            {
+                File.Delete(copyPath);
+            }
         }
 
         return Task.CompletedTask;

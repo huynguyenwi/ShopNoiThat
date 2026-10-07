@@ -149,6 +149,24 @@ public sealed class AdminReportRepository(ApplicationDbContext context) : IAdmin
     public Task MarkRoleNotificationsReadAsync(string role, DateTime readAtUtc, CancellationToken cancellationToken = default) =>
         context.Notifications.Where(n => n.RecipientRole == role && !n.IsRead)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true).SetProperty(n => n.ReadAt, readAtUtc), cancellationToken);
+
+    public async Task<NotificationDto?> ReadRoleNotificationAsync(string role, int id, DateTime readAtUtc, CancellationToken cancellationToken = default)
+    {
+        var notification = await context.Notifications.FirstOrDefaultAsync(n => n.Id == id && n.RecipientRole == role, cancellationToken);
+        if (notification is null)
+        {
+            return null;
+        }
+
+        if (!notification.IsRead)
+        {
+            notification.IsRead = true;
+            notification.ReadAt = readAtUtc;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        return new NotificationDto(notification.Id, notification.Type, notification.Title, notification.Message, notification.Link, true, notification.CreatedAt);
+    }
 }
 
 public sealed class ReviewRepository(ApplicationDbContext context) : EfRepository<Review>(context), IReviewRepository

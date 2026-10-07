@@ -29,7 +29,7 @@
                                     <span class="order-row-image">
                                         @if (order.FirstItemImage is not null)
                                         {
-                                            <img src="@order.FirstItemImage" alt="" width="72" height="54" loading="lazy" />
+                                            <img src="@ImageSizes.Small(order.FirstItemImage, 144)" alt="" width="72" height="54" loading="lazy" />
                                         }
                                     </span>
                                     <span class="flex-grow-1 min-w-0">

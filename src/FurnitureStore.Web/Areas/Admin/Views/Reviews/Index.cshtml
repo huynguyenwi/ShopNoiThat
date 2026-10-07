@@ -67,7 +67,7 @@
                 <p class="mb-2 mt-2">@r.Comment</p>
                 @if (r.ImageUrls.Count > 0)
                 {
-                    <div class="image-previews mb-2">@foreach (var url in r.ImageUrls) { <img src="@url" alt="" /> }</div>
+                    <div class="image-previews mb-2">@foreach (var url in r.ImageUrls) { <img src="@ImageSizes.Small(url, 160)" alt="" /> }</div>
                 }
                 <form method="post" asp-action="Reply" asp-route-id="@r.Id" class="d-flex gap-2">
                     <input type="hidden" name="returnUrl" value="@returnUrl" />

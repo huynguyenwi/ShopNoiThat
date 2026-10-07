@@ -66,6 +66,7 @@ public static class DependencyInjection
                 // Every POST/PUT/PATCH/DELETE must carry a valid anti-forgery token (form field or X-CSRF-TOKEN header).
                 options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
                 options.Filters.Add(new AntiforgeryFailureFilter());
+                options.Filters.Add(new PayloadTooLargeFilter());
 
                 // Vietnamese texts for model binding errors and attributes declared without a message.
                 ValidationMessages.Configure(options.ModelBindingMessageProvider);

@@ -33,7 +33,7 @@
                                     <div class="d-flex gap-2 align-items-center">
                                         @if (item.ImageUrl is not null)
                                         {
-                                            <img class="admin-thumb" src="@item.ImageUrl" alt="" width="48" height="48" />
+                                            <img class="admin-thumb" src="@ImageSizes.Small(item.ImageUrl, 96)" alt="" width="48" height="48" />
                                         }
                                         <div>
                                             <div class="fw-semibold">@item.ProductName</div>

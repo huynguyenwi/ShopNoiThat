@@ -100,7 +100,7 @@
             button.setAttribute('role', 'listitem');
             button.setAttribute('aria-label', 'Xem ảnh ' + (index + 1));
             const img = document.createElement('img');
-            img.src = url;
+            img.src = window.FS && window.FS.smallImage ? window.FS.smallImage(url) : url; // 480 px copy for a 120 px thumbnail
             img.alt = '';
             img.width = 120;
             img.height = 90;
@@ -246,9 +246,9 @@
         if (imageInput) {
             imageInput.addEventListener('change', function () {
                 const max = Number(imageInput.getAttribute('data-max-files') || 3);
-                const tooBig = Array.prototype.some.call(imageInput.files, function (f) { return f.size > 5 * 1024 * 1024; });
+                const tooBig = Array.prototype.some.call(imageInput.files, function (f) { return f.size > 50 * 1024 * 1024; });
                 if (imageInput.files.length > max || tooBig) {
-                    window.FS && window.FS.toast(tooBig ? 'Mỗi ảnh tối đa 5MB.' : 'Chỉ được chọn tối đa ' + max + ' ảnh.', 'warning');
+                    window.FS && window.FS.toast(tooBig ? 'Mỗi ảnh tối đa 50 MB.' : 'Chỉ được chọn tối đa ' + max + ' ảnh.', 'warning');
                     imageInput.value = '';
                 }
             });

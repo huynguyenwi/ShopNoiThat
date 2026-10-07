@@ -313,7 +313,8 @@ public sealed class AccountController(
     }
 
     [HttpPost]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(UploadLimits.PerImageBytes + UploadLimits.FormFieldsBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = UploadLimits.PerImageBytes + UploadLimits.FormFieldsBytes)]
     public async Task<IActionResult> Avatar(IFormFile? avatar, CancellationToken cancellationToken)
     {
         var user = await GetCurrentUserAsync();
@@ -326,7 +327,7 @@ public sealed class AccountController(
         try
         {
             await using var stream = avatar.OpenReadStream();
-            var stored = await fileStorage.SaveImageAsync(stream, avatar.FileName, "avatars", cancellationToken);
+            var stored = await fileStorage.SaveImageAsync(stream, avatar.FileName, Application.Common.Media.ImagePreset.Avatar, cancellationToken);
 
             var oldAvatar = user.AvatarUrl;
             user.AvatarUrl = stored.Url;

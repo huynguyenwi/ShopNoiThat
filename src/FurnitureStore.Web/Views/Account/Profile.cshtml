@@ -1,4 +1,5 @@
 @model FurnitureStore.Web.ViewModels.Account.ProfileViewModel
+@inject IOptions<StorageSettings> StorageOptions
 @{
     ViewData["Title"] = "Hồ sơ cá nhân";
     ViewData["Robots"] = "noindex,nofollow";
@@ -35,10 +36,12 @@
                         <div>
                             <label for="avatar" class="form-label mb-1 fw-semibold">Ảnh đại diện</label>
                             <div class="d-flex gap-2">
-                                <input id="avatar" name="avatar" type="file" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.webp" required />
+                                <input id="avatar" name="avatar" type="file" class="form-control form-control-sm" accept=".jpg,.jpeg,.jfif,.png,.webp" required
+                                       data-max-mb="@StorageOptions.Value.MaxFileSizeMb" aria-describedby="avatarHelp avatarError" />
                                 <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">Tải lên</button>
                             </div>
-                            <div class="form-text">JPG, PNG hoặc WEBP, tối đa 5 MB.</div>
+                            <div class="form-text" id="avatarHelp">JPG, PNG hoặc WEBP, tối đa @StorageOptions.Value.MaxFileSizeMb MB. Ảnh được tự cắt vuông và thu nhỏ vừa khung.</div>
+                            <div class="text-danger small" id="avatarError" role="alert" hidden></div>
                         </div>
                     </form>
 
