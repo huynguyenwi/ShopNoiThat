@@ -326,6 +326,7 @@ ASP.NET Core đọc biến môi trường với `__` thay cho `:`.
 | `ApplicationSettings__FocusCategorySlug` | Danh mục mặt hàng chính hiện đầu trang chủ và trên menu (mặc định `bo-ban-an`; để trống = ẩn) |
 | `Seo__AllowIndexing` | `false` trên máy staging/test: robots.txt chặn toàn bộ và mọi trang `noindex` |
 | `DataProtection__KeysPath` | Thư mục lưu khóa mã hóa cookie (mặc định `App_Data/keys`); dùng chung khi chạy nhiều server |
+| `DataProtection__Dpapi` | Windows: mã hóa file khóa bằng DPAPI theo `CurrentUser` (mặc định), `LocalMachine` (hosting dùng chung như Somee, app pool không nạp user profile) hoặc `None` |
 | `ReverseProxy__KnownProxies__0` | IP của reverse proxy tin cậy (nginx, load balancer) để lấy IP thật từ `X-Forwarded-For` |
 | `SKIP_SQLSERVER_TESTS` | `1` để bỏ qua test cần SQL Server LocalDB |
 
@@ -569,8 +570,57 @@ $env:Seed__AdminPassword = "<mật khẩu mạnh>"
 - **Cập nhật phiên bản**: dừng site, chép đè nội dung `publish/` mới lên thư mục cũ. **Không xóa** `wwwroot/uploads`
   (ảnh sản phẩm / đánh giá / avatar) và `App_Data` (khóa Data Protection); nên sao lưu hai thư mục này cùng database.
   Có migration mới thì chạy `database/01_schema.sql` mới (idempotent) trước khi khởi động lại.
+- **Hosting dùng chung (Somee.com, …)**: xem mục [Triển khai lên Somee](#triển-khai-lên-somee) ngay dưới.
 - **Linux**: `dotnet publish -c Release -r linux-x64 --self-contained false`, chạy bằng systemd sau nginx
   (nginx chuyển tiếp `/hubs/` với header `Upgrade` / `Connection` cho WebSocket; khai báo `ReverseProxy__KnownProxies__0`).
+
+### Triển khai lên Somee
+
+Lỗi **"HTTP Error 500.30 - ASP.NET Core app failed to start"** nghĩa là ứng dụng dừng ngay khi khởi động. Nguyên nhân thường gặp:
+connection string vẫn là `(localdb)\MSSQLLocalDB` (chỉ có trên máy dev - lúc khởi động ứng dụng kết nối database để kiểm tra
+migration nên dừng luôn), hoặc file `appsettings.Production.json` sai cú pháp JSON.
+
+1. **Database**: trong trang quản lý Somee tạo *MS SQL database*, ghi lại connection string Somee đưa
+   (dạng `workstation id=...;packet size=4096;user id=...;pwd=...;data source=....mssql.somee.com;persist security info=False;initial catalog=...;TrustServerCertificate=True`).
+   Mở công cụ chạy SQL của Somee (hoặc SSMS kết nối tới server Somee) và chạy **lần lượt** `database/01_schema.sql` rồi
+   `database/02_seed_data.sql`. **Không** dùng `FurnitureStoreDb_full.sql` (có `CREATE DATABASE` / `USE [FurnitureStoreDb]`,
+   tên database trên Somee khác và tài khoản không có quyền tạo database).
+2. **Publish**: `dotnet publish src/FurnitureStore.Web -c Release -o publish`, rồi tải **toàn bộ nội dung** thư mục `publish/`
+   (gồm `web.config`, thư mục `wwwroot`, `logs`) lên thư mục gốc của site (FTP hoặc File Manager của Somee).
+3. **Cấu hình trên server** (không commit, đã có trong `.gitignore`): tạo file `appsettings.Production.json` cạnh `web.config`:
+
+   ```json
+   {
+     "ConnectionStrings": {
+       "DefaultConnection": "<connection string Somee đưa>"
+     },
+     "Seed": {
+       "AdminPassword": "<mật khẩu admin mạnh, ≥ 8 ký tự, có hoa / thường / số>"
+     },
+     "ApplicationSettings": {
+       "BaseUrl": "https://<tên-site>.somee.com"
+     },
+     "DataProtection": {
+       "Dpapi": "LocalMachine"
+     }
+   }
+   ```
+
+   - Dấu `\` trong JSON phải viết `\\`; thiếu dấu phẩy / thừa dấu phẩy cũng làm ứng dụng không khởi động (500.30).
+   - `DataProtection:Dpapi = LocalMachine`: hosting dùng chung thường không nạp user profile cho app pool, mã hóa khóa
+     theo user (mặc định) sẽ lỗi khi đăng nhập / gửi form.
+   - Lần chạy đầu tạo tài khoản `admin@furniture.local` với mật khẩu trên. Đăng nhập, đổi mật khẩu, rồi xóa dòng
+     `AdminPassword` khỏi file.
+   - (Tùy chọn) `"AI": { "ApiKey": "..." }` nếu dùng trợ lý AI bằng OpenAI.
+4. Mở `https://<tên-site>.somee.com/health` → `Healthy` là kết nối database đã đúng.
+
+**Vẫn gặp 500.30**: sửa `web.config` trên server thành `stdoutLogEnabled="true"`, tải lại trang, mở file mới nhất trong thư mục
+`logs` (`stdout_*.log`). Dòng `crit:` cho biết nguyên nhân, ví dụ
+`Cannot open or prepare the database at startup (server '...', database '...')` (log chỉ ghi tên server / database,
+không ghi mật khẩu). Xem xong đặt lại `stdoutLogEnabled="false"` (file log lớn dần).
+
+**Cập nhật bản mới**: chép đè nội dung `publish/` mới (giữ `appsettings.Production.json`, `wwwroot/uploads`, `App_Data`);
+có migration mới thì chạy `database/01_schema.sql` mới trên database Somee trước (chạy lại nhiều lần vẫn an toàn).
 
 ## 19. Mã giảm giá
 

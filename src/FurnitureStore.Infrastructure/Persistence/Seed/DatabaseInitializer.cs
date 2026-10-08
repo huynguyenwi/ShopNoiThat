@@ -111,11 +111,49 @@ public sealed class DatabaseInitializer(
 
 public static class DatabaseInitializerExtensions
 {
-    /// <summary>Creates a scope and runs <see cref="DatabaseInitializer"/>.</summary>
+    /// <summary>
+    /// Creates a scope and runs <see cref="DatabaseInitializer"/>. A database that cannot be reached stops the application,
+    /// after a log line saying which server it tried (never the password) - on IIS this is the "HTTP Error 500.30" page,
+    /// the line is in the stdout log (web.config stdoutLogEnabled).
+    /// </summary>
     public static async Task InitializeDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
         var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
-        await initializer.InitializeAsync(cancellationToken);
+        try
+        {
+            await initializer.InitializeAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseInitializer>>();
+            logger.LogCritical(ex,
+                "Cannot open or prepare the database at startup ({Database}). Check ConnectionStrings:DefaultConnection "
+                + "(appsettings.Production.json on the server, or the environment variable ConnectionStrings__DefaultConnection): "
+                + "LocalDB only exists on a development machine. The application stops.",
+                DescribeDatabase(context));
+            throw;
+        }
+    }
+
+    /// <summary>Server and database name of the connection string, without credentials.</summary>
+    internal static string DescribeDatabase(ApplicationDbContext context)
+    {
+        var connectionString = context.Database.GetConnectionString();
+        if (!context.Database.IsSqlServer() || string.IsNullOrWhiteSpace(connectionString))
+        {
+            return context.Database.ProviderName ?? "unknown provider";
+        }
+
+        try
+        {
+            var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            return $"server '{builder.DataSource}', database '{builder.InitialCatalog}'";
+        }
+        catch (ArgumentException)
+        {
+            return "connection string not readable";
+        }
     }
 }

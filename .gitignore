@@ -26,6 +26,9 @@ artifacts/
 .env
 .env.*
 appsettings.*.local.json
+# Server-only settings (connection string, admin password): created on the host, never committed.
+src/FurnitureStore.Web/appsettings.Production.json
+src/FurnitureStore.Web/logs/
 secrets.json
 
 ## Runtime uploads (user generated content) and development email pickup folder

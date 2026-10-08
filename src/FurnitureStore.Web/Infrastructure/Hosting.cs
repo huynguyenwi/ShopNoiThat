@@ -10,7 +10,9 @@ public static class HostingExtensions
     /// <summary>
     /// Persists the data-protection keys (auth / anti-forgery cookies, reset tokens) so users stay signed in across
     /// restarts and several server instances can share them. Path: DataProtection:KeysPath (default App_Data/keys,
-    /// excluded from git). On Windows the key files are additionally encrypted with DPAPI.
+    /// excluded from git). On Windows the key files are additionally encrypted with DPAPI (DataProtection:Dpapi):
+    /// "CurrentUser" (default), "LocalMachine" for shared IIS hosting whose application pool loads no user profile
+    /// (e.g. Somee: user-scoped DPAPI fails there as soon as a form or login needs a key), or "None".
     /// </summary>
     public static IServiceCollection AddKeyStorage(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
@@ -23,9 +25,10 @@ public static class HostingExtensions
             .SetApplicationName("NhaMocFurniture")
             .PersistKeysToFileSystem(new DirectoryInfo(path));
 
-        if (OperatingSystem.IsWindows())
+        var dpapi = configuration["DataProtection:Dpapi"];
+        if (OperatingSystem.IsWindows() && !string.Equals(dpapi, "None", StringComparison.OrdinalIgnoreCase))
         {
-            builder.ProtectKeysWithDpapi();
+            builder.ProtectKeysWithDpapi(protectToLocalMachine: string.Equals(dpapi, "LocalMachine", StringComparison.OrdinalIgnoreCase));
         }
 
         return services;

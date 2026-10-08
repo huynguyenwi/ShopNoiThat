@@ -32,4 +32,9 @@
     <None Remove="App_Data\**" />
   </ItemGroup>
 
+  <!-- Empty folder for the IIS stdout log (web.config stdoutLogEnabled), read to diagnose "HTTP Error 500.30". -->
+  <Target Name="CreateStdoutLogFolder" AfterTargets="Publish">
+    <MakeDir Directories="$(PublishDir)logs" />
+  </Target>
+
 </Project>
