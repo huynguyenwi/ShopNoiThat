@@ -46,6 +46,11 @@ public sealed class ErrorController(IWebHostEnvironment environment) : Controlle
             // The page was requested directly (e.g. /Error/500) rather than re-executed by middleware.
             statusCode = StatusCodes.Status404NotFound;
         }
+        else
+        {
+            // The code the middleware re-executed for: the route value was seen missing (0) for an early 413 under load.
+            statusCode = reExecuteFeature.OriginalStatusCode;
+        }
 
         var message = statusCode == StatusCodes.Status400BadRequest && AntiforgeryFailureFilter.Failed(HttpContext)
             ? AntiforgeryFailureFilter.Message

@@ -48,5 +48,13 @@ public sealed class AiSettings
     /// <summary>Some models only accept the default temperature; set false to omit it.</summary>
     public bool SendTemperature { get; set; } = true;
 
+    /// <summary>
+    /// Sent as "reasoning_effort" when set. Thinking models count their reasoning in the output tokens: Gemini 2.5 Flash
+    /// accepts "none" (no thinking, the whole budget goes to the answer); Gemini 3 models cannot turn it off - use "minimal"
+    /// or "low". Empty: not sent (OpenAI gpt-4o-mini and most compatible APIs).
+    /// </summary>
+    [RegularExpression("^(none|minimal|low|medium|high)$")]
+    public string? ReasoningEffort { get; set; }
+
     public bool IsConfigured => Enabled && !string.IsNullOrWhiteSpace(ApiKey);
 }

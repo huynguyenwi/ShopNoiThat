@@ -14,15 +14,19 @@ public sealed class OpenAiCompatibleChatClientTests
 {
     private const string Key = "sk-test-SECRET-123";
 
+    public OpenAiCompatibleChatClientTests() => OpenAiCompatibleChatClient.TransientRetryDelay = TimeSpan.FromMilliseconds(10);
+
     private sealed class StubHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
         public HttpRequestMessage? Request { get; private set; }
         public string? Body { get; private set; }
+        public List<string> Bodies { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Request = request;
             Body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+            Bodies.Add(Body ?? string.Empty);
             return await respond(request, cancellationToken);
         }
     }
@@ -86,8 +90,114 @@ public sealed class OpenAiCompatibleChatClientTests
         Assert.Equal("json_object", body.RootElement.GetProperty("response_format").GetProperty("type").GetString());
         Assert.Equal(800, body.RootElement.GetProperty("max_tokens").GetInt32());
         Assert.True(body.RootElement.TryGetProperty("temperature", out _));
+        Assert.False(body.RootElement.TryGetProperty("reasoning_effort", out _)); // not sent unless configured
 
         Assert.DoesNotContain(log.Lines, line => line.Contains(Key));
+    }
+
+    [Fact]
+    public async Task GeminiSettings_SendReasoningEffort_ToTheOpenAiCompatibleEndpoint()
+    {
+        var (client, handler, _) = Create((_, _) => Json(HttpStatusCode.OK, """{"choices":[{"message":{"content":"ok"}}]}"""), s =>
+        {
+            s.BaseUrl = "https://generativelanguage.googleapis.com/v1beta/openai/";
+            s.Model = "gemini-2.5-flash";
+            s.ReasoningEffort = "none";
+        });
+
+        await client.CompleteAsync(Request);
+
+        Assert.Equal("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", handler.Request!.RequestUri!.ToString());
+        using var body = JsonDocument.Parse(handler.Body!);
+        Assert.Equal("none", body.RootElement.GetProperty("reasoning_effort").GetString());
+        Assert.Equal("gemini-2.5-flash", body.RootElement.GetProperty("model").GetString());
+    }
+
+    [Fact]
+    public async Task JsonModeRefused_IsRetriedWithoutIt_AndNotSentAgain()
+    {
+        var (client, handler, log) = Create((request, _) =>
+        {
+            var json = request.Content!.ReadAsStringAsync().Result;
+            return json.Contains("response_format")
+                ? Json(HttpStatusCode.BadRequest, """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Unknown name response_format"}}""")
+                : Json(HttpStatusCode.OK, """{"choices":[{"message":{"content":"```json\n{\"reply\":\"Chào\"}\n```"}}]}""");
+        }, s => s.Model = "json-refusing-model");
+
+        var first = await client.CompleteAsync(Request with { JsonResponse = true });
+        var second = await client.CompleteAsync(Request with { JsonResponse = true });
+
+        Assert.Contains("\"reply\"", first.Content);
+        Assert.Contains("\"reply\"", second.Content);
+        Assert.Equal(3, handler.Bodies.Count);                      // refused, retried, then asked without JSON mode right away
+        Assert.Contains("response_format", handler.Bodies[0]);
+        Assert.DoesNotContain("response_format", handler.Bodies[1]);
+        Assert.DoesNotContain("response_format", handler.Bodies[2]);
+        Assert.Contains(log.Lines, line => line.Contains("retrying without response_format"));
+    }
+
+    [Fact]
+    public async Task GeminiWrongKey_Is400_ReportedAsAKeyProblem_WithoutRetrying()
+    {
+        // The exact answer of generativelanguage.googleapis.com/v1beta/openai/chat/completions to an invalid key.
+        var (client, handler, log) = Create((_, _) => Json(HttpStatusCode.BadRequest,
+            """[{"error":{"code":400,"message":"Please pass a valid API key","status":"INVALID_ARGUMENT"}}]"""), s => s.Model = "gemini-wrong-key");
+
+        var ex = await Assert.ThrowsAsync<AiUnavailableException>(() => client.CompleteAsync(Request with { JsonResponse = true }));
+
+        Assert.Contains("không hợp lệ", ex.Message);
+        Assert.Single(handler.Bodies);                                  // not mistaken for "JSON mode not supported"
+        Assert.Contains(log.Lines, line => line.Contains("400/INVALID_ARGUMENT"));
+        Assert.DoesNotContain(log.Lines, line => line.Contains("Please pass a valid API key"));
+    }
+
+    [Fact]
+    public async Task BusyProvider_IsRetriedOnce_AndTheSecondAnswerIsUsed()
+    {
+        var calls = 0;
+        var (client, handler, log) = Create((_, _) => ++calls == 1
+            ? Json(HttpStatusCode.ServiceUnavailable, """[{"error":{"code":503,"message":"This model is currently experiencing high demand.","status":"UNAVAILABLE"}}]""")
+            : Json(HttpStatusCode.OK, """{"choices":[{"finish_reason":"stop","message":{"content":"{\"reply\":\"Chào bạn\"}"}}]}"""), s => s.Model = "busy-model");
+
+        var result = await client.CompleteAsync(Request);
+
+        Assert.Equal("""{"reply":"Chào bạn"}""", result.Content);
+        Assert.Equal(2, handler.Bodies.Count);
+        Assert.Contains(log.Lines, line => line.Contains("503") && line.Contains("retrying once"));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable, 2)] // still busy after the retry: falls back
+    [InlineData(HttpStatusCode.TooManyRequests, 1)]    // quota: not retried
+    public async Task Outages_AreRetriedAtMostOnce(HttpStatusCode status, int expectedRequests)
+    {
+        var (client, handler, _) = Create((_, _) => Json(status, """{"error":{"code":"busy"}}"""), s => s.Model = $"outage-{(int)status}");
+
+        await Assert.ThrowsAsync<AiUnavailableException>(() => client.CompleteAsync(Request));
+
+        Assert.Equal(expectedRequests, handler.Bodies.Count);
+    }
+
+    [Fact]
+    public async Task OtherBadRequests_AreNotRetried()
+    {
+        var (client, handler, _) = Create((_, _) => Json(HttpStatusCode.BadRequest, """{"error":{"code":"invalid_model"}}"""),
+            s => { s.Model = "no-json-model"; s.JsonMode = false; });
+
+        await Assert.ThrowsAsync<AiUnavailableException>(() => client.CompleteAsync(Request with { JsonResponse = true }));
+
+        Assert.Single(handler.Bodies);
+    }
+
+    [Fact]
+    public async Task EmptyAnswerCutByTheTokenLimit_IsExplainedInTheLog()
+    {
+        var (client, _, log) = Create((_, _) => Json(HttpStatusCode.OK,
+            """{"choices":[{"finish_reason":"length","message":{"role":"assistant","content":null}}]}"""), s => s.Model = "thinking-model");
+
+        await Assert.ThrowsAsync<AiUnavailableException>(() => client.CompleteAsync(Request));
+
+        Assert.Contains(log.Lines, line => line.Contains("finish_reason length") && line.Contains("AI:MaxOutputTokens"));
     }
 
     [Fact]

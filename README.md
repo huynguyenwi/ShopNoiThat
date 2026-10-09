@@ -274,7 +274,8 @@ Section `AI` trong `appsettings.json` (không chứa API key):
   "RequestsPerMinute": 10,
   "JsonMode": true,
   "TokenLimitParameter": "max_tokens",
-  "SendTemperature": true
+  "SendTemperature": true,
+  "ReasoningEffort": ""
 }
 ```
 
@@ -289,6 +290,45 @@ Dùng API tương thích OpenAI khác: đổi `BaseUrl` + `Model`, ví dụ Groq
 `https://openrouter.ai/api/v1/`, Ollama chạy local `http://localhost:11434/v1/` (với Ollama đặt ApiKey bất kỳ, ví dụ `ollama`).
 Nếu nhà cung cấp không hỗ trợ `response_format` đặt `JsonMode = false`; model mới của OpenAI chỉ nhận
 `max_completion_tokens` thì đặt `TokenLimitParameter = "max_completion_tokens"`; model không cho đổi temperature thì `SendTemperature = false`.
+Nhà cung cấp từ chối `response_format` (HTTP 400) thì web tự gửi lại không kèm nó và nhớ cho các lần sau (đến khi khởi động lại).
+
+**Dùng Google Gemini miễn phí** (qua endpoint tương thích OpenAI của Google, không cần sửa code):
+
+1. Vào [Google AI Studio](https://aistudio.google.com/apikey), đăng nhập Google, bấm *Create API key* (gói free không cần thẻ).
+   Xem model và hạn mức miễn phí của tài khoản ở AI Studio (mục Rate limit) - gói free giới hạn số yêu cầu / phút và / ngày.
+2. Cấu hình (máy dev: user-secrets; Somee: thêm vào `appsettings.Production.json` trên server):
+
+   ```json
+   "AI": {
+     "Enabled": true,
+     "Provider": "Gemini",
+     "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/openai/",
+     "Model": "gemini-3.8-flash",
+     "ApiKey": "<khóa từ AI Studio>",
+     "ReasoningEffort": "low",
+     "MaxOutputTokens": 2000
+   }
+   ```
+
+   ```powershell
+   dotnet user-secrets set "AI:BaseUrl" "https://generativelanguage.googleapis.com/v1beta/openai/" --project src/FurnitureStore.Web
+   dotnet user-secrets set "AI:Model" "gemini-3.8-flash" --project src/FurnitureStore.Web
+   dotnet user-secrets set "AI:ReasoningEffort" "low" --project src/FurnitureStore.Web
+   dotnet user-secrets set "AI:MaxOutputTokens" "2000" --project src/FurnitureStore.Web
+   dotnet user-secrets set "AI:ApiKey" "<khóa từ AI Studio>" --project src/FurnitureStore.Web
+   ```
+
+   - `ReasoningEffort`: model Gemini Flash "suy nghĩ" trước khi trả lời và phần suy nghĩ tính vào `MaxOutputTokens`.
+     Đã thử thật (10/2026, khóa free mới): `gemini-2.5-flash` không còn cấp cho tài khoản mới (404);
+     `gemini-3.8-flash` và `gemini-3.5-flash-lite` chạy với `"low"` (`"minimal"` / `"none"` bị từ chối - lỗi 400);
+     chế độ JSON (`response_format`) được chấp nhận. Câu trả lời bị cắt hết token thì log ghi `finish_reason length`.
+   - Báo quá tải (HTTP 503 *high demand*) là tạm thời; hay gặp thì đổi sang `gemini-3.5-flash-lite` (nhẹ, nhanh hơn).
+   - Đổi model khác trong AI Studio chỉ cần đổi `Model` (tên như hiện trong AI Studio).
+3. Khởi động lại web (Somee: *Recycle pool*). Hỏi trợ lý một câu; `/admin/ai` hiện model trả lời và số token.
+   Khóa sai: Gemini trả HTTP 400 *"Please pass a valid API key"* - web báo "Khóa API … không hợp lệ" và tự chuyển sang chế độ Tự động.
+   Hết hạn mức free (HTTP 429): web báo quá tải và cũng tạm dùng chế độ Tự động.
+4. Lưu ý gói free: theo điều khoản của Google, nội dung gửi qua gói miễn phí có thể được dùng để cải thiện sản phẩm của Google -
+   không nhập dữ liệu nhạy cảm; dùng cho cửa hàng thật nên bật thanh toán (gói trả phí không dùng dữ liệu để huấn luyện).
 
 **Bảo đảm AI không bịa:**
 - AI chỉ được chọn sản phẩm trong danh sách hệ thống gửi. Server bỏ mọi id sản phẩm không có trong danh sách, tên / giá / ảnh / link trên thẻ sản phẩm luôn lấy từ database.
