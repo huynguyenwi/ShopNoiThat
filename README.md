@@ -580,6 +580,9 @@ Lỗi **"HTTP Error 500.30 - ASP.NET Core app failed to start"** nghĩa là ứn
 connection string vẫn là `(localdb)\MSSQLLocalDB` (chỉ có trên máy dev - lúc khởi động ứng dụng kết nối database để kiểm tra
 migration nên dừng luôn), hoặc file `appsettings.Production.json` sai cú pháp JSON.
 
+0. **Phiên bản .NET**: trong dashboard của site trên Somee chọn **ASP.NET Core / .NET 8** (web build cho `net8.0`; chọn sai
+   phiên bản hoặc ASP.NET 4.x thì ứng dụng không chạy). Gói free: 150 MB dung lượng, database 30 MB - bản publish ~25 MB,
+   dữ liệu mẫu ~4 MB, vừa đủ.
 1. **Database**: trong trang quản lý Somee tạo *MS SQL database*, ghi lại connection string Somee đưa
    (dạng `workstation id=...;packet size=4096;user id=...;pwd=...;data source=....mssql.somee.com;persist security info=False;initial catalog=...;TrustServerCertificate=True`).
    Mở công cụ chạy SQL của Somee (hoặc SSMS kết nối tới server Somee) và chạy **lần lượt** `database/01_schema.sql` rồi
@@ -612,12 +615,31 @@ migration nên dừng luôn), hoặc file `appsettings.Production.json` sai cú 
    - Lần chạy đầu tạo tài khoản `admin@furniture.local` với mật khẩu trên. Đăng nhập, đổi mật khẩu, rồi xóa dòng
      `AdminPassword` khỏi file.
    - (Tùy chọn) `"AI": { "ApiKey": "..." }` nếu dùng trợ lý AI bằng OpenAI.
-4. Mở `https://<tên-site>.somee.com/health` → `Healthy` là kết nối database đã đúng.
+4. Mở `https://<tên-site>.somee.com/health` → `Healthy` là kết nối database đã đúng. Luôn mở web bằng **https://**:
+   ở Production cookie đăng nhập / chống giả mạo form chỉ gửi qua HTTPS, mở bằng `http://` các trang sẽ báo lỗi.
 
-**Vẫn gặp 500.30**: sửa `web.config` trên server thành `stdoutLogEnabled="true"`, tải lại trang, mở file mới nhất trong thư mục
-`logs` (`stdout_*.log`). Dòng `crit:` cho biết nguyên nhân, ví dụ
-`Cannot open or prepare the database at startup (server '...', database '...')` (log chỉ ghi tên server / database,
-không ghi mật khẩu). Xem xong đặt lại `stdoutLogEnabled="false"` (file log lớn dần).
+**Vẫn gặp 500.30 - xem nguyên nhân thật** (trang 500.30 chỉ là trang chung):
+
+- **Trên trình duyệt** (nhanh nhất): mở `web.config` trên server (File Manager), thay `... hostingModel="inprocess" />` bằng
+
+  ```xml
+  ... hostingModel="inprocess">
+    <environmentVariables>
+      <environmentVariable name="ASPNETCORE_DETAILEDERRORS" value="1" />
+    </environmentVariables>
+  </aspNetCore>
+  ```
+
+  tải lại trang: trang lỗi hiện *"An error occurred while starting the application"* kèm lỗi cụ thể, ví dụ
+  `SqlException: ... The server was not found or was not accessible` (sai connection string),
+  `Failed to load configuration from file '...appsettings.Production.json'` (JSON sai cú pháp). Xem xong **xóa đoạn này
+  ngay** - nó hiện stack trace cho mọi người xem. (Đã thử trên IIS Express: mật khẩu trong connection string không bị hiện.)
+- **Trong file log**: đặt `stdoutLogEnabled="true"`, tải lại trang, mở file mới nhất trong thư mục `logs` (`stdout_*.log`),
+  tìm dòng `crit:` (log chỉ ghi tên server / database, không ghi mật khẩu). Xem xong đặt lại `"false"` (file log lớn dần).
+- Lỗi báo thiếu .NET runtime (*"framework ... was not found"*, hoặc 500.31): kiểm tra lại bước 0, hoặc publish
+  **self-contained** (Somee khuyên dùng; kèm sẵn runtime, thêm ~70 MB):
+  `dotnet publish src/FurnitureStore.Web -c Release -r win-x86 --self-contained true -o publish`
+  và đổi `hostingModel="inprocess"` thành `"outofprocess"` trong `web.config` (chạy được bất kể app pool 32 hay 64-bit).
 
 **Cập nhật bản mới**: chép đè nội dung `publish/` mới (giữ `appsettings.Production.json`, `wwwroot/uploads`, `App_Data`);
 có migration mới thì chạy `database/01_schema.sql` mới trên database Somee trước (chạy lại nhiều lần vẫn an toàn).
