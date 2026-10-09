@@ -615,8 +615,16 @@ migration nên dừng luôn), hoặc file `appsettings.Production.json` sai cú 
    - Lần chạy đầu tạo tài khoản `admin@furniture.local` với mật khẩu trên. Đăng nhập, đổi mật khẩu, rồi xóa dòng
      `AdminPassword` khỏi file.
    - (Tùy chọn) `"AI": { "ApiKey": "..." }` nếu dùng trợ lý AI bằng OpenAI.
-4. Mở `https://<tên-site>.somee.com/health` → `Healthy` là kết nối database đã đúng. Luôn mở web bằng **https://**:
-   ở Production cookie đăng nhập / chống giả mạo form chỉ gửi qua HTTPS, mở bằng `http://` các trang sẽ báo lỗi.
+   - Không chạy được file SQL ở bước 1? Thêm `"Database": { "ApplyMigrationsOnStartup": true, "SeedDemoData": true }`:
+     lần khởi động đầu web tự tạo bảng và dữ liệu mẫu (database đã có bảng thì không làm gì thêm).
+   - Lưu file xong vào trang site trên Somee bấm **Recycle pool** (khung *IIS Application pool*) để web đọc lại cấu hình.
+   - Lỗi vẫn ghi `server '(localdb)\MSSQLLocalDB'` (tab **Event viewer** của site) nghĩa là file chưa được đọc: kiểm tra tên file
+     đúng `appsettings.Production.json` (không có đuôi `.txt`), nằm cùng thư mục với `web.config`.
+4. **Bật HTTPS** (bắt buộc): site Somee mới tạo chưa có HTTPS, mà ở Production cookie đăng nhập / chống giả mạo form chỉ
+   gửi qua HTTPS - mở bằng `http://` mọi trang đều lỗi 500. Trong control panel Somee: *SSL Certificates → Free certificate
+   orders → Create order*, chọn tên miền (`<tên-site>.somee.com`, thêm cả `www.<tên-site>.somee.com` nếu dùng) - chứng chỉ
+   Let's Encrypt miễn phí. Gói free **không tự gia hạn**: cứ 3 tháng vào đó bấm *Renew*.
+5. Mở `https://<tên-site>.somee.com/health` → `Healthy` là kết nối database đã đúng. Có HTTPS rồi thì `http://` tự chuyển sang `https://`.
 
 **Vẫn gặp 500.30 - xem nguyên nhân thật** (trang 500.30 chỉ là trang chung):
 
