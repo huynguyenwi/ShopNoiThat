@@ -28,7 +28,7 @@ public sealed class EmailSettings
 
 public sealed class SmtpSettings
 {
-    public string Host { get; set; } = string.Empty;
+    public string Host { get; set; } = "smtp.gmail.com";
     public int Port { get; set; } = 587;
     public bool EnableSsl { get; set; } = true;
     public string? UserName { get; set; }

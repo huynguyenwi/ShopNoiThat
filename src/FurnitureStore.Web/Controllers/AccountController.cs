@@ -197,19 +197,36 @@ public sealed class AccountController(
         }
 
         var user = await userManager.FindByEmailAsync(model.Email.Trim());
-        if (user is not null && user.IsActive)
+        if (user is null)
         {
-            var token = await userManager.GeneratePasswordResetTokenAsync(user);
-            var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-            var resetUrl = AbsoluteUrl(Url.Action(nameof(ResetPassword), "Account", new { email = user.Email, code })!);
-
-            await TrySendEmailAsync(new EmailMessage(user.Email!, "Đặt lại mật khẩu",
-                EmailTemplates.PasswordReset((await storeInfo.GetAsync(HttpContext.RequestAborted)).Name, user.FullName, resetUrl,
-                    (int)AccountSecurity.PasswordResetTokenLifespan.TotalHours), user.FullName));
-            logger.LogInformation("Password reset requested for user {UserId}", user.Id);
+            ModelState.AddModelError(string.Empty, "Email không tồn tại trong hệ thống.");
+            return View(model);
         }
 
-        // Same response whether or not the email exists, so accounts cannot be enumerated.
+        if (!user.IsActive)
+        {
+            ModelState.AddModelError(string.Empty, "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ cửa hàng để được hỗ trợ.");
+            return View(model);
+        }
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var resetUrl = AbsoluteUrl(Url.Action(nameof(ResetPassword), "Account", new { email = user.Email, code })!);
+
+        try
+        {
+            await emailSender.SendAsync(new EmailMessage(user.Email!, "Đặt lại mật khẩu",
+                EmailTemplates.PasswordReset((await storeInfo.GetAsync(HttpContext.RequestAborted)).Name, user.FullName, resetUrl,
+                    (int)AccountSecurity.PasswordResetTokenLifespan.TotalHours), user.FullName), HttpContext.RequestAborted);
+            logger.LogInformation("Password reset requested for user {UserId}", user.Id);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to send password reset email to {Email}", user.Email);
+            ModelState.AddModelError(string.Empty, "Không thể gửi email đặt lại mật khẩu lúc này. Vui lòng thử lại sau.");
+            return View(model);
+        }
+
         return RedirectToAction(nameof(ForgotPasswordConfirmation));
     }
 

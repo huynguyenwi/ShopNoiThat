@@ -55,8 +55,14 @@ public static class DependencyInjection
         // AI provider (OpenAI-compatible). The client enforces AI:TimeoutSeconds itself.
         services.AddHttpClient<IAiChatClient, OpenAiCompatibleChatClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
 
-        var emailMode = configuration.GetSection(EmailSettings.SectionName)[nameof(EmailSettings.Mode)];
-        if (string.Equals(emailMode, "Smtp", StringComparison.OrdinalIgnoreCase))
+        var emailSection = configuration.GetSection(EmailSettings.SectionName);
+        var emailMode = emailSection[nameof(EmailSettings.Mode)];
+        var smtpSection = emailSection.GetSection(nameof(EmailSettings.Smtp));
+        var hasSmtpCredentials = !string.IsNullOrWhiteSpace(smtpSection[nameof(SmtpSettings.UserName)])
+            && !string.IsNullOrWhiteSpace(smtpSection[nameof(SmtpSettings.Password)]);
+        var isTestingPickup = string.Equals(configuration["ENVIRONMENT"], "Testing", StringComparison.OrdinalIgnoreCase);
+
+        if (!isTestingPickup && (string.Equals(emailMode, "Smtp", StringComparison.OrdinalIgnoreCase) || hasSmtpCredentials))
         {
             services.AddScoped<IEmailSender, SmtpEmailSender>();
         }

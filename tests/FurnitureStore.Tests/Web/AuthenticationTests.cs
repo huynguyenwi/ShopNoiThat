@@ -259,15 +259,16 @@ public sealed partial class AuthenticationTests(FurnitureStoreWebApplicationFact
     }
 
     [Fact]
-    public async Task ForgotPassword_ForUnknownEmail_LooksIdentical()
+    public async Task ForgotPassword_ForUnknownEmail_ShowsError()
     {
         var client = factory.CreateClient();
 
         var response = await PostFormAsync(client, "/account/forgotpassword", "/account/forgotpassword",
             new Dictionary<string, string> { ["Email"] = "unknown-person@example.com" });
+        var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal("/Account/ForgotPasswordConfirmation", response.Headers.Location?.OriginalString, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Email không tồn tại trong hệ thống.", html);
     }
 
     [Fact]
