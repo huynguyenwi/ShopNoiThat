@@ -733,3 +733,9 @@
 .social-label-icon {
     color: var(--fs-wood-dark);
 }
+
+/* An error summary with no errors is still rendered (class validation-summary-valid): hide it so an empty
+   alert box does not show. jQuery unobtrusive validation swaps the class when client-side errors appear. */
+.validation-summary-valid {
+    display: none;
+}

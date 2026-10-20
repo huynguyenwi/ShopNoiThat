@@ -2990,3 +2990,8 @@ p a:not(.btn):not(.badge),
     color: var(--fs-brown);
     word-break: break-all;
 }
+
+/* An error summary with no errors is still rendered (class validation-summary-valid): hide the empty alert box. */
+.validation-summary-valid {
+    display: none;
+}
