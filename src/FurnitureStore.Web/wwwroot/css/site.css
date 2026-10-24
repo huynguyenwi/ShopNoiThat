@@ -901,6 +901,20 @@ img {
     background: rgba(255, 255, 255, .92);
     color: var(--fs-ink);
     box-shadow: var(--fs-shadow-sm);
+    padding: 0;               /* iOS Safari gives buttons default padding, pushing the icon off centre */
+    font-size: 1rem;
+    line-height: 1;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Bootstrap Icons shift glyphs down with vertical-align: -.125em (meant for icons inside text);
+   inside the round button that offset makes the heart sit off centre. */
+.product-card-wishlist .bi,
+.product-card-wishlist .bi::before {
+    display: block;
+    line-height: 1;
+    vertical-align: 0;
 }
 
 .product-card-wishlist:hover,
